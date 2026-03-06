@@ -63,4 +63,17 @@ document.getElementById('logout-btn').addEventListener('click', async () => {
   window.location.href = '/';
 });
 
+// Patch Notes
+document.getElementById('version-tag').addEventListener('click', () => {
+  document.getElementById('patchnotes-overlay').classList.add('active');
+});
+document.getElementById('patchnotes-close').addEventListener('click', () => {
+  document.getElementById('patchnotes-overlay').classList.remove('active');
+});
+document.getElementById('patchnotes-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    e.currentTarget.classList.remove('active');
+  }
+});
+
 loadUser();

@@ -415,6 +415,239 @@ const newCards = [
   add200();
 }
 
+// --- Migration : abilities uniques pour chaque carte ---
+{
+  // Check if migration already ran by looking for a unique new ability name
+  const check = db.prepare("SELECT id FROM cards WHERE ability_name = 'Pioche brutale'").get();
+  if (!check) {
+    const upd = db.prepare('UPDATE cards SET ability_name = ?, ability_desc = ? WHERE name = ?');
+    const runUpd = db.transaction(() => {
+      let count = 0;
+
+      // ===== COMMUNES - TERRE =====
+      upd.run('Pioche brutale',     '2 degats directs',        'Mineur');
+      upd.run('Griffe de terre',    '2 degats directs',        'Taupe');
+      upd.run('Carapace blindee',   '+3 DEF ce tour',          'Scarabee');
+      upd.run('Coup de massue',     '1 degat direct',          'Paysan');
+      upd.run('Mur mineral',        '+3 DEF ce tour',          'Caillou vivant');
+      // Ver de terre keeps Regeneration
+      upd.run('Herbe toxique',      '-2 ATK ennemi',           'Herboriste');
+      upd.run('Spores nocives',     'Poison 2 par tour',       'Champignon');
+      upd.run('Tranchant rocheux',  '2 degats directs',        'Terrassier');
+      upd.run('Morsure de rat',     '2 degats 1er tour',       'Rat');
+      upd.run('Garde de pierre',    '+2 DEF ce tour',          'Sentinelle');
+      upd.run('Nuee de mandibules', '1 degat x3',              'Fourmi');
+      upd.run('Coup bas',           '3 degats 1er tour',       'Brigand');
+      upd.run('Hache de bois',      '2 degats directs',        'Bucheron');
+      upd.run('Charge sauvage',     '+2 ATK ce tour',          'Sanglier');
+      upd.run('Piquants',           'Contre 2 degats',         'Herisson');
+      upd.run('Elixir acide',       '2 degats +1 PV',          'Alchimiste');
+      upd.run('Appel aux armes',    '+1 ATK equipe',           'Fermier');
+
+      // ===== COMMUNES - EAU =====
+      upd.run('Ecaille coupante',   '1 degat direct',          'Poisson');
+      upd.run('Pince acier',        '2 degats directs',        'Crabe');
+      upd.run('Filet marin',        'Stun 1 tour',             'Marin');
+      upd.run('Jet d encre',        '-2 ATK ennemi',           'Pieuvre');
+      upd.run('Decharge electrique','Stun + 1 degat',          'Meduse');
+      upd.run('Lance de corail',    '2 degats directs',        'Triton');
+      upd.run('Nage defensive',     '+2 DEF ce tour',          'Hippocampe');
+      upd.run('Brume aquatique',    '-2 DEF ennemi',           'Nymphe');
+      upd.run('Sabre de bord',      '2 degats 1er tour',       'Pirate');
+      upd.run('Plongeon',           '2 degats 1er tour',       'Pelican');
+      upd.run('Glissade',           '+2 DEF ce tour',          'Phoque');
+      upd.run('Barricade nacrée',   '+3 DEF ce tour',          'Coquillage');
+      upd.run('Onde glaciale',      '2 degats directs',        'Naiade');
+      upd.run('Jeu aquatique',      'Soigne allie 2 PV',       'Loutre');
+      upd.run('Cri du matelot',     '+2 ATK ce tour',          'Moussaillon');
+      upd.run('Electrocution',      '2 degats directs',        'Anguille');
+      upd.run('Retrait protecteur', 'Bouclier +3',             'Tortue');
+      upd.run('Bec tranchant',      '1 degat direct',          'Mouette');
+
+      // ===== COMMUNES - FEU =====
+      upd.run('Flamme dansante',    '2 degats directs',        'Torche');
+      upd.run('Queue enflammee',    '2 degats directs',        'Salamandre');
+      upd.run('Marteau ardent',     '+2 ATK ce tour',          'Forgeron');
+      upd.run('Brulure soudaine',   '3 degats 1er tour',       'Braise');
+      upd.run('Bombe artisanale',   '1 degat x3',              'Artificier');
+      upd.run('Croc brulant',       '2 degats 1er tour',       'Fennec');
+      upd.run('Epines brulantes',   'Contre 2 degats',         'Cactus ardent');
+      upd.run('Combustion lente',   'Poison 2 par tour',       'Charbon');
+      upd.run('Ecaille de braise',  '+2 DEF ce tour',          'Lezard');
+      upd.run('Eruption mineure',   '2 degats directs',        'Volcanologue');
+      upd.run('Suie aveuglante',    '-2 ATK ennemi',           'Charbonnier');
+      upd.run('Etincelle vive',     '2 degats 1er tour',       'Etincelle');
+      upd.run('Morsure de flamme',  'Poison 2 par tour',       'Chien de feu');
+      upd.run('Pas de feu',         '+2 ATK ce tour',          'Danseur');
+      upd.run('Coulée de lave',     '2 degats directs',        'Magma');
+      upd.run('Broche ardente',     'Soigne allie 2 PV',       'Cuisinier');
+      upd.run('Dard de flamme',     '2 degats 1er tour',       'Mouche de feu');
+      upd.run('Voile de cendres',   '+3 DEF ce tour',          'Fumigene');
+      upd.run('Torche vive',        '1 degat direct',          'Flambeau');
+
+      // ===== COMMUNES - OMBRE =====
+      upd.run('Cri ultrason',       '-2 ATK ennemi',           'Chauve-souris');
+      upd.run('Toile collante',     'Stun 1 tour',             'Araignee');
+      upd.run('Lame furtive',       '3 degats 1er tour',       'Voleur');
+      upd.run('Mauvais presage',    '-2 DEF ennemi',           'Corbeau');
+      upd.run('Rongement',          '2 degats directs',        'Rat noir');
+      // Spectre keeps Passe-muraille
+      upd.run('Embuscade sombre',   '3 degats 1er tour',       'Bandit');
+      upd.run('Etreinte mortelle',  '2 degats +1 PV',          'Zombie');
+      upd.run('Os tranchant',       '2 degats directs',        'Squelette');
+      upd.run('Griffe d ombre',     '2 degats directs',        'Chat noir');
+      upd.run('Toucher spectral',   '2 degats +1 PV',          'Ombre rampante');
+      upd.run('Cocon ténébreux',    '+3 DEF ce tour',          'Larve');
+      upd.run('Dague empoisonnee',  'Poison 2 par tour',       'Assassin novice');
+      upd.run('Mucus toxique',      '-2 ATK ennemi',           'Crapaud sombre');
+      // Ectoplasme keeps Effroi
+      upd.run('Morsure vorace',     '2 degats +1 PV',          'Goule');
+      upd.run('Fils invisibles',    'Stun 1 tour',             'Marionnette');
+      upd.run('Venin nocturne',     'Poison 2 par tour',       'Serpent venimeux');
+      upd.run('Raid eclair',        '2 degats 1er tour',       'Pilleur');
+
+      // ===== COMMUNES - LUMIERE =====
+      upd.run('Elan celeste',       '+1 ATK ce tour',          'Moineau celeste');
+      upd.run('Priere mineure',     'Soigne allie 2 PV',       'Pretre novice');
+      upd.run('Oeil du faucon',     '-2 DEF ennemi',           'Eclaireur');
+      upd.run('Poussiere d or',     '-2 ATK ennemi',           'Papillon');
+      upd.run('Dard sacre',         '2 degats directs',        'Abeille sacree');
+      upd.run('Mur de lumiere',     '+3 DEF ce tour',          'Gardien');
+      upd.run('Trait lumineux',     '2 degats directs',        'Apprenti mage');
+      upd.run('Toison protectrice', '+2 DEF ce tour',          'Agneau');
+      upd.run('Plume doree',        'Soigne allie 2 PV',       'Colombe');
+      upd.run('Frappe vertueuse',   '2 degats directs',        'Paladin novice');
+      upd.run('Farce magique',      '-2 ATK ennemi',           'Lutin');
+      upd.run('Meditation',         '+3 DEF ce tour',          'Moine');
+      upd.run('Bois sacre',         '+2 ATK ce tour',          'Cerf blanc');
+      upd.run('Soin feerique',      'Soigne allie 2 PV',       'Fee');
+      upd.run('Fanfare',            '+1 ATK equipe',           'Heraut');
+      upd.run('Ronronnement',       'Soigne allie 2 PV',       'Chat blanc');
+      upd.run('Reflet d or',        '2 degats directs',        'Scarabee dore');
+      upd.run('Courrier rapide',    '2 degats 1er tour',       'Messager');
+
+      // ===== RARES - TERRE =====
+      // Centaure keeps Galop
+      // Druidesse keeps Ronces
+      // Taureau keeps Coup fatal
+      // Treant keeps Forteresse
+      // Gladiateur keeps Frappe lourde
+      upd.run('Muraille vivante',   'Bouclier +5',             'Tortue geante');
+      upd.run('Pioche runique',     'Vol de vie 30%',          'Nain mineur');
+      upd.run('Regard petrifiant',  'Marque +2 degats',        'Basilic');
+      upd.run('Onde tellurique',    '-3 DEF ennemi',           'Geomancien');
+      upd.run('Rage ursine',        '+4 ATK ce tour',          'Ours brun');
+      // Sage des forets keeps Guerison
+
+      // ===== RARES - EAU =====
+      // Requin keeps Frenzy
+      // Ondine keeps Vague glacee
+      upd.run('Assaut corsaire',    '5 degats 1er tour',       'Corsaire');
+      upd.run('Benediction marine', 'Bouclier +5',             'Morse');
+      // Elementaire d eau keeps Torrent
+      upd.run('Aura apaisante',     '-3 ATK ennemi',           'Kappa');
+      // Pirate fantome keeps Lame spectrale
+      upd.run('Echo aquatique',     '-3 DEF ennemi',           'Dauphin');
+      upd.run('Orage marin',        '3 degats a tous',         'Invoqueuse de pluie');
+      upd.run('Corne de narval',    '5 degats directs',        'Narval');
+
+      // ===== RARES - FEU =====
+      // Ifrit keeps Pluie de feu
+      // Berserker keeps Rage
+      upd.run('Corne de taureau',   '5 degats directs',        'Minotaure');
+      // Serpent de lave keeps Soif de sang
+      upd.run('Griffes multiples',  '2 degats x3',             'Chimere');
+      // Lion de feu keeps Rugissement
+      upd.run('Brasier',            '3 degats a tous',         'Pyromancien');
+      upd.run('Dard venimeux',      '4 degats +3 PV',          'Scorpion geant');
+      upd.run('Flamme mystique',    '+3 ATK ce tour',          'Djinn');
+      upd.run('Assaut predateur',   '5 degats 1er tour',       'Raptor');
+      upd.run('Katana de braise',   'Vol de vie 30%',          'Samourai de feu');
+
+      // ===== RARES - OMBRE =====
+      upd.run('Morsure vampirique', '4 degats +3 PV',          'Vampire');
+      upd.run('Hurlement bestial',  '+4 ATK ce tour',          'Loup-garou');
+      // Necromancien keeps Malediction
+      upd.run('Lame de l ombre',    '5 degats 1er tour',       'Assassin');
+      upd.run('Griffes de harpie',  '2 degats + stun',         'Harpie');
+      upd.run('Toucher du neant',   'Ignore la DEF',           'Wraith');
+      upd.run('Bouclier maudit',    'Bouclier +5',             'Chevalier noir');
+      upd.run('Queue de manticore', '4 degats +3 PV',          'Manticore');
+      upd.run('Flamme necrotique',  '3 degats a tous',         'Liche');
+      upd.run('Bond furtif',        '5 degats 1er tour',       'Panthere noire');
+
+      // ===== RARES - LUMIERE =====
+      // Paladin keeps Benediction
+      upd.run('Aegis celeste',      'Bouclier +5',             'Ange gardien');
+      // Licorne keeps Corne sacree
+      upd.run('Serres divines',     '4 degats directs',        'Griffon');
+      upd.run('Priere de soin',     'Soigne allie 4 PV',       'Pretre');
+      upd.run('Epee de justice',    '4 degats directs',        'Templier');
+      upd.run('Charge ailee',       'Ignore la DEF',           'Pegase');
+      upd.run('Rayon purificateur', '3 degats a tous',         'Mage blanc');
+      upd.run('Lance celeste',      '5 degats 1er tour',       'Valkyrie');
+      upd.run('Aura bienveillante', 'Soigne allie 4 PV',       'Esprit sacre');
+
+      // ===== EPIQUES - TERRE =====
+      // Titan de pierre keeps Avalanche
+      // Roi des nains keeps Marteau runique
+      // Hydre de terre keeps Multi-tetes
+      // Druide ancien keeps Eveil naturel
+      upd.run('Pietinement',        '12 degats, -5 PV soi',    'Behemoth');
+      // Sphinx keeps Terreur nocturne
+
+      // ===== EPIQUES - EAU =====
+      upd.run('Tentacules geants',  '3 degats x3',             'Kraken');
+      // Leviathan keeps Raz-de-maree
+      upd.run('Maelstrom',          '5 degats + stun',         'Sorcier des mers');
+      // Amiral fantome keeps Purification
+      // Roi triton keeps Trident royal
+
+      // ===== EPIQUES - FEU =====
+      // Demon de feu keeps Inferno
+      upd.run('Souffle triple',     '3 degats x3',             'Hydre de feu');
+      // Wyvern keeps Charge divine
+      // Efreet keeps Festin de sang
+      upd.run('Eruption royale',    '12 degats, -5 PV soi',    'Roi volcanique');
+      upd.run('Marteau infernal',   'Execute sous 30% PV',     'Guerrier infernal');
+
+      // ===== EPIQUES - OMBRE =====
+      // Faucheur keeps Faux mortelle
+      upd.run('Souffle des ombres', '5 degats a tous',         'Dragon d ombre');
+      upd.run('Festin sanguinaire', '6 degats +4 PV',          'Seigneur vampire');
+      upd.run('Armee de morts',     '5 degats a tous',         'Roi des morts');
+      upd.run('Cauchemar vivant',   '5 degats + soin 3',       'Cauchemar');
+
+      // ===== EPIQUES - LUMIERE =====
+      // Seraphin keeps Lumiere divine
+      upd.run('Frappe sainte',      'Execute sous 30% PV',     'Champion sacre');
+      upd.run('Harmonie celeste',   '5 degats + soin 4',       'Druide celeste');
+      upd.run('Plongeon celeste',   '6 degats 1er tour',       'Chimere celeste');
+      upd.run('Marteau de lumiere', '7 degats directs',        'Inquisiteur');
+
+      // ===== LEGENDAIRES =====
+      upd.run('Eveil de Gaia',      'AoE 5 + soin 3 + DEF 2', 'Gaia');
+      upd.run('Appel de la foret',  'Soin 4 + ATK 2 + Shield','Roi des forets');
+      upd.run('Poids du monde',     '8 degats + stun + marque','Atlas');
+      upd.run('Maree divine',       'AoE 6 + debuff ATK 3',   'Poseidon');
+      upd.run('Abime eternel',      '8 degats + poison + soin','Serpent de mer');
+      upd.run('Ere glaciaire',      'AoE 5 + stun + DEF 2',   'Reine des glaces');
+      upd.run('Flamme eternelle',   '-10 PV, 18 degats',       'Ifrit supreme');
+      upd.run('Supernova',          'AoE 7 + poison 3 + ATK', 'Empereur dragon');
+      upd.run('Jugement final',     'Execute sous 40% PV',     'Thanatos');
+      upd.run('Apocalypse',         'AoE 6 + debuff + soin 5','Roi demon');
+      upd.run('Rage du loup',       '5+5/allie mort, AoE',    'Fenrir');
+      upd.run('Foudre olympienne',  '8 degats + stun + marque','Zeus');
+      upd.run('Immortalite',        'Revive 20 + soin + shield','Gardien eternel');
+      upd.run('Jugement divin',     '6 degats + soin 3 + DEF','Archange');
+      upd.run('Renaissance eternelle','Revient avec 20 PV',    'Phenix');
+
+      console.log('Migration abilities uniques terminee.');
+    });
+    runUpd();
+  }
+}
+
 // --- Boosters ---
 const BOOSTERS = [
   {
@@ -460,82 +693,285 @@ function openBooster(boosterId, userId) {
 // SYSTEME DE COMBAT - Abilities
 // ============================================
 const ABILITY_MAP = {
-  'Charge':         { type: 'buff_atk',          value: 2 },
-  'Rempart':        { type: 'buff_def',          value: 4 },
-  'Bouclier algue': { type: 'buff_def',          value: 3 },
-  'Morsure':        { type: 'direct_damage',     value: 2 },
-  'Boule de feu':   { type: 'direct_damage',     value: 5 },
-  'Jugement divin': { type: 'direct_damage',     value: 10 },
-  'Tir percant':    { type: 'ignore_def',        value: 0 },
-  'Traversee':      { type: 'ignore_def',        value: 0 },
-  'Drain de vie':   { type: 'drain',             damage: 4, heal: 2 },
-  'Souffle ardent': { type: 'aoe_damage',        value: 6 },
-  'Renaissance':    { type: 'revive',            value: 15 },
-  'Seisme':         { type: 'stun',              damage: 3 },
-  'Flash':          { type: 'stun',              damage: 0 },
-  'Chant envoutant':{ type: 'debuff_atk',        value: 3 },
-  'Embuscade':      { type: 'first_turn_damage', value: 3 },
-  'Jonglerie':      { type: 'random_damage',     damage: 2, hits: 2 },
-  // --- Nouvelles abilities (pool 200 cartes) ---
-  'Griffure':         { type: 'direct_damage',     value: 2 },
-  'Coup de poing':    { type: 'direct_damage',     value: 1 },
-  'Mur de pierre':    { type: 'buff_def',          value: 2 },
-  'Elan':             { type: 'buff_atk',          value: 1 },
-  'Piqure':           { type: 'direct_damage',     value: 1 },
-  'Toxine':           { type: 'debuff_atk',        value: 2 },
-  'Morsure rapide':   { type: 'first_turn_damage', value: 2 },
-  'Carapace':         { type: 'buff_def',          value: 2 },
-  'Cri de guerre':    { type: 'buff_atk',          value: 2 },
-  'Siphon':           { type: 'drain',             damage: 2, heal: 1 },
-  'Rafale':           { type: 'random_damage',     damage: 1, hits: 3 },
-  'Ecran de fumee':   { type: 'buff_def',          value: 3 },
-  'Effroi':           { type: 'stun',              damage: 0 },
-  'Paralysie':        { type: 'stun',              damage: 0 },
-  'Coup sournois':    { type: 'first_turn_damage', value: 3 },
-  'Regeneration':     { type: 'drain',             damage: 1, heal: 2 },
-  'Passe-muraille':   { type: 'ignore_def',        value: 0 },
-  'Galop':            { type: 'buff_atk',          value: 3 },
-  'Ronces':           { type: 'stun',              damage: 2 },
-  'Frappe lourde':    { type: 'direct_damage',     value: 4 },
-  'Forteresse':       { type: 'buff_def',          value: 5 },
-  'Frenzy':           { type: 'random_damage',     damage: 2, hits: 3 },
-  'Vague glacee':     { type: 'stun',              damage: 2 },
-  'Malediction':      { type: 'debuff_atk',        value: 4 },
-  'Coup fatal':       { type: 'first_turn_damage', value: 5 },
-  'Soif de sang':     { type: 'drain',             damage: 4, heal: 3 },
-  'Lame spectrale':   { type: 'ignore_def',        value: 0 },
-  'Benediction':      { type: 'buff_def',          value: 4 },
-  'Guerison':         { type: 'drain',             damage: 2, heal: 4 },
-  'Rage':             { type: 'buff_atk',          value: 4 },
-  'Pluie de feu':     { type: 'aoe_damage',        value: 3 },
-  'Rugissement':      { type: 'debuff_atk',        value: 3 },
-  'Torrent':          { type: 'direct_damage',     value: 4 },
-  'Corne sacree':     { type: 'drain',             damage: 3, heal: 3 },
-  'Avalanche':        { type: 'aoe_damage',        value: 5 },
-  'Marteau runique':  { type: 'direct_damage',     value: 7 },
-  'Multi-tetes':      { type: 'random_damage',     damage: 3, hits: 3 },
-  'Eveil naturel':    { type: 'drain',             damage: 5, heal: 4 },
-  'Inferno':          { type: 'aoe_damage',        value: 6 },
-  'Faux mortelle':    { type: 'ignore_def',        value: 0 },
-  'Festin de sang':   { type: 'drain',             damage: 6, heal: 4 },
-  'Terreur nocturne': { type: 'stun',              damage: 5 },
-  'Lumiere divine':   { type: 'aoe_damage',        value: 5 },
-  'Charge divine':    { type: 'first_turn_damage', value: 6 },
-  'Purification':     { type: 'direct_damage',     value: 7 },
-  'Raz-de-maree':     { type: 'aoe_damage',        value: 6 },
-  'Trident royal':    { type: 'drain',             damage: 5, heal: 3 },
-  'Colere terrestre': { type: 'aoe_damage',        value: 8 },
-  'Renaissance totale':{ type: 'revive',           value: 25 },
-  'Tsunami':          { type: 'aoe_damage',        value: 8 },
-  'Sentence mortelle':{ type: 'direct_damage',     value: 15 },
-  'Ragnarok':         { type: 'random_damage',     damage: 5, hits: 3 },
-  'Foudre supreme':   { type: 'direct_damage',     value: 12 },
-  'Supernova':        { type: 'aoe_damage',        value: 9 },
-  'Immortalite':      { type: 'revive',            value: 25 },
-  'Apocalypse':       { type: 'aoe_damage',        value: 9 },
-  'Poids du monde':   { type: 'stun',              damage: 6 },
-  'Abime':            { type: 'drain',             damage: 8, heal: 5 },
-  'Blizzard':         { type: 'aoe_damage',        value: 7 },
+  // ===== SEED CARD ABILITIES (keep original) =====
+  'Charge':           { type: 'buff_atk',          value: 2 },
+  'Rempart':          { type: 'buff_def',          value: 4 },
+  'Bouclier algue':   { type: 'buff_def',          value: 3 },
+  'Morsure':          { type: 'direct_damage',     value: 2 },
+  'Boule de feu':     { type: 'direct_damage',     value: 5 },
+  'Tir percant':      { type: 'ignore_def',        value: 0 },
+  'Traversee':        { type: 'ignore_def',        value: 0 },
+  'Drain de vie':     { type: 'drain',             damage: 4, heal: 2 },
+  'Souffle ardent':   { type: 'aoe_damage',        value: 6 },
+  'Seisme':           { type: 'stun',              damage: 3 },
+  'Flash':            { type: 'stun',              damage: 0 },
+  'Chant envoutant':  { type: 'debuff_atk',        value: 3 },
+  'Embuscade':        { type: 'first_turn_damage', value: 3 },
+  'Jonglerie':        { type: 'random_damage',     damage: 2, hits: 2 },
+
+  // ===== COMMUNES - TERRE (unique per card) =====
+  'Pioche brutale':     { type: 'direct_damage',     value: 2 },   // Mineur
+  'Griffe de terre':    { type: 'direct_damage',     value: 2 },   // Taupe
+  'Carapace blindee':   { type: 'buff_def',          value: 3 },   // Scarabee
+  'Coup de massue':     { type: 'direct_damage',     value: 1 },   // Paysan
+  'Mur mineral':        { type: 'buff_def',          value: 3 },   // Caillou vivant
+  'Regeneration':       { type: 'drain',             damage: 1, heal: 2 },  // Ver de terre
+  'Herbe toxique':      { type: 'debuff_atk',        value: 2 },   // Herboriste
+  'Spores nocives':     { type: 'poison',            damage: 2 },  // Champignon
+  'Tranchant rocheux':  { type: 'direct_damage',     value: 2 },   // Terrassier
+  'Morsure de rat':     { type: 'first_turn_damage', value: 2 },   // Rat
+  'Garde de pierre':    { type: 'buff_def',          value: 2 },   // Sentinelle
+  'Nuee de mandibules': { type: 'random_damage',     damage: 1, hits: 3 },  // Fourmi
+  'Coup bas':           { type: 'first_turn_damage', value: 3 },   // Brigand
+  'Hache de bois':      { type: 'direct_damage',     value: 2 },   // Bucheron
+  'Charge sauvage':     { type: 'buff_atk',          value: 2 },   // Sanglier
+  'Piquants':           { type: 'counter',           value: 2 },   // Herisson
+  'Elixir acide':       { type: 'drain',             damage: 2, heal: 1 },  // Alchimiste
+  'Appel aux armes':    { type: 'buff_team_atk',     value: 1 },   // Fermier
+
+  // ===== COMMUNES - EAU (18 unique) =====
+  'Ecaille coupante':   { type: 'direct_damage',     value: 1 },   // Poisson
+  'Pince acier':        { type: 'direct_damage',     value: 2 },   // Crabe
+  'Filet marin':        { type: 'stun',              damage: 0 },  // Marin
+  'Jet d encre':        { type: 'debuff_atk',        value: 2 },   // Pieuvre
+  'Decharge electrique':{ type: 'stun',              damage: 1 },  // Meduse
+  'Lance de corail':    { type: 'direct_damage',     value: 2 },   // Triton
+  'Nage defensive':     { type: 'buff_def',          value: 2 },   // Hippocampe
+  'Brume aquatique':    { type: 'debuff_def',        value: 2 },   // Nymphe
+  'Sabre de bord':      { type: 'first_turn_damage', value: 2 },   // Pirate
+  'Plongeon':           { type: 'first_turn_damage', value: 2 },   // Pelican
+  'Glissade':           { type: 'buff_def',          value: 2 },   // Phoque
+  'Barricade nacrée':   { type: 'buff_def',          value: 3 },   // Coquillage
+  'Onde glaciale':      { type: 'direct_damage',     value: 2 },   // Naiade
+  'Jeu aquatique':      { type: 'heal_ally',         value: 2 },   // Loutre
+  'Cri du matelot':     { type: 'buff_atk',          value: 2 },   // Moussaillon
+  'Electrocution':      { type: 'direct_damage',     value: 2 },   // Anguille
+  'Retrait protecteur': { type: 'shield',            value: 3 },   // Tortue
+  'Bec tranchant':      { type: 'direct_damage',     value: 1 },   // Mouette
+
+  // ===== COMMUNES - FEU (19 unique) =====
+  'Flamme dansante':    { type: 'direct_damage',     value: 2 },   // Torche
+  'Queue enflammee':    { type: 'direct_damage',     value: 2 },   // Salamandre
+  'Marteau ardent':     { type: 'buff_atk',          value: 2 },   // Forgeron
+  'Brulure soudaine':   { type: 'first_turn_damage', value: 3 },   // Braise
+  'Bombe artisanale':   { type: 'random_damage',     damage: 1, hits: 3 },  // Artificier
+  'Croc brulant':       { type: 'first_turn_damage', value: 2 },   // Fennec
+  'Epines brulantes':   { type: 'counter',           value: 2 },   // Cactus ardent
+  'Combustion lente':   { type: 'poison',            damage: 2 },  // Charbon
+  'Ecaille de braise':  { type: 'buff_def',          value: 2 },   // Lezard
+  'Eruption mineure':   { type: 'direct_damage',     value: 2 },   // Volcanologue
+  'Suie aveuglante':    { type: 'debuff_atk',        value: 2 },   // Charbonnier
+  'Etincelle vive':     { type: 'first_turn_damage', value: 2 },   // Etincelle
+  'Morsure de flamme':  { type: 'poison',            damage: 2 },  // Chien de feu
+  'Pas de feu':         { type: 'buff_atk',          value: 2 },   // Danseur
+  'Coulée de lave':     { type: 'direct_damage',     value: 2 },   // Magma
+  'Broche ardente':     { type: 'heal_ally',         value: 2 },   // Cuisinier
+  'Dard de flamme':     { type: 'first_turn_damage', value: 2 },   // Mouche de feu
+  'Voile de cendres':   { type: 'buff_def',          value: 3 },   // Fumigene
+  'Torche vive':        { type: 'direct_damage',     value: 1 },   // Flambeau
+
+  // ===== COMMUNES - OMBRE (19 unique) =====
+  'Cri ultrason':       { type: 'debuff_atk',        value: 2 },   // Chauve-souris
+  'Toile collante':     { type: 'stun',              damage: 0 },  // Araignee
+  'Lame furtive':       { type: 'first_turn_damage', value: 3 },   // Voleur
+  'Mauvais presage':    { type: 'debuff_def',        value: 2 },   // Corbeau
+  'Rongement':          { type: 'direct_damage',     value: 2 },   // Rat noir
+  'Passe-muraille':     { type: 'ignore_def',        value: 0 },   // Spectre
+  'Embuscade sombre':   { type: 'first_turn_damage', value: 3 },   // Bandit
+  'Etreinte mortelle':  { type: 'drain',             damage: 2, heal: 1 },  // Zombie
+  'Os tranchant':       { type: 'direct_damage',     value: 2 },   // Squelette
+  'Griffe d ombre':     { type: 'direct_damage',     value: 2 },   // Chat noir
+  'Toucher spectral':   { type: 'drain',             damage: 2, heal: 1 },  // Ombre rampante
+  'Cocon ténébreux':    { type: 'buff_def',          value: 3 },   // Larve
+  'Dague empoisonnee':  { type: 'poison',            damage: 2 },  // Assassin novice
+  'Mucus toxique':      { type: 'debuff_atk',        value: 2 },   // Crapaud sombre
+  'Effroi':             { type: 'stun',              damage: 0 },  // Ectoplasme
+  'Morsure vorace':     { type: 'drain',             damage: 2, heal: 1 },  // Goule
+  'Fils invisibles':    { type: 'stun',              damage: 0 },  // Marionnette
+  'Venin nocturne':     { type: 'poison',            damage: 2 },  // Serpent venimeux
+  'Raid eclair':        { type: 'first_turn_damage', value: 2 },   // Pilleur
+
+  // ===== COMMUNES - LUMIERE (18 unique) =====
+  'Elan celeste':       { type: 'buff_atk',          value: 1 },   // Moineau celeste
+  'Priere mineure':     { type: 'heal_ally',         value: 2 },   // Pretre novice
+  'Oeil du faucon':     { type: 'debuff_def',        value: 2 },   // Eclaireur
+  'Poussiere d or':     { type: 'debuff_atk',        value: 2 },   // Papillon
+  'Dard sacre':         { type: 'direct_damage',     value: 2 },   // Abeille sacree
+  'Mur de lumiere':     { type: 'buff_def',          value: 3 },   // Gardien
+  'Trait lumineux':     { type: 'direct_damage',     value: 2 },   // Apprenti mage
+  'Toison protectrice': { type: 'buff_def',          value: 2 },   // Agneau
+  'Plume doree':        { type: 'heal_ally',         value: 2 },   // Colombe
+  'Frappe vertueuse':   { type: 'direct_damage',     value: 2 },   // Paladin novice
+  'Farce magique':      { type: 'debuff_atk',        value: 2 },   // Lutin
+  'Meditation':         { type: 'buff_def',          value: 3 },   // Moine
+  'Bois sacre':         { type: 'buff_atk',          value: 2 },   // Cerf blanc
+  'Soin feerique':      { type: 'heal_ally',         value: 2 },   // Fee
+  'Fanfare':            { type: 'buff_team_atk',     value: 1 },   // Heraut
+  'Ronronnement':       { type: 'heal_ally',         value: 2 },   // Chat blanc
+  'Reflet d or':        { type: 'direct_damage',     value: 2 },   // Scarabee dore
+  'Courrier rapide':    { type: 'first_turn_damage', value: 2 },   // Messager
+
+  // ===== RARES - TERRE (11 unique) =====
+  'Galop':              { type: 'buff_atk',          value: 3 },   // Centaure
+  'Ronces':             { type: 'stun',              damage: 2 },  // Druidesse
+  'Coup fatal':         { type: 'first_turn_damage', value: 5 },   // Taureau
+  'Forteresse':         { type: 'buff_def',          value: 5 },   // Treant
+  'Frappe lourde':      { type: 'direct_damage',     value: 4 },   // Gladiateur
+  'Muraille vivante':   { type: 'shield',            value: 5 },   // Tortue geante
+  'Pioche runique':     { type: 'lifesteal_attack',  percent: 30 },// Nain mineur
+  'Regard petrifiant':  { type: 'mark',              damageBonus: 2 },  // Basilic
+  'Onde tellurique':    { type: 'debuff_def',        value: 3 },   // Geomancien
+  'Rage ursine':        { type: 'buff_atk',          value: 4 },   // Ours brun  (was Frappe lourde)
+  'Guerison':           { type: 'drain',             damage: 2, heal: 4 },  // Sage des forets
+
+  // ===== RARES - EAU (10 unique) =====
+  'Frenzy':             { type: 'random_damage',     damage: 2, hits: 3 },  // Requin
+  'Vague glacee':       { type: 'stun',              damage: 2 },  // Ondine
+  'Assaut corsaire':    { type: 'first_turn_damage', value: 5 },   // Corsaire
+  'Benediction marine': { type: 'shield',            value: 5 },   // Morse
+  'Torrent':            { type: 'direct_damage',     value: 4 },   // Elementaire d eau
+  'Aura apaisante':     { type: 'debuff_atk',        value: 3 },   // Kappa
+  'Lame spectrale':     { type: 'ignore_def',        value: 0 },   // Pirate fantome
+  'Echo aquatique':     { type: 'debuff_def',        value: 3 },   // Dauphin
+  'Orage marin':        { type: 'aoe_damage',        value: 3 },   // Invoqueuse de pluie
+  'Corne de narval':    { type: 'direct_damage',     value: 5 },   // Narval  (was Torrent)
+
+  // ===== RARES - FEU (11 unique) =====
+  'Pluie de feu':       { type: 'aoe_damage',        value: 3 },   // Ifrit
+  'Rage':               { type: 'buff_atk',          value: 4 },   // Berserker
+  'Corne de taureau':   { type: 'direct_damage',     value: 5 },   // Minotaure  (was Frappe lourde)
+  'Soif de sang':       { type: 'drain',             damage: 4, heal: 3 },  // Serpent de lave
+  'Griffes multiples':  { type: 'random_damage',     damage: 2, hits: 3 },  // Chimere
+  'Rugissement':        { type: 'debuff_atk',        value: 3 },   // Lion de feu
+  'Brasier':            { type: 'aoe_damage',        value: 3 },   // Pyromancien  (was Pluie de feu)
+  'Dard venimeux':      { type: 'drain',             damage: 4, heal: 3 },  // Scorpion geant (was Soif de sang)
+  'Flamme mystique':    { type: 'buff_atk',          value: 3 },   // Djinn (was Galop)
+  'Assaut predateur':   { type: 'first_turn_damage', value: 5 },   // Raptor (was Coup fatal)
+  'Katana de braise':   { type: 'lifesteal_attack',  percent: 30 },// Samourai de feu (was Frappe lourde)
+
+  // ===== RARES - OMBRE (10 unique) =====
+  'Morsure vampirique': { type: 'drain',             damage: 4, heal: 3 },  // Vampire (was Soif de sang)
+  'Hurlement bestial':  { type: 'buff_atk',          value: 4 },   // Loup-garou (was Rage)
+  'Malediction':        { type: 'debuff_atk',        value: 4 },   // Necromancien
+  'Lame de l ombre':    { type: 'first_turn_damage', value: 5 },   // Assassin (was Coup fatal)
+  'Griffes de harpie':  { type: 'stun',              damage: 2 },  // Harpie (was Ronces)
+  'Toucher du neant':   { type: 'ignore_def',        value: 0 },   // Wraith (was Lame spectrale)
+  'Bouclier maudit':    { type: 'shield',            value: 5 },   // Chevalier noir (was Benediction)
+  'Queue de manticore': { type: 'drain',             damage: 4, heal: 3 },  // Manticore (was Soif de sang)
+  'Flamme necrotique':  { type: 'aoe_damage',        value: 3 },   // Liche (was Pluie de feu)
+  'Bond furtif':        { type: 'first_turn_damage', value: 5 },   // Panthere noire (was Coup fatal)
+
+  // ===== RARES - LUMIERE (10 unique) =====
+  'Benediction':        { type: 'buff_def',          value: 4 },   // Paladin
+  'Aegis celeste':      { type: 'shield',            value: 5 },   // Ange gardien (was Benediction)
+  'Corne sacree':       { type: 'drain',             damage: 3, heal: 3 },  // Licorne
+  'Serres divines':     { type: 'direct_damage',     value: 4 },   // Griffon (was Frappe lourde)
+  'Priere de soin':     { type: 'heal_ally',         value: 4 },   // Pretre (was Guerison)
+  'Epee de justice':    { type: 'direct_damage',     value: 4 },   // Templier (was Frappe lourde)
+  'Charge ailee':       { type: 'ignore_def',        value: 0 },   // Pegase (was Lame spectrale)
+  'Rayon purificateur': { type: 'aoe_damage',        value: 3 },   // Mage blanc (was Pluie de feu)
+  'Lance celeste':      { type: 'first_turn_damage', value: 5 },   // Valkyrie (was Coup fatal)
+  'Aura bienveillante': { type: 'heal_ally',         value: 4 },   // Esprit sacre (was Guerison)
+
+  // ===== EPIQUES - TERRE (6 unique) =====
+  'Avalanche':          { type: 'aoe_damage',        value: 5 },   // Titan de pierre
+  'Marteau runique':    { type: 'direct_damage',     value: 7 },   // Roi des nains
+  'Multi-tetes':        { type: 'random_damage',     damage: 3, hits: 3 },  // Hydre de terre
+  'Eveil naturel':      { type: 'drain',             damage: 5, heal: 4 },  // Druide ancien
+  'Pietinement':        { type: 'sacrifice',         selfDamage: 5, targetDamage: 12 }, // Behemoth (was Avalanche)
+  'Terreur nocturne':   { type: 'stun',              damage: 5 },  // Sphinx
+
+  // ===== EPIQUES - EAU (5 unique) =====
+  'Tentacules geants':  { type: 'random_damage',     damage: 3, hits: 3 },  // Kraken (was Multi-tetes)
+  'Raz-de-maree':       { type: 'aoe_damage',        value: 6 },   // Leviathan
+  'Maelstrom':          { type: 'stun',              damage: 5 },  // Sorcier des mers (was Terreur nocturne)
+  'Purification':       { type: 'direct_damage',     value: 7 },   // Amiral fantome
+  'Trident royal':      { type: 'drain',             damage: 5, heal: 3 },  // Roi triton
+
+  // ===== EPIQUES - FEU (6 unique) =====
+  'Inferno':            { type: 'aoe_damage',        value: 6 },   // Demon de feu
+  'Souffle triple':     { type: 'random_damage',     damage: 3, hits: 3 },  // Hydre de feu (was Multi-tetes)
+  'Charge divine':      { type: 'first_turn_damage', value: 6 },   // Wyvern
+  'Festin de sang':     { type: 'drain',             damage: 6, heal: 4 },  // Efreet
+  'Eruption royale':    { type: 'sacrifice',         selfDamage: 5, targetDamage: 12 }, // Roi volcanique (was Inferno)
+  'Marteau infernal':   { type: 'execute',           damage: 4, executeDamage: 12, threshold: 0.3 }, // Guerrier infernal (was Marteau runique)
+
+  // ===== EPIQUES - OMBRE (5 unique) =====
+  'Faux mortelle':      { type: 'ignore_def',        value: 0 },   // Faucheur
+  'Souffle des ombres': { type: 'aoe_damage',        value: 5 },   // Dragon d ombre (was Avalanche)
+  'Festin sanguinaire': { type: 'drain',             damage: 6, heal: 4 },  // Seigneur vampire (was Festin de sang)
+  'Armee de morts':     { type: 'aoe_damage',        value: 5 },   // Roi des morts (was Avalanche)
+  'Cauchemar vivant':   { type: 'damage_and_heal',   damage: 5, heal: 3 },  // Cauchemar (was Terreur nocturne)
+
+  // ===== EPIQUES - LUMIERE (5 unique) =====
+  'Lumiere divine':     { type: 'aoe_damage',        value: 5 },   // Seraphin
+  'Frappe sainte':      { type: 'execute',           damage: 4, executeDamage: 12, threshold: 0.3 }, // Champion sacre (was Purification)
+  'Harmonie celeste':   { type: 'damage_and_heal',   damage: 5, heal: 4 },  // Druide celeste (was Eveil naturel)
+  'Plongeon celeste':   { type: 'first_turn_damage', value: 6 },   // Chimere celeste (was Charge divine)
+  'Marteau de lumiere': { type: 'direct_damage',     value: 7 },   // Inquisiteur (was Purification)
+
+  // ===== LEGENDAIRES (15 unique - combo/special) =====
+  'Eveil de Gaia':      { type: 'combo', effects: [
+    { effect: 'aoe_damage', value: 5 },
+    { effect: 'team_heal', value: 3 },
+    { effect: 'buff_team_def', value: 2 }
+  ]},
+  'Appel de la foret':  { type: 'combo', effects: [
+    { effect: 'team_heal', value: 4 },
+    { effect: 'buff_team_atk', value: 2 },
+    { effect: 'shield', value: 6 }
+  ]},
+  'Poids du monde':     { type: 'combo', effects: [
+    { effect: 'damage', value: 8 },
+    { effect: 'stun' },
+    { effect: 'mark', value: 3 }
+  ]},
+  'Maree divine':       { type: 'combo', effects: [
+    { effect: 'aoe_damage', value: 6 },
+    { effect: 'aoe_debuff', value: 3 }
+  ]},
+  'Abime eternel':      { type: 'combo', effects: [
+    { effect: 'damage', value: 8 },
+    { effect: 'poison', value: 4 },
+    { effect: 'heal', value: 5 }
+  ]},
+  'Ere glaciaire':      { type: 'combo', effects: [
+    { effect: 'aoe_damage', value: 5 },
+    { effect: 'stun' },
+    { effect: 'buff_team_def', value: 2 }
+  ]},
+  'Flamme eternelle':   { type: 'sacrifice', selfDamage: 10, targetDamage: 18 },
+  'Supernova':          { type: 'combo', effects: [
+    { effect: 'aoe_damage', value: 7 },
+    { effect: 'poison', value: 3 },
+    { effect: 'buff_atk', value: 3 }
+  ]},
+  'Jugement final':     { type: 'execute', damage: 5, executeDamage: 20, threshold: 0.4 },
+  'Apocalypse':         { type: 'combo', effects: [
+    { effect: 'aoe_damage', value: 6 },
+    { effect: 'aoe_debuff', value: 3 },
+    { effect: 'heal', value: 5 }
+  ]},
+  'Rage du loup':       { type: 'conditional_damage', baseDamage: 5, bonusPerDeadAlly: 5, aoe: true },
+  'Foudre olympienne':  { type: 'combo', effects: [
+    { effect: 'damage', value: 8 },
+    { effect: 'stun' },
+    { effect: 'mark', value: 3 }
+  ]},
+  'Immortalite':        { type: 'combo', effects: [
+    { effect: 'revive', value: 20 },
+    { effect: 'team_heal', value: 5 },
+    { effect: 'shield', value: 10 }
+  ]},
+  'Jugement divin':     { type: 'combo', effects: [
+    { effect: 'damage', value: 6 },
+    { effect: 'team_heal', value: 3 },
+    { effect: 'buff_team_def', value: 1 }
+  ]},
+  'Renaissance eternelle': { type: 'revive', hp: 20 },
+
+  // ===== LEGACY (keep for backward compat, may be unused after migration) =====
+  'Renaissance':        { type: 'revive',            hp: 15 },
 };
 
 function getEffectiveStats(card) {
@@ -558,11 +994,36 @@ function getElementMod(attackerElem, defenderElem) {
 function calcDamage(attacker, defender, ignoreDef) {
   const atkStats = attacker.effectiveStats || getEffectiveStats(attacker);
   const defStats = defender.effectiveStats || getEffectiveStats(defender);
-  const defVal = ignoreDef ? 0 : (defStats.defense + (defender.buffDef || 0));
-  const atkVal = atkStats.attack + (attacker.buffAtk || 0);
-  const baseDamage = Math.max(1, atkVal - defVal);
+  const defVal = ignoreDef ? 0 : (defStats.defense + (defender.buffDef || 0) + (defender.permanentBonusDef || 0));
+  const atkVal = atkStats.attack + (attacker.buffAtk || 0) + (attacker.permanentBonusAtk || 0);
+  let baseDamage = Math.max(1, atkVal - defVal);
+  // Passif Mark : bonus degats si cible marquee
+  if (defender.marked > 0) baseDamage += defender.marked;
   const elemMod = getElementMod(attacker.element, defender.element);
-  return Math.max(1, Math.floor(baseDamage * elemMod));
+  let dmg = Math.max(1, Math.floor(baseDamage * elemMod));
+  // Passif Mage : Fragilite (+1 degat subi des attaques normales)
+  if (defender.type === 'mage') dmg += 1;
+  return dmg;
+}
+
+// Helper pour appliquer des degats avec shield, counter, grace
+function applyDamage(target, damage, events, source) {
+  let remaining = damage;
+  // Shield absorbe en premier
+  if (target.shield > 0) {
+    const absorbed = Math.min(target.shield, remaining);
+    target.shield -= absorbed;
+    remaining -= absorbed;
+    events.push({ type: 'shield_absorb', unit: target.name, absorbed });
+  }
+  target.currentHp = Math.max(0, target.currentHp - remaining);
+  // Counter : reflete des degats
+  if (target.counterDamage > 0 && source && source.alive) {
+    source.currentHp = Math.max(0, source.currentHp - target.counterDamage);
+    events.push({ type: 'counter_damage', unit: target.name, target: source.name, damage: target.counterDamage });
+    if (source.currentHp <= 0) checkKO(source, events);
+  }
+  if (target.currentHp <= 0) checkKO(target, events);
 }
 
 // --- Battle state management ---
@@ -585,6 +1046,10 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
 
   const makeUnit = (card, index, side) => {
     const es = getEffectiveStats(card);
+    // Passif Guerrier : +10% PV max
+    if (card.type === 'guerrier') {
+      es.hp = Math.floor(es.hp * 1.1);
+    }
     return {
       index,
       side,
@@ -610,9 +1075,32 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
       buffDef: 0,
       stunned: false,
       usedAbility: false,
-      canRevive: card.ability_name === 'Renaissance',
+      canRevive: ABILITY_MAP[card.ability_name]?.type === 'revive',
+      // Nouveaux champs
+      shield: 0,
+      poisoned: 0,
+      marked: 0,
+      counterDamage: 0,
+      permanentBonusAtk: 0,
+      permanentBonusDef: 0,
+      lowHpDefTriggered: false,
+      graceUsed: false,
+      lifestealPercent: 0,
     };
   };
+
+  // Passif Bete : Instinct de meute (+1 ATK si 2+ Betes dans l equipe)
+  const applyPackBonus = (team) => {
+    const beteCount = team.filter(u => u.type === 'bete').length;
+    if (beteCount >= 2) {
+      team.filter(u => u.type === 'bete').forEach(u => { u.permanentBonusAtk += 1; });
+    }
+  };
+
+  const pTeam = playerCards.map((c, i) => makeUnit(c, i, 'player'));
+  const eTeam = enemyCards.map((c, i) => makeUnit(c, i, 'enemy'));
+  applyPackBonus(pTeam);
+  applyPackBonus(eTeam);
 
   const state = {
     battleId,
@@ -620,8 +1108,8 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
     nodeId: nodeId || null,
     turn: 1,
     phase: 'player_turn',
-    playerTeam: playerCards.map((c, i) => makeUnit(c, i, 'player')),
-    enemyTeam: enemyCards.map((c, i) => makeUnit(c, i, 'enemy')),
+    playerTeam: pTeam,
+    enemyTeam: eTeam,
     log: [],
     result: null,
     lastAction: Date.now(),
@@ -639,6 +1127,13 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
   const events = [];
   const abilityName = unit.ability_name;
 
+  // Passif Mage : +20% degats d ability
+  const mageDmgMult = (unit.type === 'mage') ? 1.2 : 1;
+  const scaleDmg = (val) => Math.max(1, Math.floor(val * mageDmgMult));
+
+  const pickTarget = () => targets[0] || allEnemies.find(e => e.alive);
+  const weakestAlly = () => allAllies.filter(a => a.alive && a !== unit).sort((a, b) => a.currentHp - b.currentHp)[0];
+
   switch (ability.type) {
     case 'buff_atk':
       unit.buffAtk += ability.value;
@@ -649,11 +1144,11 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${ability.value} DEF` });
       break;
     case 'direct_damage': {
-      const target = targets[0] || allEnemies.find(e => e.alive);
+      const target = pickTarget();
       if (target) {
-        target.currentHp = Math.max(0, target.currentHp - ability.value);
-        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: ability.value });
-        if (target.currentHp <= 0) checkKO(target, events);
+        const dmg = scaleDmg(ability.value);
+        applyDamage(target, dmg, events, unit);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
       }
       break;
     }
@@ -661,39 +1156,40 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Ignore DEF' });
       break;
     case 'drain': {
-      const target = targets[0] || allEnemies.find(e => e.alive);
+      const target = pickTarget();
       if (target) {
-        target.currentHp = Math.max(0, target.currentHp - ability.damage);
+        const dmg = scaleDmg(ability.damage);
+        applyDamage(target, dmg, events, unit);
         unit.currentHp = Math.min(unit.maxHp, unit.currentHp + ability.heal);
-        events.push({ type: 'ability_drain', unit: unit.name, target: target.name, ability: abilityName, damage: ability.damage, heal: ability.heal });
-        if (target.currentHp <= 0) checkKO(target, events);
+        events.push({ type: 'ability_drain', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, heal: ability.heal });
       }
       break;
     }
-    case 'aoe_damage':
+    case 'aoe_damage': {
+      const dmg = scaleDmg(ability.value);
       allEnemies.filter(e => e.alive).forEach(enemy => {
-        enemy.currentHp = Math.max(0, enemy.currentHp - ability.value);
-        events.push({ type: 'ability_aoe', unit: unit.name, target: enemy.name, ability: abilityName, damage: ability.value });
-        if (enemy.currentHp <= 0) checkKO(enemy, events);
+        applyDamage(enemy, dmg, events, unit);
+        events.push({ type: 'ability_aoe', unit: unit.name, target: enemy.name, ability: abilityName, damage: dmg });
       });
       break;
+    }
     case 'revive':
-      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Peut revenir avec ${ability.value} PV` });
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Peut revenir avec ${ability.hp || ability.value} PV` });
       break;
     case 'stun': {
-      const target = targets[0] || allEnemies.find(e => e.alive);
+      const target = pickTarget();
       if (target) {
         if (ability.damage > 0) {
-          target.currentHp = Math.max(0, target.currentHp - ability.damage);
+          const dmg = scaleDmg(ability.damage);
+          applyDamage(target, dmg, events, unit);
         }
         target.stunned = true;
         events.push({ type: 'ability_stun', unit: unit.name, target: target.name, ability: abilityName, damage: ability.damage || 0 });
-        if (target.currentHp <= 0) checkKO(target, events);
       }
       break;
     }
     case 'debuff_atk': {
-      const target = targets[0] || allEnemies.find(e => e.alive);
+      const target = pickTarget();
       if (target) {
         target.buffAtk -= ability.value;
         events.push({ type: 'ability_debuff', unit: unit.name, target: target.name, ability: abilityName, desc: `-${ability.value} ATK` });
@@ -702,11 +1198,11 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
     }
     case 'first_turn_damage': {
       if (battle.turn === 1) {
-        const target = targets[0] || allEnemies.find(e => e.alive);
+        const target = pickTarget();
         if (target) {
-          target.currentHp = Math.max(0, target.currentHp - ability.value);
-          events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: ability.value });
-          if (target.currentHp <= 0) checkKO(target, events);
+          const dmg = scaleDmg(ability.value);
+          applyDamage(target, dmg, events, unit);
+          events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
         }
       }
       break;
@@ -716,23 +1212,246 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
         const aliveEnemies = allEnemies.filter(e => e.alive);
         if (aliveEnemies.length === 0) break;
         const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
-        target.currentHp = Math.max(0, target.currentHp - ability.damage);
-        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: ability.damage });
-        if (target.currentHp <= 0) checkKO(target, events);
+        const dmg = scaleDmg(ability.damage);
+        applyDamage(target, dmg, events, unit);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
       }
       break;
     }
+    // ===== NOUVEAUX TYPES =====
+    case 'heal_ally': {
+      const ally = weakestAlly();
+      if (ally) {
+        ally.currentHp = Math.min(ally.maxHp, ally.currentHp + ability.value);
+        events.push({ type: 'ability_heal', unit: unit.name, target: ally.name, ability: abilityName, heal: ability.value });
+      } else {
+        // Pas d allie, se soigne soi-meme
+        unit.currentHp = Math.min(unit.maxHp, unit.currentHp + ability.value);
+        events.push({ type: 'ability_heal', unit: unit.name, target: unit.name, ability: abilityName, heal: ability.value });
+      }
+      break;
+    }
+    case 'debuff_def': {
+      const target = pickTarget();
+      if (target) {
+        target.buffDef -= ability.value;
+        events.push({ type: 'ability_debuff', unit: unit.name, target: target.name, ability: abilityName, desc: `-${ability.value} DEF` });
+      }
+      break;
+    }
+    case 'counter':
+      unit.counterDamage = ability.value;
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Contre-attaque ${ability.value} degats` });
+      break;
+    case 'buff_team_atk':
+      allAllies.filter(a => a.alive).forEach(a => { a.buffAtk += ability.value; });
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${ability.value} ATK a l equipe` });
+      break;
+    case 'buff_team_def':
+      allAllies.filter(a => a.alive).forEach(a => { a.buffDef += ability.value; });
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${ability.value} DEF a l equipe` });
+      break;
+    case 'poison': {
+      const target = pickTarget();
+      if (target) {
+        target.poisoned = (target.poisoned || 0) + ability.damage;
+        events.push({ type: 'ability_poison', unit: unit.name, target: target.name, ability: abilityName, damage: ability.damage });
+      }
+      break;
+    }
+    case 'shield':
+      unit.shield = (unit.shield || 0) + ability.value;
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Bouclier +${ability.value}` });
+      break;
+    case 'execute': {
+      const target = pickTarget();
+      if (target) {
+        const isLow = (target.currentHp / target.maxHp) <= ability.threshold;
+        const dmg = scaleDmg(isLow ? ability.executeDamage : ability.damage);
+        applyDamage(target, dmg, events, unit);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, executed: isLow });
+      }
+      break;
+    }
+    case 'lifesteal_attack':
+      unit.lifestealPercent = ability.percent;
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Vole ${ability.percent}% PV` });
+      break;
+    case 'sacrifice': {
+      const target = pickTarget();
+      if (target) {
+        const dmg = scaleDmg(ability.targetDamage);
+        unit.currentHp = Math.max(1, unit.currentHp - ability.selfDamage);
+        applyDamage(target, dmg, events, unit);
+        events.push({ type: 'ability_sacrifice', unit: unit.name, target: target.name, ability: abilityName, selfDamage: ability.selfDamage, targetDamage: dmg });
+      }
+      break;
+    }
+    case 'aoe_debuff':
+      allEnemies.filter(e => e.alive).forEach(e => {
+        if (ability.stat === 'atk') e.buffAtk -= ability.value;
+        else e.buffDef -= ability.value;
+      });
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `-${ability.value} ${ability.stat === 'atk' ? 'ATK' : 'DEF'} a tous` });
+      break;
+    case 'damage_and_heal': {
+      const target = pickTarget();
+      const ally = weakestAlly();
+      if (target) {
+        const dmg = scaleDmg(ability.damage);
+        applyDamage(target, dmg, events, unit);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
+      }
+      if (ally) {
+        ally.currentHp = Math.min(ally.maxHp, ally.currentHp + ability.heal);
+        events.push({ type: 'ability_heal', unit: unit.name, target: ally.name, ability: abilityName, heal: ability.heal });
+      }
+      break;
+    }
+    case 'team_heal':
+      allAllies.filter(a => a.alive).forEach(a => {
+        a.currentHp = Math.min(a.maxHp, a.currentHp + ability.value);
+      });
+      events.push({ type: 'ability_team_heal', unit: unit.name, ability: abilityName, heal: ability.value });
+      break;
+    case 'mark': {
+      const target = pickTarget();
+      if (target) {
+        target.marked = ability.damageBonus;
+        events.push({ type: 'ability_mark', unit: unit.name, target: target.name, ability: abilityName, bonus: ability.damageBonus });
+      }
+      break;
+    }
+    case 'conditional_damage': {
+      const deadAllies = allAllies.filter(a => !a.alive).length;
+      const deadEnemies = allEnemies.filter(e => !e.alive).length;
+      let dmg = ability.baseDamage;
+      if (ability.bonusPerDeadAlly) dmg += deadAllies * ability.bonusPerDeadAlly;
+      if (ability.bonusPerDeadEnemy) dmg += deadEnemies * ability.bonusPerDeadEnemy;
+      dmg = scaleDmg(dmg);
+      if (ability.aoe) {
+        allEnemies.filter(e => e.alive).forEach(enemy => {
+          applyDamage(enemy, dmg, events, unit);
+          events.push({ type: 'ability_aoe', unit: unit.name, target: enemy.name, ability: abilityName, damage: dmg });
+        });
+      } else {
+        const target = pickTarget();
+        if (target) {
+          applyDamage(target, dmg, events, unit);
+          events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
+        }
+      }
+      break;
+    }
+    case 'combo':
+      for (const fx of ability.effects) {
+        switch (fx.effect) {
+          case 'damage': {
+            const t = pickTarget();
+            if (t) {
+              const d = scaleDmg(fx.value);
+              applyDamage(t, d, events, unit);
+              events.push({ type: 'ability_damage', unit: unit.name, target: t.name, ability: abilityName, damage: d });
+            }
+            break;
+          }
+          case 'aoe_damage': {
+            const d = scaleDmg(fx.value);
+            allEnemies.filter(e => e.alive).forEach(e => {
+              applyDamage(e, d, events, unit);
+              events.push({ type: 'ability_aoe', unit: unit.name, target: e.name, ability: abilityName, damage: d });
+            });
+            break;
+          }
+          case 'heal':
+            unit.currentHp = Math.min(unit.maxHp, unit.currentHp + fx.value);
+            events.push({ type: 'ability_heal', unit: unit.name, target: unit.name, ability: abilityName, heal: fx.value });
+            break;
+          case 'team_heal':
+            allAllies.filter(a => a.alive).forEach(a => {
+              a.currentHp = Math.min(a.maxHp, a.currentHp + fx.value);
+            });
+            events.push({ type: 'ability_team_heal', unit: unit.name, ability: abilityName, heal: fx.value });
+            break;
+          case 'buff_atk':
+            unit.buffAtk += fx.value;
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${fx.value} ATK` });
+            break;
+          case 'buff_def':
+            unit.buffDef += fx.value;
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${fx.value} DEF` });
+            break;
+          case 'buff_team_atk':
+            allAllies.filter(a => a.alive).forEach(a => { a.buffAtk += fx.value; });
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${fx.value} ATK equipe` });
+            break;
+          case 'buff_team_def':
+            allAllies.filter(a => a.alive).forEach(a => { a.buffDef += fx.value; });
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${fx.value} DEF equipe` });
+            break;
+          case 'debuff_atk': {
+            const t = pickTarget();
+            if (t) t.buffAtk -= fx.value;
+            events.push({ type: 'ability_debuff', unit: unit.name, target: t?.name, ability: abilityName, desc: `-${fx.value} ATK` });
+            break;
+          }
+          case 'aoe_debuff':
+            allEnemies.filter(e => e.alive).forEach(e => { e.buffAtk -= fx.value; });
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `-${fx.value} ATK a tous` });
+            break;
+          case 'stun': {
+            const t = pickTarget();
+            if (t) t.stunned = true;
+            events.push({ type: 'ability_stun', unit: unit.name, target: t?.name, ability: abilityName, damage: 0 });
+            break;
+          }
+          case 'mark': {
+            const t = pickTarget();
+            if (t) t.marked = fx.damageBonus || fx.value;
+            events.push({ type: 'ability_mark', unit: unit.name, target: t?.name, ability: abilityName, bonus: fx.damageBonus || fx.value });
+            break;
+          }
+          case 'shield':
+            unit.shield = (unit.shield || 0) + fx.value;
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Bouclier +${fx.value}` });
+            break;
+          case 'poison': {
+            const t = pickTarget();
+            if (t) t.poisoned = (t.poisoned || 0) + fx.value;
+            events.push({ type: 'ability_poison', unit: unit.name, target: t?.name, ability: abilityName, damage: fx.value });
+            break;
+          }
+          case 'revive':
+            unit.canRevive = true;
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Revient avec ${fx.value} PV` });
+            break;
+        }
+      }
+      break;
   }
   return events;
 }
 
 function checkKO(unit, events) {
   if (unit.currentHp <= 0) {
+    // Passif Divin : Grace (15% de survivre a 1 PV, une seule fois)
+    if (unit.type === 'divin' && !unit.graceUsed && Math.random() < 0.15) {
+      unit.currentHp = 1;
+      unit.graceUsed = true;
+      events.push({ type: 'grace_survive', unit: unit.name });
+      return;
+    }
     if (unit.canRevive) {
       const ability = ABILITY_MAP[unit.ability_name];
-      unit.currentHp = ability.value;
+      let reviveHp = ability.hp || ability.value;
+      // For combo abilities, find the revive effect's value
+      if (!reviveHp && ability.type === 'combo' && ability.effects) {
+        const reviveEffect = ability.effects.find(fx => fx.effect === 'revive');
+        if (reviveEffect) reviveHp = reviveEffect.value;
+      }
+      unit.currentHp = reviveHp || 15;
       unit.canRevive = false;
-      events.push({ type: 'revive', unit: unit.name, hp: ability.value });
+      events.push({ type: 'revive', unit: unit.name, hp: unit.currentHp });
     } else {
       unit.alive = false;
       events.push({ type: 'ko', unit: unit.name });
@@ -751,10 +1470,33 @@ function checkWin(battle) {
 function aiTurn(battle) {
   const events = [];
   const aliveEnemies = battle.enemyTeam.filter(u => u.alive);
-  const alivePlayers = battle.playerTeam.filter(u => u.alive);
+
+  // Aura Divin ennemie
+  const divinCountE = battle.enemyTeam.filter(u => u.alive && u.type === 'divin').length;
+  if (divinCountE > 0) {
+    battle.enemyTeam.filter(u => u.alive).forEach(u => {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + divinCountE);
+    });
+    events.push({ type: 'type_passive', desc: `Aura divine ennemie : +${divinCountE} PV` });
+  }
 
   for (const enemy of aliveEnemies) {
-    if (!enemy.alive || alivePlayers.filter(p => p.alive).length === 0) continue;
+    if (!enemy.alive || battle.playerTeam.filter(p => p.alive).length === 0) continue;
+
+    // Tick poison ennemi
+    if (enemy.poisoned > 0) {
+      enemy.currentHp = Math.max(1, enemy.currentHp - enemy.poisoned);
+      events.push({ type: 'poison_tick', unit: enemy.name, damage: enemy.poisoned });
+      enemy.poisoned = 0;
+      if (enemy.currentHp <= 0) { checkKO(enemy, events); continue; }
+    }
+
+    // Fortification Guerrier ennemi
+    if (enemy.type === 'guerrier' && !enemy.lowHpDefTriggered && enemy.currentHp / enemy.maxHp < 0.3) {
+      enemy.permanentBonusDef += 2;
+      enemy.lowHpDefTriggered = true;
+      events.push({ type: 'type_passive', desc: `${enemy.name} active Fortification ! +2 DEF` });
+    }
 
     if (enemy.stunned) {
       enemy.stunned = false;
@@ -764,7 +1506,7 @@ function aiTurn(battle) {
 
     // Ability on first attack
     if (!enemy.usedAbility) {
-      const abilityEvents = resolveAbility(enemy, alivePlayers, battle.enemyTeam, battle.playerTeam, battle);
+      const abilityEvents = resolveAbility(enemy, battle.playerTeam.filter(p => p.alive), battle.enemyTeam, battle.playerTeam, battle);
       events.push(...abilityEvents);
       if (checkWin(battle)) return events;
     }
@@ -776,10 +1518,19 @@ function aiTurn(battle) {
 
     const ignoreDef = ABILITY_MAP[enemy.ability_name]?.type === 'ignore_def';
     const dmg = calcDamage(enemy, target, ignoreDef);
-    target.currentHp = Math.max(0, target.currentHp - dmg);
+    applyDamage(target, dmg, events, enemy);
     events.push({ type: 'attack', attacker: enemy.name, attackerIndex: enemy.index, target: target.name, targetIndex: target.index, damage: dmg, side: 'enemy' });
 
-    if (target.currentHp <= 0) checkKO(target, events);
+    // Lifesteal ennemi
+    if (enemy.lifestealPercent > 0) {
+      const healed = Math.floor(dmg * enemy.lifestealPercent / 100);
+      enemy.currentHp = Math.min(enemy.maxHp, enemy.currentHp + healed);
+    }
+    // Feroce Bete ennemi
+    if (!target.alive && enemy.type === 'bete') {
+      enemy.permanentBonusAtk += 1;
+    }
+
     if (checkWin(battle)) return events;
   }
 
@@ -1141,6 +1892,28 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
 
   const events = [];
 
+  // --- Passifs de debut de tour ---
+  // Aura Divin (soigne 1 PV/Divin vivant)
+  const divinCountP = battle.playerTeam.filter(u => u.alive && u.type === 'divin').length;
+  if (divinCountP > 0) {
+    battle.playerTeam.filter(u => u.alive).forEach(u => {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + divinCountP);
+    });
+    events.push({ type: 'type_passive', desc: `Aura divine : +${divinCountP} PV a l equipe` });
+  }
+  // Tick Poison joueur
+  if (attacker.poisoned > 0) {
+    attacker.currentHp = Math.max(1, attacker.currentHp - attacker.poisoned);
+    events.push({ type: 'poison_tick', unit: attacker.name, damage: attacker.poisoned });
+    attacker.poisoned = 0;
+  }
+  // Fortification Guerrier
+  if (attacker.type === 'guerrier' && !attacker.lowHpDefTriggered && attacker.currentHp / attacker.maxHp < 0.3) {
+    attacker.permanentBonusDef += 2;
+    attacker.lowHpDefTriggered = true;
+    events.push({ type: 'type_passive', desc: `${attacker.name} active Fortification ! +2 DEF permanent` });
+  }
+
   // Player stunned check
   if (attacker.stunned) {
     attacker.stunned = false;
@@ -1160,10 +1933,19 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
     if (target.alive) {
       const ignoreDef = ABILITY_MAP[attacker.ability_name]?.type === 'ignore_def';
       const dmg = calcDamage(attacker, target, ignoreDef);
-      target.currentHp = Math.max(0, target.currentHp - dmg);
+      applyDamage(target, dmg, events, attacker);
       events.push({ type: 'attack', attacker: attacker.name, attackerIndex, target: target.name, targetIndex, damage: dmg, side: 'player' });
-
-      if (target.currentHp <= 0) checkKO(target, events);
+      // Lifesteal
+      if (attacker.lifestealPercent > 0) {
+        const healed = Math.floor(dmg * attacker.lifestealPercent / 100);
+        attacker.currentHp = Math.min(attacker.maxHp, attacker.currentHp + healed);
+        events.push({ type: 'ability_heal', unit: attacker.name, target: attacker.name, ability: 'Vampirisme', heal: healed });
+      }
+      // Passif Bete : Feroce (+1 ATK permanent sur KO)
+      if (!target.alive && attacker.type === 'bete') {
+        attacker.permanentBonusAtk += 1;
+        events.push({ type: 'type_passive', desc: `${attacker.name} gagne en feroce ! +1 ATK permanent` });
+      }
     }
   }
 
@@ -1178,9 +1960,14 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
 
   battle.turn++;
 
-  // Reset buffs each turn
-  battle.playerTeam.forEach(u => { u.buffAtk = 0; u.buffDef = 0; });
-  battle.enemyTeam.forEach(u => { u.buffAtk = 0; u.buffDef = 0; });
+  // Reset buffs temporaires chaque tour (mais pas les permanents)
+  const resetTurnBuffs = (u) => {
+    u.buffAtk = 0; u.buffDef = 0;
+    u.marked = 0; u.counterDamage = 0;
+    u.lifestealPercent = 0;
+  };
+  battle.playerTeam.forEach(resetTurnBuffs);
+  battle.enemyTeam.forEach(resetTurnBuffs);
 
   res.json({ events, ...getBattleSnapshot(battle) });
 });
@@ -1552,6 +2339,6 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Gacha Game lance sur http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Gacha Game lance sur http://0.0.0.0:${PORT}`);
 });
