@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Campagne</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='/combat'">[ RETOUR ]</button>
+  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+
+  <div class="crt-screen">
+    <div class="campaign-wrapper">
+      <h1 class="menu-title">CAMPAGNE</h1>
+
+      <!-- Map -->
+      <div class="campaign-map" id="campaign-map"></div>
+
+      <!-- Node detail panel -->
+      <div class="campaign-detail hidden" id="campaign-detail">
+        <h2 class="campaign-node-name" id="node-name"></h2>
+        <div class="campaign-node-info" id="node-info"></div>
+        <div class="campaign-node-reward" id="node-reward"></div>
+
+        <h3 class="team-select-title">Selectionnez 3 cartes :</h3>
+        <div class="team-select-grid" id="team-grid"></div>
+
+        <div class="team-selected" id="team-selected">
+          <div class="team-slot" id="slot-0">Slot 1</div>
+          <div class="team-slot" id="slot-1">Slot 2</div>
+          <div class="team-slot" id="slot-2">Slot 3</div>
+        </div>
+
+        <button class="submit-btn campaign-fight-btn" id="fight-btn" onclick="startCampaignBattle()" disabled>COMBATTRE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-flash hidden" id="screen-flash"></div>
+  <div class="version-tag">v0.6.0</div>
+
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/campaign.js"></script>
+</body>
+</html>

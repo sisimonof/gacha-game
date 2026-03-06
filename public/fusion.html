@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Fusion</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
+  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+
+  <div class="crt-screen">
+    <div class="fusion-wrapper">
+      <h1 class="menu-title">FUSION</h1>
+      <p class="shop-subtitle">- Fusionnez 5 cartes identiques (35% de succes) -</p>
+
+      <!-- Available cards -->
+      <div class="fusion-grid" id="fusion-grid"></div>
+      <p class="collection-empty hidden" id="empty-msg">Aucune carte eligible. Il faut 5 copies identiques non-fusionnees.</p>
+
+      <!-- Fusion panel -->
+      <div class="fusion-panel hidden" id="fusion-panel">
+        <h2 class="fusion-panel-title" id="fusion-card-name"></h2>
+        <div class="fusion-slots" id="fusion-slots"></div>
+        <button class="submit-btn fusion-btn" id="fusion-btn" onclick="startFusion()">FUSIONNER (35%)</button>
+      </div>
+
+      <!-- Wheel overlay -->
+      <div class="fusion-overlay hidden" id="fusion-overlay">
+        <div class="fusion-wheel-container">
+          <div class="fusion-wheel-pointer">▼</div>
+          <canvas id="fusion-wheel" width="400" height="400"></canvas>
+        </div>
+        <div class="fusion-result hidden" id="fusion-result">
+          <h2 id="fusion-result-text"></h2>
+          <div id="fusion-result-card"></div>
+          <button class="submit-btn" onclick="closeFusionResult()">CONTINUER</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-flash hidden" id="screen-flash"></div>
+  <div class="version-tag">v0.6.0</div>
+
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/fusion.js"></script>
+</body>
+</html>

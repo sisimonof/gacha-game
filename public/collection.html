@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Collection</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
+  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+
+  <div class="crt-screen">
+    <div class="collection-wrapper">
+      <h1 class="menu-title">COLLECTION</h1>
+      <p class="shop-subtitle">- Vos cartes obtenues -</p>
+
+      <div class="collection-grid" id="collection-grid">
+        <!-- Rempli par JS -->
+      </div>
+
+      <p class="collection-empty hidden" id="empty-msg">Aucune carte. Visitez la boutique !</p>
+
+      <!-- Zone de vente -->
+      <div class="sell-zone" id="sell-zone">
+        <div class="sell-zone-icon">&#9876;</div>
+        <div class="sell-zone-text">VENDRE</div>
+        <div class="sell-zone-hint">Glissez une carte ici</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay animation de vente -->
+  <div class="sell-overlay hidden" id="sell-overlay">
+    <div class="sell-card-container" id="sell-card-container"></div>
+    <div class="sell-price-popup" id="sell-price-popup"></div>
+  </div>
+
+  <!-- Flash écran -->
+  <div class="screen-flash hidden" id="screen-flash"></div>
+
+  <div class="version-tag">v0.5.0</div>
+
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/collection.js"></script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Combat</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="crt-screen">
+    <div class="battle-wrapper">
+      <!-- Turn info -->
+      <div class="battle-header">
+        <div class="battle-turn" id="battle-turn">Tour 1</div>
+        <div class="battle-vs">VS</div>
+      </div>
+
+      <!-- Enemy team -->
+      <div class="battle-team battle-enemy-team" id="enemy-team"></div>
+
+      <!-- Battle log -->
+      <div class="battle-log" id="battle-log"></div>
+
+      <!-- Player team -->
+      <div class="battle-team battle-player-team" id="player-team"></div>
+
+      <!-- Action bar -->
+      <div class="battle-actions" id="battle-actions">
+        <div class="battle-instruction" id="battle-instruction">Selectionnez votre carte puis une cible ennemie</div>
+        <button class="submit-btn battle-attack-btn hidden" id="attack-btn" onclick="doAttack()">ATTAQUER</button>
+      </div>
+
+      <!-- Result overlay -->
+      <div class="battle-result-overlay hidden" id="battle-result">
+        <div class="battle-result-box" id="battle-result-box">
+          <h1 id="result-title"></h1>
+          <div id="result-rewards"></div>
+          <button class="submit-btn" id="result-btn" onclick="leaveBattle()">CONTINUER</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-flash hidden" id="screen-flash"></div>
+  <div class="version-tag">v0.6.0</div>
+
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/battle.js"></script>
+</body>
+</html>

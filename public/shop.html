@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Boutique</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
+  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+
+  <div class="crt-screen">
+
+    <!-- VUE BOUTIQUE -->
+    <div class="shop-view" id="shop-view">
+      <div class="boosters-shelf" id="boosters-shelf">
+        <!-- Rempli par JS -->
+      </div>
+    </div>
+
+    <!-- VUE OUVERTURE -->
+    <div class="opening-view hidden" id="opening-view">
+      <!-- Déchirure du booster -->
+      <div class="tear-container hidden" id="tear-container">
+        <div class="tear-half tear-left" id="tear-left"></div>
+        <div class="tear-half tear-right" id="tear-right"></div>
+        <div class="tear-glow"></div>
+      </div>
+
+      <!-- Reveal des cartes -->
+      <div class="reveal-scene hidden" id="reveal-scene">
+        <h2 class="reveal-title" id="reveal-title">OUVERTURE...</h2>
+        <div class="cards-reveal" id="cards-reveal"></div>
+        <button class="submit-btn opening-done-btn hidden" id="done-btn">> CONTINUER</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Flash écran -->
+  <div class="screen-flash hidden" id="screen-flash"></div>
+
+  <div class="version-tag">v0.5.0</div>
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/shop.js"></script>
+</body>
+</html>

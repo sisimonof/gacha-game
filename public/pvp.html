@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - PvP</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='/combat'">[ RETOUR ]</button>
+  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+
+  <div class="crt-screen">
+    <div class="pvp-wrapper">
+      <h1 class="menu-title">PVP</h1>
+
+      <!-- Defense team section -->
+      <div class="pvp-section">
+        <h2 class="pvp-section-title">EQUIPE DE DEFENSE</h2>
+        <div class="pvp-defense-team" id="defense-team">
+          <p class="pvp-no-team">Aucune equipe definie</p>
+        </div>
+        <button class="submit-btn pvp-edit-btn" onclick="showTeamEditor('defense')">MODIFIER</button>
+      </div>
+
+      <!-- Find opponent -->
+      <div class="pvp-section">
+        <h2 class="pvp-section-title">TROUVER UN ADVERSAIRE</h2>
+        <button class="submit-btn pvp-find-btn" id="find-btn" onclick="findOpponent()">RECHERCHER</button>
+
+        <div class="pvp-opponent hidden" id="opponent-section">
+          <h3 id="opponent-name"></h3>
+          <div class="pvp-opponent-team" id="opponent-team"></div>
+
+          <h3 class="pvp-section-title">VOTRE EQUIPE D'ATTAQUE</h3>
+          <div class="team-select-grid" id="attack-team-grid"></div>
+          <div class="team-selected" id="attack-team-slots">
+            <div class="team-slot" id="atk-slot-0">Slot 1</div>
+            <div class="team-slot" id="atk-slot-1">Slot 2</div>
+            <div class="team-slot" id="atk-slot-2">Slot 3</div>
+          </div>
+          <button class="submit-btn pvp-attack-btn" id="pvp-attack-btn" onclick="startPvpBattle()" disabled>ATTAQUER</button>
+        </div>
+      </div>
+
+      <!-- Team editor modal -->
+      <div class="pvp-editor-overlay hidden" id="editor-overlay">
+        <div class="pvp-editor">
+          <h2>Selectionnez 3 cartes</h2>
+          <div class="team-select-grid" id="editor-grid"></div>
+          <div class="team-selected" id="editor-slots">
+            <div class="team-slot" id="ed-slot-0">Slot 1</div>
+            <div class="team-slot" id="ed-slot-1">Slot 2</div>
+            <div class="team-slot" id="ed-slot-2">Slot 3</div>
+          </div>
+          <div class="pvp-editor-actions">
+            <button class="submit-btn" onclick="saveDefenseTeam()">VALIDER</button>
+            <button class="submit-btn" style="border-color:#ff4444;color:#ff4444" onclick="closeEditor()">ANNULER</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-flash hidden" id="screen-flash"></div>
+  <div class="version-tag">v0.6.0</div>
+
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/pvp.js"></script>
+</body>
+</html>

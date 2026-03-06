@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Combat</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
+
+  <div class="crt-screen">
+    <div class="combat-hub">
+      <h1 class="menu-title">COMBAT</h1>
+      <p class="shop-subtitle">- Choisissez votre mode -</p>
+
+      <div class="combat-grid">
+        <button class="combat-mode-btn" onclick="window.location.href='/campaign'">
+          <span class="combat-mode-icon">🗺️</span>
+          <span class="combat-mode-label">CAMPAGNE</span>
+          <span class="combat-mode-desc">Explorez 15 niveaux et gagnez des recompenses</span>
+        </button>
+        <button class="combat-mode-btn" onclick="window.location.href='/pvp'">
+          <span class="combat-mode-icon">⚔️</span>
+          <span class="combat-mode-label">PVP</span>
+          <span class="combat-mode-desc">Affrontez d'autres joueurs</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="version-tag">v0.6.0</div>
+  <script src="/js/combat.js"></script>
+</body>
+</html>

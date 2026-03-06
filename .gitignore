@@ -1,0 +1,6 @@
+node_modules/
+gacha.db
+gacha.db-shm
+gacha.db-wal
+.env
+.DS_Store
