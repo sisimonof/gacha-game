@@ -1,9 +1,28 @@
-// collection.js — Drag & Drop + Systeme de vente (updated with shiny/fused)
+// collection.js — Filtres, Tri, Recherche + Drag & Drop Vente
 
 let currentCredits = 0;
 let sellPrices = {};
 let cardsData = [];
+let filteredCards = [];
 let isSelling = false;
+
+// Etat des filtres
+const filterState = {
+  search: '',
+  rarity: 'all',
+  element: 'all',
+  type: 'all',
+  shiny: false,
+  fused: false,
+  sort: 'rarity'
+};
+
+// Ordre de rarete pour le tri
+const RARITY_ORDER = { commune: 0, rare: 1, epique: 2, legendaire: 3 };
+
+// ==========================================
+//  CHARGEMENT INITIAL
+// ==========================================
 
 async function loadCredits() {
   const res = await fetch('/api/me');
@@ -18,54 +37,159 @@ async function loadSellPrices() {
   if (res.ok) sellPrices = await res.json();
 }
 
-function animateCredits(from, to) {
-  const el = document.getElementById('credits-count');
-  const display = document.querySelector('.credits-display');
-  const duration = 600;
-  const start = performance.now();
+// ==========================================
+//  STATS D'INVENTAIRE
+// ==========================================
 
-  display.classList.remove('credits-flash');
-  void display.offsetWidth;
-  display.classList.add('credits-flash');
+function updateStats(cards) {
+  const total = cards.length;
+  let commune = 0, rare = 0, epique = 0, legendaire = 0, shiny = 0;
 
-  function step(now) {
-    const progress = Math.min((now - start) / duration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    el.textContent = Math.round(from + (to - from) * eased);
-    if (progress < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
+  cards.forEach(c => {
+    if (c.rarity === 'commune') commune++;
+    else if (c.rarity === 'rare') rare++;
+    else if (c.rarity === 'epique') epique++;
+    else if (c.rarity === 'legendaire') legendaire++;
+    if (c.is_shiny) shiny++;
+  });
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-commune').textContent = commune;
+  document.getElementById('stat-rare').textContent = rare;
+  document.getElementById('stat-epique').textContent = epique;
+  document.getElementById('stat-legendaire').textContent = legendaire;
+  document.getElementById('stat-shiny').textContent = shiny;
 }
 
-function renderCollection(cards) {
-  cardsData = cards;
+// ==========================================
+//  FILTRAGE & TRI
+// ==========================================
+
+function getCardPrice(card) {
+  let price = sellPrices[card.rarity] || 0;
+  if (card.is_shiny) price *= 3;
+  if (card.is_fused) price *= 2;
+  return price;
+}
+
+function getEffectiveStat(card, stat) {
+  const mult = card.is_fused ? 2 : 1;
+  return card[stat] * mult;
+}
+
+function applyFilters() {
+  let cards = [...cardsData];
+
+  // Filtre recherche
+  if (filterState.search) {
+    const q = filterState.search.toLowerCase();
+    cards = cards.filter(c => c.name.toLowerCase().includes(q));
+  }
+
+  // Filtre rarete
+  if (filterState.rarity !== 'all') {
+    cards = cards.filter(c => c.rarity === filterState.rarity);
+  }
+
+  // Filtre element
+  if (filterState.element !== 'all') {
+    cards = cards.filter(c => c.element === filterState.element);
+  }
+
+  // Filtre type
+  if (filterState.type !== 'all') {
+    cards = cards.filter(c => c.type === filterState.type);
+  }
+
+  // Filtre shiny
+  if (filterState.shiny) {
+    cards = cards.filter(c => c.is_shiny);
+  }
+
+  // Filtre fused
+  if (filterState.fused) {
+    cards = cards.filter(c => c.is_fused);
+  }
+
+  // Tri
+  cards.sort((a, b) => {
+    switch (filterState.sort) {
+      case 'rarity':
+        return (RARITY_ORDER[b.rarity] || 0) - (RARITY_ORDER[a.rarity] || 0);
+      case 'atk':
+        return getEffectiveStat(b, 'attack') - getEffectiveStat(a, 'attack');
+      case 'def':
+        return getEffectiveStat(b, 'defense') - getEffectiveStat(a, 'defense');
+      case 'hp':
+        return getEffectiveStat(b, 'hp') - getEffectiveStat(a, 'hp');
+      case 'name_asc':
+        return a.name.localeCompare(b.name, 'fr');
+      case 'name_desc':
+        return b.name.localeCompare(a.name, 'fr');
+      case 'price':
+        return getCardPrice(b) - getCardPrice(a);
+      default:
+        return 0;
+    }
+  });
+
+  filteredCards = cards;
+
+  // Mise a jour compteur resultats
+  const countEl = document.getElementById('filter-result-count');
+  if (filterState.search || filterState.rarity !== 'all' || filterState.element !== 'all' ||
+      filterState.type !== 'all' || filterState.shiny || filterState.fused) {
+    countEl.textContent = `${cards.length} carte${cards.length !== 1 ? 's' : ''} trouvee${cards.length !== 1 ? 's' : ''}`;
+    countEl.classList.add('visible');
+  } else {
+    countEl.textContent = '';
+    countEl.classList.remove('visible');
+  }
+
+  renderFilteredCards(cards);
+}
+
+// ==========================================
+//  RENDU DES CARTES
+// ==========================================
+
+function renderFilteredCards(cards) {
   const grid = document.getElementById('collection-grid');
   const emptyMsg = document.getElementById('empty-msg');
+  const noResultsMsg = document.getElementById('no-results-msg');
 
-  if (cards.length === 0) {
+  // Si pas de cartes du tout
+  if (cardsData.length === 0) {
     grid.innerHTML = '';
     emptyMsg.classList.remove('hidden');
+    noResultsMsg.classList.add('hidden');
     return;
   }
 
   emptyMsg.classList.add('hidden');
 
+  // Si filtres actifs mais aucun resultat
+  if (cards.length === 0) {
+    grid.innerHTML = '';
+    noResultsMsg.classList.remove('hidden');
+    return;
+  }
+
+  noResultsMsg.classList.add('hidden');
+
   grid.innerHTML = cards.map((card, idx) => {
     const r = RARITY_COLORS[card.rarity];
-    let price = sellPrices[card.rarity] || 0;
-    if (card.is_shiny) price *= 3;
-    if (card.is_fused) price *= 2;
-
+    const price = getCardPrice(card);
     const shinyClass = card.is_shiny ? 'collection-card-shiny' : '';
     const fusedClass = card.is_fused ? 'collection-card-fused' : '';
 
     return `
-      <div class="collection-card rarity-${card.rarity} ${shinyClass} ${fusedClass}"
+      <div class="collection-card rarity-${card.rarity} ${shinyClass} ${fusedClass} card-appear"
            draggable="true"
            data-card-idx="${idx}"
            data-user-card-id="${card.user_card_id}"
            data-card-id="${card.id}"
-           style="border-color:${r.color}; box-shadow:0 0 12px ${r.glow}">
+           style="border-color:${r.color}; box-shadow:0 0 12px ${r.glow}; animation-delay:${Math.min(idx * 30, 600)}ms">
         ${renderHolo(card.rarity, card.is_shiny)}
         ${renderBadges(card)}
         <div class="card-count">x${card.count}</div>
@@ -86,6 +210,7 @@ function renderCollection(cards) {
     `;
   }).join('');
 
+  // Click pour detail
   grid.querySelectorAll('.collection-card').forEach((el) => {
     const idx = parseInt(el.dataset.cardIdx);
     el.addEventListener('click', (e) => {
@@ -97,6 +222,91 @@ function renderCollection(cards) {
   setupDragOnCards();
   initTiltEffect(grid);
 }
+
+function renderCollection(cards) {
+  cardsData = cards;
+  updateStats(cards);
+  applyFilters();
+}
+
+// ==========================================
+//  EVENT LISTENERS FILTRES
+// ==========================================
+
+function setupFilterListeners() {
+  // Recherche
+  const searchInput = document.getElementById('search-input');
+  searchInput.addEventListener('input', () => {
+    filterState.search = searchInput.value.trim();
+    applyFilters();
+  });
+
+  // Boutons de filtre (rarete, element, type)
+  document.querySelectorAll('.filter-btn[data-filter][data-value]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filterType = btn.dataset.filter;
+      const value = btn.dataset.value;
+
+      // Desactiver les autres boutons du meme groupe
+      document.querySelectorAll(`.filter-btn[data-filter="${filterType}"]`).forEach(b => {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+
+      filterState[filterType] = value;
+      applyFilters();
+    });
+  });
+
+  // Toggle shiny
+  document.getElementById('filter-shiny').addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    filterState.shiny = !filterState.shiny;
+    btn.classList.toggle('active', filterState.shiny);
+    applyFilters();
+  });
+
+  // Toggle fused
+  document.getElementById('filter-fused').addEventListener('click', (e) => {
+    const btn = e.currentTarget;
+    filterState.fused = !filterState.fused;
+    btn.classList.toggle('active', filterState.fused);
+    applyFilters();
+  });
+
+  // Tri
+  document.getElementById('sort-select').addEventListener('change', (e) => {
+    filterState.sort = e.target.value;
+    applyFilters();
+  });
+}
+
+// ==========================================
+//  ANIMATION CREDITS
+// ==========================================
+
+function animateCredits(from, to) {
+  const el = document.getElementById('credits-count');
+  const display = document.querySelector('.credits-display');
+  const duration = 600;
+  const start = performance.now();
+
+  display.classList.remove('credits-flash');
+  void display.offsetWidth;
+  display.classList.add('credits-flash');
+
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(from + (to - from) * eased);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+// ==========================================
+//  DRAG & DROP VENTE
+// ==========================================
 
 function setupDragOnCards() {
   const grid = document.getElementById('collection-grid');
@@ -208,9 +418,7 @@ function playSellAnimation(card) {
   const pricePopup = document.getElementById('sell-price-popup');
 
   const r = RARITY_COLORS[card.rarity];
-  let price = sellPrices[card.rarity] || 0;
-  if (card.is_shiny) price *= 3;
-  if (card.is_fused) price *= 2;
+  const price = getCardPrice(card);
 
   container.innerHTML = `
     <div class="collection-card rarity-${card.rarity}" style="border-color:${r.color}; box-shadow:0 0 12px ${r.glow}; min-height:300px;">
@@ -249,6 +457,10 @@ function screenFlash() {
   }, 400);
 }
 
+// ==========================================
+//  CHARGEMENT COLLECTION
+// ==========================================
+
 async function loadCollection() {
   const res = await fetch('/api/collection');
   if (!res.ok) { window.location.href = '/'; return; }
@@ -257,6 +469,7 @@ async function loadCollection() {
 }
 
 async function init() {
+  setupFilterListeners();
   await Promise.all([loadCredits(), loadSellPrices()]);
   await loadCollection();
 }

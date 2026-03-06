@@ -13,13 +13,87 @@
   <div class="crt-screen">
     <div class="collection-wrapper">
       <h1 class="menu-title">COLLECTION</h1>
-      <p class="shop-subtitle">- Vos cartes obtenues -</p>
 
+      <!-- Stats d'inventaire -->
+      <div class="collection-stats" id="collection-stats">
+        <div class="stat-chip stat-total"><span class="stat-icon">📦</span> <span id="stat-total">0</span> cartes</div>
+        <div class="stat-chip stat-commune"><span class="stat-icon">⚪</span> <span id="stat-commune">0</span></div>
+        <div class="stat-chip stat-rare"><span class="stat-icon">🔵</span> <span id="stat-rare">0</span></div>
+        <div class="stat-chip stat-epique"><span class="stat-icon">🟣</span> <span id="stat-epique">0</span></div>
+        <div class="stat-chip stat-legendaire"><span class="stat-icon">🟡</span> <span id="stat-legendaire">0</span></div>
+        <div class="stat-chip stat-shiny"><span class="stat-icon">✨</span> <span id="stat-shiny">0</span></div>
+      </div>
+
+      <!-- Toolbar de filtres -->
+      <div class="collection-toolbar" id="collection-toolbar">
+
+        <!-- Recherche -->
+        <div class="filter-row search-row">
+          <input type="text" class="search-input" id="search-input" placeholder="> Rechercher une carte..." autocomplete="off">
+        </div>
+
+        <!-- Filtres Rarete -->
+        <div class="filter-row">
+          <span class="filter-label">RARETE</span>
+          <button class="filter-btn active" data-filter="rarity" data-value="all">TOUS</button>
+          <button class="filter-btn" data-filter="rarity" data-value="commune">COMMUNE</button>
+          <button class="filter-btn" data-filter="rarity" data-value="rare">RARE</button>
+          <button class="filter-btn" data-filter="rarity" data-value="epique">EPIQUE</button>
+          <button class="filter-btn" data-filter="rarity" data-value="legendaire">LEGEND.</button>
+        </div>
+
+        <!-- Filtres Element -->
+        <div class="filter-row">
+          <span class="filter-label">ELEMENT</span>
+          <button class="filter-btn active" data-filter="element" data-value="all">TOUS</button>
+          <button class="filter-btn" data-filter="element" data-value="feu">🔥 FEU</button>
+          <button class="filter-btn" data-filter="element" data-value="eau">💧 EAU</button>
+          <button class="filter-btn" data-filter="element" data-value="terre">🌿 TERRE</button>
+          <button class="filter-btn" data-filter="element" data-value="lumiere">✨ LUMIERE</button>
+          <button class="filter-btn" data-filter="element" data-value="ombre">🌑 OMBRE</button>
+        </div>
+
+        <!-- Filtres Type -->
+        <div class="filter-row">
+          <span class="filter-label">TYPE</span>
+          <button class="filter-btn active" data-filter="type" data-value="all">TOUS</button>
+          <button class="filter-btn" data-filter="type" data-value="guerrier">⚔ GUERRIER</button>
+          <button class="filter-btn" data-filter="type" data-value="mage">🔮 MAGE</button>
+          <button class="filter-btn" data-filter="type" data-value="bete">🐾 BETE</button>
+          <button class="filter-btn" data-filter="type" data-value="divin">👼 DIVIN</button>
+        </div>
+
+        <!-- Special + Tri -->
+        <div class="filter-row filter-row-bottom">
+          <div class="filter-special">
+            <button class="filter-btn filter-toggle" id="filter-shiny" data-filter="shiny">✨ SHINY</button>
+            <button class="filter-btn filter-toggle" id="filter-fused" data-filter="fused">🔗 FUSE</button>
+          </div>
+          <div class="filter-sort">
+            <select class="sort-select" id="sort-select">
+              <option value="rarity">Tri: Rarete</option>
+              <option value="atk">Tri: ATK</option>
+              <option value="def">Tri: DEF</option>
+              <option value="hp">Tri: PV</option>
+              <option value="name_asc">Tri: Nom A-Z</option>
+              <option value="name_desc">Tri: Nom Z-A</option>
+              <option value="price">Tri: Prix</option>
+            </select>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Compteur resultats -->
+      <div class="filter-result-count" id="filter-result-count"></div>
+
+      <!-- Grille de cartes -->
       <div class="collection-grid" id="collection-grid">
         <!-- Rempli par JS -->
       </div>
 
       <p class="collection-empty hidden" id="empty-msg">Aucune carte. Visitez la boutique !</p>
+      <p class="collection-empty hidden" id="no-results-msg">Aucune carte ne correspond aux filtres.</p>
 
       <!-- Zone de vente -->
       <div class="sell-zone" id="sell-zone">
@@ -36,10 +110,10 @@
     <div class="sell-price-popup" id="sell-price-popup"></div>
   </div>
 
-  <!-- Flash écran -->
+  <!-- Flash ecran -->
   <div class="screen-flash hidden" id="screen-flash"></div>
 
-  <div class="version-tag">v0.5.0</div>
+  <div class="version-tag">v0.7.0</div>
 
   <script src="/js/card-renderer.js"></script>
   <script src="/js/collection.js"></script>

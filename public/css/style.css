@@ -637,8 +637,9 @@ body::after {
    ============================== */
 
 .collection-wrapper {
-  text-align: center; width: 950px; max-width: 95vw;
-  max-height: 85vh; overflow-y: auto;
+  text-align: center; width: 1050px; max-width: 95vw;
+  max-height: 90vh; overflow-y: auto;
+  padding-bottom: 20px;
 }
 
 .collection-wrapper::-webkit-scrollbar { width: 6px; }
@@ -668,6 +669,258 @@ body::after {
 }
 
 .collection-empty { font-size: 22px; color: #006b1f; margin-top: 40px; }
+
+/* ==============================
+   STATS D'INVENTAIRE
+   ============================== */
+
+.collection-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 12px 0 16px;
+}
+
+.stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  padding: 5px 10px;
+  border: 1px solid #004d15;
+  border-radius: 20px;
+  background: rgba(0, 20, 0, 0.6);
+  color: #00cc33;
+  white-space: nowrap;
+}
+
+.stat-chip .stat-icon { font-size: 12px; }
+
+.stat-chip.stat-total { border-color: #00ff41; color: #00ff41; }
+.stat-chip.stat-commune { border-color: #888; color: #888; }
+.stat-chip.stat-rare { border-color: #4488ff; color: #4488ff; }
+.stat-chip.stat-epique { border-color: #cc44ff; color: #cc44ff; }
+.stat-chip.stat-legendaire { border-color: #ffaa00; color: #ffaa00; }
+.stat-chip.stat-shiny {
+  border-color: #ff66ff;
+  color: #ff66ff;
+  background: rgba(40, 0, 40, 0.4);
+}
+
+/* ==============================
+   TOOLBAR COLLECTION (FILTRES)
+   ============================== */
+
+.collection-toolbar {
+  background: rgba(0, 10, 0, 0.8);
+  border: 1px solid #003300;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.filter-row.search-row {
+  margin-bottom: 4px;
+}
+
+.filter-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #006b1f;
+  min-width: 65px;
+  text-align: right;
+  padding-right: 6px;
+  flex-shrink: 0;
+}
+
+.search-input {
+  width: 100%;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #004d15;
+  border-radius: 4px;
+  color: #00ff41;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input::placeholder {
+  color: #004d15;
+}
+
+.search-input:focus {
+  border-color: #00ff41;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.2), inset 0 0 10px rgba(0, 255, 65, 0.05);
+}
+
+.filter-btn {
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #003300;
+  border-radius: 4px;
+  color: #006b1f;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.filter-btn:hover {
+  color: #00cc33;
+  border-color: #00cc33;
+  background: rgba(0, 40, 0, 0.4);
+}
+
+.filter-btn.active {
+  color: #000;
+  background: #00ff41;
+  border-color: #00ff41;
+  text-shadow: none;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+}
+
+.filter-btn.filter-toggle {
+  border-style: dashed;
+}
+
+.filter-btn.filter-toggle.active {
+  border-style: solid;
+}
+
+.filter-row-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-special {
+  display: flex;
+  gap: 6px;
+}
+
+.filter-sort {
+  margin-left: auto;
+}
+
+.sort-select {
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #004d15;
+  border-radius: 4px;
+  color: #00ff41;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.sort-select option {
+  background: #001a00;
+  color: #00ff41;
+}
+
+.sort-select:focus {
+  border-color: #00ff41;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+}
+
+/* Compteur resultats */
+.filter-result-count {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: #00cc33;
+  text-align: center;
+  padding: 4px 0;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.filter-result-count.visible {
+  opacity: 1;
+}
+
+/* ==============================
+   ANIMATION APPARITION CARTES
+   ============================== */
+
+@keyframes cardAppear {
+  from {
+    opacity: 0;
+    transform: translateY(15px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.card-appear {
+  opacity: 0;
+  animation: cardAppear 0.35s ease-out forwards;
+}
+
+/* ==============================
+   RESPONSIVE COLLECTION TOOLBAR
+   ============================== */
+
+@media (max-width: 600px) {
+  .collection-toolbar {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .filter-label {
+    min-width: unset;
+    width: 100%;
+    text-align: left;
+    padding-right: 0;
+    margin-bottom: 2px;
+  }
+
+  .filter-row {
+    gap: 4px;
+  }
+
+  .filter-btn {
+    font-size: 7px;
+    padding: 4px 7px;
+  }
+
+  .stat-chip {
+    font-size: 7px;
+    padding: 4px 7px;
+  }
+
+  .filter-row-bottom {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-sort {
+    margin-left: 0;
+  }
+
+  .sort-select {
+    width: 100%;
+  }
+}
 
 /* ==============================
    BADGES SHINY / FUSED
