@@ -11,11 +11,13 @@ async function loadUser() {
     updateRank(data.cardCount);
 
     // Bonus quotidien
-    const dailyBtn = document.getElementById('daily-btn');
     if (!data.canClaimDaily) {
-      dailyBtn.classList.add('daily-claimed');
-      dailyBtn.disabled = true;
-      dailyBtn.querySelector('.daily-text').innerHTML = 'DEJA RECUPERE<br><small>Revenez demain</small>';
+      const item = document.getElementById('daily-item');
+      const btn = document.getElementById('daily-btn');
+      const sub = document.getElementById('daily-sub');
+      if (item) item.classList.add('daily-claimed');
+      if (btn) btn.classList.add('daily-claimed');
+      if (sub) sub.textContent = 'Demain';
     }
 
     // Check admin
@@ -38,46 +40,45 @@ async function checkAdminAccess() {
 }
 
 async function claimDaily() {
+  const item = document.getElementById('daily-item');
   const btn = document.getElementById('daily-btn');
-  btn.disabled = true;
+  const sub = document.getElementById('daily-sub');
+
+  // Deja claimed
+  if (item && item.classList.contains('daily-claimed')) return;
 
   try {
     const res = await fetch('/api/daily', { method: 'POST' });
     const data = await res.json();
 
     if (data.success) {
-      btn.classList.add('daily-claimed');
-      btn.querySelector('.daily-text').innerHTML = 'RECUPERE !<br><small>+200 CR</small>';
+      if (item) item.classList.add('daily-claimed');
+      if (btn) {
+        btn.classList.add('daily-claimed');
+        btn.classList.add('daily-flash');
+      }
+      if (sub) sub.textContent = 'Recu !';
       document.getElementById('stat-credits').textContent = data.credits;
-
-      // Petit effet
-      btn.classList.add('daily-flash');
     } else {
-      btn.classList.add('daily-claimed');
-      btn.querySelector('.daily-text').innerHTML = 'DEJA RECUPERE<br><small>Revenez demain</small>';
+      if (item) item.classList.add('daily-claimed');
+      if (btn) btn.classList.add('daily-claimed');
+      if (sub) sub.textContent = 'Demain';
     }
-  } catch {
-    btn.disabled = false;
-  }
+  } catch {}
 }
 
 function updateRank(cardCount) {
   const rankLabel = document.querySelector('.rank-label');
-  const rankIcon = document.querySelector('.rank-icon');
-  if (!rankLabel || !rankIcon) return;
+  if (!rankLabel) return;
 
   if (cardCount >= 100) {
     rankLabel.textContent = 'MAITRE';
-    rankIcon.innerHTML = '&#9733;&#9733;&#9733;';
   } else if (cardCount >= 50) {
     rankLabel.textContent = 'VETERAN';
-    rankIcon.innerHTML = '&#9733;&#9733;';
   } else if (cardCount >= 20) {
     rankLabel.textContent = 'SOLDAT';
-    rankIcon.innerHTML = '&#9733;';
   } else {
     rankLabel.textContent = 'RECRUE';
-    rankIcon.innerHTML = '&#9733;';
   }
 }
 

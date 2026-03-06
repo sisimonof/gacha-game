@@ -9,74 +9,54 @@
 <body>
   <div class="bg-grid"></div>
   <div class="scanline-bar"></div>
-  <button class="logout-btn" id="logout-btn">[ DECONNEXION ]</button>
 
   <div class="crt-screen">
     <div class="menu-wrapper">
+
+      <!-- Header barre -->
+      <div class="menu-header">
+        <div class="header-rank">&#9733; <span class="rank-label">RECRUE</span></div>
+        <div class="header-user"><span id="username-display">???</span><span class="cursor-blink">_</span></div>
+        <div class="header-stats">
+          <div class="header-stat">&#128230; <span id="stat-cards">0</span></div>
+          <div class="header-stat">&#128176; <span id="stat-credits">0</span></div>
+        </div>
+      </div>
+
+      <!-- Titre -->
       <h1 class="menu-title" data-text="GACHA CARDS">GACHA CARDS</h1>
 
-      <!-- Info joueur -->
-      <div class="player-info">
-        <div class="player-rank-badge">
-          <span class="rank-icon">&#9733;</span>
-          <span class="rank-label">RECRUE</span>
+      <!-- Navigation : 3 boutons ronds -->
+      <div class="menu-nav">
+        <div class="nav-item" onclick="window.location.href='/shop'">
+          <div class="nav-btn nav-shop"><span>&#127978;</span></div>
+          <div class="nav-label">BOUTIQUE</div>
         </div>
-        <p class="menu-welcome">Terminal de <span id="username-display">???</span> <span class="cursor-blink">_</span></p>
-      </div>
-
-      <!-- Bonus quotidien -->
-      <div class="daily-container" id="daily-container">
-        <button class="daily-btn" id="daily-btn" onclick="claimDaily()">
-          <span class="daily-icon">🎁</span>
-          <span class="daily-text">BONUS QUOTIDIEN<br><small>+200 CR</small></span>
-        </button>
-      </div>
-
-      <!-- Grille du menu -->
-      <div class="menu-grid">
-        <button class="menu-btn unlocked" onclick="window.location.href='/fusion'">
-          <span class="btn-icon">🎴</span>
-          <span class="btn-label">INVOQUER</span>
-        </button>
-        <button class="menu-btn unlocked" onclick="window.location.href='/collection'">
-          <span class="btn-icon">📖</span>
-          <span class="btn-label">COLLECTION</span>
-        </button>
-        <button class="menu-btn unlocked" onclick="window.location.href='/combat'">
-          <span class="btn-icon">⚔️</span>
-          <span class="btn-label">COMBAT</span>
-        </button>
-        <button class="menu-btn unlocked" onclick="window.location.href='/shop'">
-          <span class="btn-icon">🏪</span>
-          <span class="btn-label">BOUTIQUE</span>
-        </button>
-      </div>
-
-      <!-- Bouton Admin (visible seulement pour les admins) -->
-      <button class="menu-btn unlocked hidden" id="admin-btn" onclick="window.location.href='/admin'" style="border-color:#ff4444;color:#ff4444;grid-column:1/-1">
-        <span class="btn-icon">🛡️</span>
-        <span class="btn-label">ADMIN PANEL</span>
-      </button>
-
-      <!-- Barre de statut -->
-      <div class="status-bar">
-        <div class="status-box">
-          <span class="status-box-label">SYSTEME</span>
-          <span class="status-box-value status-online">EN LIGNE</span>
+        <div class="nav-item" onclick="window.location.href='/collection'">
+          <div class="nav-btn nav-collection"><span>&#128214;</span></div>
+          <div class="nav-label">COLLECTION</div>
         </div>
-        <div class="status-box">
-          <span class="status-box-label">CARTES</span>
-          <span class="status-box-value" id="stat-cards">0</span>
-        </div>
-        <div class="status-box">
-          <span class="status-box-label">CREDITS</span>
-          <span class="status-box-value" id="stat-credits">0</span>
+        <div class="nav-item" id="daily-item" onclick="claimDaily()">
+          <div class="nav-btn nav-daily" id="daily-btn"><span>&#127873;</span></div>
+          <div class="nav-label">BONUS</div>
+          <div class="nav-sub" id="daily-sub">+200 CR</div>
         </div>
       </div>
+
+      <!-- Admin (cache par defaut) -->
+      <div class="menu-admin hidden" id="admin-btn" onclick="window.location.href='/admin'">
+        &#128737; ADMIN PANEL
+      </div>
+
+      <!-- Footer -->
+      <div class="menu-footer">
+        <span class="footer-version" id="version-tag">v0.8.0 — PATCH NOTES</span>
+        <span class="footer-status">SYS: <span class="status-online">EN LIGNE</span></span>
+        <span class="footer-logout" id="logout-btn">DECONNEXION</span>
+      </div>
+
     </div>
   </div>
-
-  <div class="version-tag" id="version-tag" style="cursor:pointer">v0.8.0 - PATCH NOTES</div>
 
   <!-- Modal Patch Notes -->
   <div class="patchnotes-overlay" id="patchnotes-overlay">
