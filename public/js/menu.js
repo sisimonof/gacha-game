@@ -7,6 +7,9 @@ async function loadUser() {
     document.getElementById('stat-credits').textContent = data.credits;
     document.getElementById('stat-cards').textContent = data.cardCount;
 
+    // Rang du joueur
+    updateRank(data.cardCount);
+
     // Bonus quotidien
     const dailyBtn = document.getElementById('daily-btn');
     if (!data.canClaimDaily) {
@@ -55,6 +58,26 @@ async function claimDaily() {
     }
   } catch {
     btn.disabled = false;
+  }
+}
+
+function updateRank(cardCount) {
+  const rankLabel = document.querySelector('.rank-label');
+  const rankIcon = document.querySelector('.rank-icon');
+  if (!rankLabel || !rankIcon) return;
+
+  if (cardCount >= 100) {
+    rankLabel.textContent = 'MAITRE';
+    rankIcon.innerHTML = '&#9733;&#9733;&#9733;';
+  } else if (cardCount >= 50) {
+    rankLabel.textContent = 'VETERAN';
+    rankIcon.innerHTML = '&#9733;&#9733;';
+  } else if (cardCount >= 20) {
+    rankLabel.textContent = 'SOLDAT';
+    rankIcon.innerHTML = '&#9733;';
+  } else {
+    rankLabel.textContent = 'RECRUE';
+    rankIcon.innerHTML = '&#9733;';
   }
 }
 

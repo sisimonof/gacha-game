@@ -7,12 +7,22 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
   <button class="logout-btn" id="logout-btn">[ DECONNEXION ]</button>
 
   <div class="crt-screen">
     <div class="menu-wrapper">
-      <h1 class="menu-title">GACHA CARDS</h1>
-      <p class="menu-welcome">Bienvenue, <span id="username-display">???</span> <span class="cursor-blink">_</span></p>
+      <h1 class="menu-title" data-text="GACHA CARDS">GACHA CARDS</h1>
+
+      <!-- Info joueur -->
+      <div class="player-info">
+        <div class="player-rank-badge">
+          <span class="rank-icon">&#9733;</span>
+          <span class="rank-label">RECRUE</span>
+        </div>
+        <p class="menu-welcome">Terminal de <span id="username-display">???</span> <span class="cursor-blink">_</span></p>
+      </div>
 
       <!-- Bonus quotidien -->
       <div class="daily-container" id="daily-container">
@@ -50,14 +60,23 @@
 
       <!-- Barre de statut -->
       <div class="status-bar">
-        <div>SYSTEME: <span>EN LIGNE</span></div>
-        <div>CARTES: <span id="stat-cards">0</span></div>
-        <div>CREDITS: <span id="stat-credits">0</span></div>
+        <div class="status-box">
+          <span class="status-box-label">SYSTEME</span>
+          <span class="status-box-value status-online">EN LIGNE</span>
+        </div>
+        <div class="status-box">
+          <span class="status-box-label">CARTES</span>
+          <span class="status-box-value" id="stat-cards">0</span>
+        </div>
+        <div class="status-box">
+          <span class="status-box-label">CREDITS</span>
+          <span class="status-box-value" id="stat-credits">0</span>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="version-tag" id="version-tag" style="cursor:pointer">v0.7.0 - PATCH NOTES</div>
+  <div class="version-tag" id="version-tag" style="cursor:pointer">v0.8.0 - PATCH NOTES</div>
 
   <!-- Modal Patch Notes -->
   <div class="patchnotes-overlay" id="patchnotes-overlay">

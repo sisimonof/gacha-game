@@ -23,16 +23,18 @@ function renderCardVisual(card) {
   const hasImage = card.image && card.image !== '';
   const imgPath = `/img/cards/${card.image}`;
   const icon = ELEMENT_ICONS[card.element] || '?';
+  const watermark = `<div class="card-visual-watermark">${icon}</div>`;
 
   if (hasImage) {
     return `
       <div class="card-visual">
+        ${watermark}
         <img src="${imgPath}" alt="${card.name}"
           onerror="this.parentElement.innerHTML='<div class=\\'card-visual-fallback elem-${card.element}\\'>${icon}</div>'">
       </div>
     `;
   }
-  return `<div class="card-visual"><div class="card-visual-fallback elem-${card.element}">${icon}</div></div>`;
+  return `<div class="card-visual">${watermark}<div class="card-visual-fallback elem-${card.element}">${icon}</div></div>`;
 }
 
 // === BARRES DE STATS ===
@@ -137,6 +139,12 @@ function renderBattleCard(unit) {
           <div class="battle-hp-fill" style="width:${hpPct}%; background:${hpColor}"></div>
         </div>
         <div class="battle-hp-text" style="color:${hpColor}">${unit.currentHp}/${unit.maxHp}</div>
+        <div class="battle-statuses">
+          ${unit.poisoned > 0 ? '<span title="Empoisonne" style="color:#aa44ff">☠</span>' : ''}
+          ${unit.shield > 0 ? '<span title="Bouclier" style="color:#44cccc">🛡' + unit.shield + '</span>' : ''}
+          ${unit.marked > 0 ? '<span title="Marque" style="color:#ffaa00">🎯</span>' : ''}
+          ${unit.counterDamage > 0 ? '<span title="Contre-attaque" style="color:#ff4444">⚔</span>' : ''}
+        </div>
         <div class="battle-card-stats">
           <span style="color:#ff4444">ATK ${unit.effectiveStats.attack}</span>
           <span style="color:#4488ff">DEF ${unit.effectiveStats.defense}</span>
