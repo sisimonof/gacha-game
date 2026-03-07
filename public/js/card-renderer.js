@@ -4,7 +4,8 @@ const RARITY_COLORS = {
   rare:       { color: '#4488ff', glow: 'rgba(68,136,255,0.5)',  label: 'RARE' },
   epique:     { color: '#cc44ff', glow: 'rgba(204,68,255,0.5)',  label: 'EPIQUE' },
   legendaire: { color: '#ffaa00', glow: 'rgba(255,170,0,0.6)',   label: 'LEGENDAIRE' },
-  chaos:      { color: '#ff0044', glow: 'rgba(255,0,68,0.7)',    label: 'CHAOS' }
+  chaos:      { color: '#ff0044', glow: 'rgba(255,0,68,0.7)',    label: 'CHAOS' },
+  secret:     { color: '#111111', glow: 'rgba(255,255,255,0.6)', label: 'SECRET' }
 };
 
 const ELEMENT_ICONS  = { feu: '🔥', eau: '💧', terre: '🌿', lumiere: '✨', ombre: '🌑', neutre: '⚪' };

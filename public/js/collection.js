@@ -17,7 +17,7 @@ const filterState = {
 };
 
 // Ordre de rarete pour le tri
-const RARITY_ORDER = { commune: 0, rare: 1, epique: 2, legendaire: 3, chaos: 4 };
+const RARITY_ORDER = { commune: 0, rare: 1, epique: 2, legendaire: 3, chaos: 4, secret: 5 };
 
 // Nombre total de cartes dans le jeu (pour la barre de progression)
 const TOTAL_CARDS_IN_GAME = 200;
@@ -58,7 +58,7 @@ async function loadSellPrices() {
 
 function updateStats(cards) {
   const total = cards.length;
-  let commune = 0, rare = 0, epique = 0, legendaire = 0, chaos = 0, shiny = 0;
+  let commune = 0, rare = 0, epique = 0, legendaire = 0, chaos = 0, secret = 0, shiny = 0;
 
   cards.forEach(c => {
     if (c.rarity === 'commune') commune++;
@@ -66,6 +66,7 @@ function updateStats(cards) {
     else if (c.rarity === 'epique') epique++;
     else if (c.rarity === 'legendaire') legendaire++;
     else if (c.rarity === 'chaos') chaos++;
+    else if (c.rarity === 'secret') secret++;
     if (c.is_shiny) shiny++;
   });
 
@@ -75,12 +76,14 @@ function updateStats(cards) {
   const elEpique = document.getElementById('coll-stat-epique');
   const elLegendaire = document.getElementById('coll-stat-legendaire');
   const elChaos = document.getElementById('coll-stat-chaos');
+  const elSecret = document.getElementById('coll-stat-secret');
   const elShiny = document.getElementById('coll-stat-shiny');
   if (elCommune) elCommune.textContent = commune;
   if (elRare) elRare.textContent = rare;
   if (elEpique) elEpique.textContent = epique;
   if (elLegendaire) elLegendaire.textContent = legendaire;
   if (elChaos) elChaos.textContent = chaos;
+  if (elSecret) elSecret.textContent = secret;
   if (elShiny) elShiny.textContent = shiny;
 
   // Progress bar
@@ -102,11 +105,13 @@ function updateStats(cards) {
   const pillEpique = document.getElementById('pill-epique');
   const pillLegendaire = document.getElementById('pill-legendaire');
   const pillChaos = document.getElementById('pill-chaos');
+  const pillSecret = document.getElementById('pill-secret');
   if (pillCommune) pillCommune.textContent = commune;
   if (pillRare) pillRare.textContent = rare;
   if (pillEpique) pillEpique.textContent = epique;
   if (pillLegendaire) pillLegendaire.textContent = legendaire;
   if (pillChaos) pillChaos.textContent = chaos;
+  if (pillSecret) pillSecret.textContent = secret;
 
   // Navbar card count
   const navCards = document.getElementById('nav-cards');

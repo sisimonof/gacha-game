@@ -35,7 +35,8 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     if (data.success) {
       msg.textContent = 'Accès autorisé. Redirection...';
       msg.className = 'message success';
-      setTimeout(() => window.location.href = '/menu', 800);
+      const dest = localStorage.getItem('introSeen') ? '/menu' : '/intro';
+      setTimeout(() => window.location.href = dest, 800);
     } else {
       msg.textContent = data.error;
       msg.className = 'message error';
@@ -80,7 +81,7 @@ document.getElementById('register-form').addEventListener('submit', async (e) =>
     if (data.success) {
       msg.textContent = 'Compte créé ! Redirection...';
       msg.className = 'message success';
-      setTimeout(() => window.location.href = '/menu', 800);
+      setTimeout(() => window.location.href = '/intro', 800);
     } else {
       msg.textContent = data.error;
       msg.className = 'message error';

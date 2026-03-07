@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Initialisation</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="intro-page">
+  <div class="intro-scanlines"></div>
+
+  <div class="intro-terminal">
+    <div class="intro-header">
+      <span class="intro-header-dot intro-dot-red"></span>
+      <span class="intro-header-dot intro-dot-yellow"></span>
+      <span class="intro-header-dot intro-dot-green"></span>
+      <span class="intro-header-title">GACHA_CARDS — terminal v1.0</span>
+    </div>
+    <div class="intro-body" id="intro-body">
+      <div class="intro-text" id="intro-text"></div>
+      <span class="intro-cursor" id="intro-cursor">█</span>
+    </div>
+    <div class="intro-footer">
+      <button class="intro-enter-btn hidden" id="intro-enter" onclick="enterGame()">
+        > ACCEDER A LA BOUTIQUE_
+      </button>
+      <button class="intro-skip-btn" id="intro-skip" onclick="skipIntro()">
+        [ PASSER ]
+      </button>
+    </div>
+  </div>
+
+  <script src="/js/intro.js"></script>
+</body>
+</html>

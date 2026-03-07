@@ -1,5 +1,7 @@
 // shop.js — Booster opening with click-to-reveal system
 
+const legendarySound = new Audio('/audio/legendary-hit.mp3');
+
 const BOOSTER_IMAGES = {
   origines: '/img/booster-origines.png',
   rift: '/img/booster-rift.jpg'
@@ -149,7 +151,7 @@ function showCardsReveal(cards) {
   const totalCards = cards.length;
 
   // Tri : commune -> legendaire, shiny en dernier
-  const rarityOrder = { commune: 0, rare: 1, epique: 2, legendaire: 3, chaos: 4 };
+  const rarityOrder = { commune: 0, rare: 1, epique: 2, legendaire: 3, chaos: 4, secret: 5 };
   const sorted = [...cards].sort((a, b) => {
     const rd = rarityOrder[a.rarity] - rarityOrder[b.rarity];
     if (rd !== 0) return rd;
@@ -220,10 +222,20 @@ function showCardsReveal(cards) {
         title.style.color = '#ff66ff';
         screenFlash();
         screenShake();
+      } else if (card.rarity === 'secret') {
+        el.classList.add('secret-reveal');
+        title.textContent = '🔒 SECRET 🔒';
+        title.style.color = '#ffffff';
+        legendarySound.currentTime = 0; legendarySound.play();
+        screenFlash();
+        screenShake();
+        screenShake();
+        screenShake();
       } else if (card.rarity === 'chaos') {
         el.classList.add('chaos-reveal');
         title.textContent = '☠ CHAOS ☠';
         title.style.color = RARITY_COLORS.chaos.color;
+        legendarySound.currentTime = 0; legendarySound.play();
         screenFlash();
         screenShake();
         screenShake();
@@ -231,6 +243,7 @@ function showCardsReveal(cards) {
         el.classList.add('legendary-reveal');
         title.textContent = '★ LEGENDAIRE ★';
         title.style.color = RARITY_COLORS.legendaire.color;
+        legendarySound.currentTime = 0; legendarySound.play();
         screenFlash();
         screenShake();
       } else if (card.rarity === 'epique') {

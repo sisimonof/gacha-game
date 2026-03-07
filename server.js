@@ -17,7 +17,8 @@ const SELL_PRICES = {
   rare: 75,
   epique: 150,
   legendaire: 400,
-  chaos: 1000
+  chaos: 1000,
+  secret: 2000
 };
 
 // --- Base de données (chemin configurable via env pour Railway volume) ---
@@ -327,7 +328,7 @@ function getManaForTurn(turn) {
     db.prepare(`
       INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run('La Voie Lactee', 'chaos', 'creature', 'neutre', 2, 5, 10, 6, 'Quitte ou Double', 'Choisis un ennemi : 50% de chance de le tuer instantanement, 50% de chance de tuer ta carte', '🌌', 'Une carte La Voie Lactee max sur le plateau', 1.0);
+    `).run('La Voie Lactee', 'secret', 'creature', 'neutre', 2, 5, 10, 6, 'Quitte ou Double', 'Choisis un ennemi : 50% de chance de le tuer instantanement, 50% de chance de tuer ta carte', '🌌', 'Une carte La Voie Lactee max sur le plateau', 1.0);
     console.log('Migration: carte CHAOS La Voie Lactee ajoutee');
   }
 }
@@ -369,6 +370,27 @@ function getManaForTurn(turn) {
   db.prepare("UPDATE cards SET rarity = 'legendaire' WHERE name = 'Archange Dechu'").run();
 }
 
+// --- Migration : La Voie Lactee → rareté SECRET ---
+{
+  const voieLactee = db.prepare("SELECT id, rarity FROM cards WHERE name = 'La Voie Lactee'").get();
+  if (voieLactee && voieLactee.rarity === 'chaos') {
+    db.prepare("UPDATE cards SET rarity = 'secret' WHERE name = 'La Voie Lactee'").run();
+    console.log('Migration: La Voie Lactee promue en SECRET');
+  }
+}
+
+// --- Migration : Carte SECRET - Koteons ---
+{
+  const hasKoteons = db.prepare("SELECT id FROM cards WHERE name = 'Koteons'").get();
+  if (!hasKoteons) {
+    db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('Koteons', 'secret', 'creature', 'ombre', 3, 4, 8, 6, 'Action de Moderation', 'Supprime la capacite d une carte ennemie choisie pour le reste du combat', '😾', 'Les ennemis reduits au silence perdent 1 DEF', 2.0);
+    console.log('Migration: carte SECRET Koteons ajoutee');
+  }
+}
+
 // --- Tables Decks ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS decks (
@@ -400,7 +422,7 @@ const BOOSTERS = [
     description: '5 cartes du monde originel.',
     price: 300,
     cardsPerPack: 5,
-    weights: { commune: 54.9, rare: 38, epique: 6, legendaire: 1, chaos: 0.1 },
+    weights: { commune: 54.85, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05 },
     shinyRate: 0.007
   },
   {
@@ -409,7 +431,7 @@ const BOOSTERS = [
     description: '7 cartes de la faille dimensionnelle.',
     price: 415,
     cardsPerPack: 7,
-    weights: { commune: 54.9, rare: 38, epique: 6, legendaire: 1, chaos: 0.1 },
+    weights: { commune: 54.85, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05 },
     shinyRate: 0.007
   }
 ];
@@ -437,7 +459,7 @@ function openBooster(boosterId, userId) {
     let cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(rarity);
     // Fallback : si aucune carte de cette rarete, descendre d'un cran
     if (!cards.length) {
-      const fallbackOrder = ['chaos', 'legendaire', 'epique', 'rare', 'commune'];
+      const fallbackOrder = ['secret', 'chaos', 'legendaire', 'epique', 'rare', 'commune'];
       const idx = fallbackOrder.indexOf(rarity);
       for (let f = idx + 1; f < fallbackOrder.length; f++) {
         cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(fallbackOrder[f]);
@@ -780,6 +802,9 @@ const ABILITY_MAP = {
   'Jugement celeste':    { type: 'def_as_damage' },                   // Archange Dechu (degats = DEF cible, ignore DEF)
   'Moisson funeste':     { type: 'reap',               threshold: 3 }, // Faucheur d Ames (kill si <= 3 PV)
   'Quitte ou Double':    { type: 'coin_flip' },                        // La Voie Lactee (50/50 kill)
+
+  // ===== CARTES SECRET =====
+  'Action de Moderation': { type: 'silence' },                          // Koteons (supprime l'ability d'un ennemi)
 };
 
 // ============================================
@@ -965,6 +990,7 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
       poisonDot: 0,
       poisonDotTurns: 0,
       ralliement: false,
+      silenced: false,
     };
   };
 
@@ -1001,7 +1027,7 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
 
 function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
   const ability = ABILITY_MAP[unit.ability_name];
-  if (!ability || unit.usedAbility) return [];
+  if (!ability || unit.usedAbility || unit.silenced) return [];
   unit.usedAbility = true;
 
   const events = [];
@@ -1424,6 +1450,20 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
           events.push({ type: 'ability_damage', unit: unit.name, target: unit.name, ability: abilityName, damage: 9999, desc: 'Quitte ou Double : ECHEC ! Votre carte est detruite !' });
           checkKO(unit, events, battle);
         }
+      }
+      break;
+    }
+    case 'silence': {
+      // Koteons : supprime la capacité d'un ennemi choisi
+      const target = pickTarget();
+      if (target && !target.silenced) {
+        target.silenced = true;
+        target.usedAbility = true;
+        // Passif Koteons : les ennemis réduits au silence perdent 1 DEF
+        target.permanentBonusDef = (target.permanentBonusDef || 0) - 1;
+        events.push({ type: 'ability', unit: unit.name, target: target.name, ability: abilityName, desc: `${target.name} est reduit au silence ! Capacite supprimee & -1 DEF` });
+      } else if (target && target.silenced) {
+        events.push({ type: 'ability', unit: unit.name, target: target.name, ability: abilityName, desc: `${target.name} est deja reduit au silence !` });
       }
       break;
     }
@@ -2476,7 +2516,7 @@ app.get('/api/collection', requireAuth, (req, res) => {
     WHERE uc.user_id = ?
     GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp
     ORDER BY
-      CASE c.rarity WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
   res.json(cards);
@@ -2520,7 +2560,7 @@ app.post('/api/collection/sell', requireAuth, (req, res) => {
     WHERE uc.user_id = ?
     GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp
     ORDER BY
-      CASE c.rarity WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
 
@@ -2547,7 +2587,7 @@ app.get('/api/fusion/available', requireAuth, (req, res) => {
     GROUP BY c.id
     HAVING count >= 5
     ORDER BY
-      CASE c.rarity WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       c.attack DESC
   `).all(req.session.userId);
   res.json(cards);
@@ -4022,13 +4062,14 @@ app.get('/api/my-cards', requireAuth, (req, res) => {
     JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ?
     ORDER BY
-      CASE c.rarity WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
   res.json(cards);
 });
 
 // --- Pages ---
+app.get('/intro', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'intro.html')); });
 app.get('/menu', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'menu.html')); });
 app.get('/shop', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'shop.html')); });
 app.get('/collection', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'collection.html')); });
