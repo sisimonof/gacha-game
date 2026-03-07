@@ -150,15 +150,17 @@ function renderFieldSlot(unit, slotIndex, side) {
       <span class="bt-passive-label">🔸 ${unit.passive_desc}</span>
     </div>` : '';
 
+  const manaCost = unit.mana_cost || unit.manaCost || '?';
+
   return `
     <div class="bt-unit ${isSelected ? 'bt-selected' : ''} ${isTarget ? 'bt-targetable' : ''} ${attackedClass} ${sicknessClass}"
          style="border-color: ${r.color}" data-slot="${slotIndex}" data-side="${side}">
-      <div class="bt-unit-element" style="background:${elemColor}">${elemIcon}</div>
+      <div class="bt-unit-type">${unit.type || ''}</div>
+      <div class="bt-unit-mana">⚡${manaCost}</div>
       ${unit.justDeployed ? '<div class="bt-sickness-badge">💤</div>' : ''}
       <div class="bt-unit-emoji">${emoji}</div>
       <div class="bt-unit-name">${unit.name}</div>
       <div class="bt-unit-hp">
-        <span class="bt-unit-hp-icon">❤️</span>
         <div class="bt-unit-hpbar">
           <div class="bt-unit-hpbar-fill" style="width:${hpPercent}%;background:${hpColor}"></div>
         </div>
@@ -167,10 +169,11 @@ function renderFieldSlot(unit, slotIndex, side) {
       <div class="bt-unit-stats">
         <span class="bt-stat-atk">⚔️ ${totalAtk}</span>
         <span class="bt-stat-def">🛡️ ${totalDef}</span>
+        <span class="bt-stat-hp">❤️ ${unit.currentHp}</span>
       </div>
       ${statusIcons ? `<div class="bt-unit-status">${statusIcons}</div>` : ''}
-      ${passiveHtml}
       ${abilityHtml}
+      ${passiveHtml}
     </div>
   `;
 }
@@ -220,18 +223,18 @@ function renderHand() {
            style="border-color: ${r.color}"
            onclick="clickHandCard(${i})"
            title="${card.name}${isObj ? ' (Objet: ' + card.ability_desc + ')' : ''}">
-        <div class="bt-card-element" style="color:${elemColor}">${elemIcon}</div>
+        <div class="bt-card-type-badge">${card.type || ''}</div>
         <div class="bt-card-cost">⚡${card.mana_cost}</div>
         <div class="bt-card-emoji">${emoji}</div>
         <div class="bt-card-name">${card.name}</div>
-        ${isObj ? `<div class="bt-card-type">OBJET</div>
-          <div class="bt-card-obj-desc">${card.ability_desc || ''}</div>` : `
+        ${isObj ? `<div class="bt-card-obj-desc">${card.ability_desc || ''}</div>` : `
           <div class="bt-card-stats">
             <span class="bt-card-stat-atk">⚔️ ${card.effectiveStats.attack}</span>
             <span class="bt-card-stat-def">🛡️ ${card.effectiveStats.defense}</span>
             <span class="bt-card-stat-hp">❤️ ${card.effectiveStats.hp}</span>
           </div>
-          ${card.ability_name ? `<div class="bt-card-ability">✦ ${card.ability_name}</div>` : ''}
+          ${card.ability_name && card.ability_name !== 'Aucun' ? `<div class="bt-card-ability">✦ ${card.ability_desc || card.ability_name}</div>` : ''}
+          ${card.passive_desc ? `<div class="bt-card-passive">🔸 ${card.passive_desc}</div>` : ''}
         `}
       </div>
     `;
