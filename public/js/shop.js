@@ -2,7 +2,7 @@
 
 const BOOSTER_IMAGES = {
   origines: '/img/booster-origines.png',
-  rift: '/img/booster-rift.svg'
+  rift: '/img/booster-rift.jpg'
 };
 
 let currentCredits = 0;
