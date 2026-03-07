@@ -359,8 +359,8 @@ const BOOSTERS = [
     description: '5 cartes du monde originel.',
     price: 300,
     cardsPerPack: 5,
-    weights: { commune: 59.9, rare: 25, epique: 12, legendaire: 3, chaos: 0.1 },
-    shinyRate: 0.02
+    weights: { commune: 54.9, rare: 38, epique: 6, legendaire: 1, chaos: 0.1 },
+    shinyRate: 0.007
   },
   {
     id: 'rift',
@@ -368,8 +368,8 @@ const BOOSTERS = [
     description: '7 cartes de la faille dimensionnelle.',
     price: 415,
     cardsPerPack: 7,
-    weights: { commune: 49.8, rare: 28, epique: 16, legendaire: 6, chaos: 0.2 },
-    shinyRate: 0.05
+    weights: { commune: 54.9, rare: 38, epique: 6, legendaire: 1, chaos: 0.1 },
+    shinyRate: 0.007
   }
 ];
 
