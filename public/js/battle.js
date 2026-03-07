@@ -9,7 +9,8 @@ let actionMode = null;
 let selectedHandIndex = null;
 let selectedFieldSlot = null;
 let selectedItemIndex = null;
-let actionPopupSlot = null;
+let actionPanelSlot = null;
+let slotClickedThisFrame = false;
 
 function init() {
   const stored = sessionStorage.getItem('deckBattleData');
@@ -53,13 +54,66 @@ function renderTurnInfo() {
   document.getElementById('enemy-deck-count').textContent = battleData.enemyDeckCount;
   document.getElementById('enemy-hand-count').textContent = battleData.enemyHandCount;
 
+  // Crystal gauges
+  const pCrystal = battleData.playerCrystal || 0;
+  const pMaxCrystal = battleData.playerMaxCrystal || 2;
+  const eCrystal = battleData.enemyCrystal || 0;
+  const eMaxCrystal = battleData.enemyMaxCrystal || 2;
+
+  const pCrystalEl = document.getElementById('player-crystal-fill');
+  const eCrystalEl = document.getElementById('enemy-crystal-fill');
+  const pCrystalText = document.getElementById('player-crystal-text');
+  const eCrystalText = document.getElementById('enemy-crystal-text');
+
+  if (pCrystalEl) pCrystalEl.style.width = `${(pCrystal / pMaxCrystal) * 100}%`;
+  if (eCrystalEl) eCrystalEl.style.width = `${(eCrystal / eMaxCrystal) * 100}%`;
+  if (pCrystalText) pCrystalText.textContent = `${pCrystal.toFixed(1)}`;
+  if (eCrystalText) eCrystalText.textContent = `${eCrystal.toFixed(1)}`;
+
+  // Opponent HP avatar
+  const enemyHp = battleData.enemyHp || 0;
+  const enemyMaxHp = battleData.enemyMaxHp || 20;
+  const playerHp = battleData.playerHp || 0;
+  const playerMaxHp = battleData.playerMaxHp || 20;
+
+  const enemyAvatarEl = document.getElementById('enemy-avatar-hp');
+  const playerAvatarEl = document.getElementById('player-avatar-hp');
+
+  if (enemyAvatarEl) {
+    const eHpPct = Math.round((enemyHp / enemyMaxHp) * 100);
+    const eHpColor = eHpPct > 50 ? '#cc2222' : eHpPct > 25 ? '#cc6622' : '#cc2222';
+    enemyAvatarEl.innerHTML = `
+      <div class="bt-avatar-circle bt-avatar-enemy" onclick="clickEnemyAvatar()">
+        <div class="bt-avatar-icon">👤</div>
+        <div class="bt-avatar-hpbar">
+          <div class="bt-avatar-hpbar-fill" style="width:${eHpPct}%;background:${eHpColor}"></div>
+        </div>
+        <div class="bt-avatar-hp-text">❤️ ${enemyHp}/${enemyMaxHp}</div>
+      </div>
+    `;
+  }
+
+  if (playerAvatarEl) {
+    const pHpPct = Math.round((playerHp / playerMaxHp) * 100);
+    const pHpColor = pHpPct > 50 ? '#22cc44' : pHpPct > 25 ? '#ccaa22' : '#cc2222';
+    playerAvatarEl.innerHTML = `
+      <div class="bt-avatar-circle bt-avatar-player">
+        <div class="bt-avatar-icon">👤</div>
+        <div class="bt-avatar-hpbar">
+          <div class="bt-avatar-hpbar-fill" style="width:${pHpPct}%;background:${pHpColor}"></div>
+        </div>
+        <div class="bt-avatar-hp-text">❤️ ${playerHp}/${playerMaxHp}</div>
+      </div>
+    `;
+  }
+
   // Disable end turn if battle over
   document.getElementById('end-turn-btn').disabled = !!battleData.result;
 }
 
 function renderFieldSlot(unit, slotIndex, side) {
   if (!unit || !unit.alive) {
-    return `<div class="field-slot-empty">VIDE</div>`;
+    return `<div class="bt-slot-empty">VIDE</div>`;
   }
 
   const r = RARITY_COLORS[unit.rarity] || { color: '#888' };
@@ -77,37 +131,45 @@ function renderFieldSlot(unit, slotIndex, side) {
   const totalDef = unit.effectiveStats.defense + (unit.buffDef || 0) + (unit.permanentBonusDef || 0);
 
   let statusIcons = '';
-  if (unit.poisoned > 0) statusIcons += '<span class="status-icon status-poison">☠</span>';
-  if (unit.stunned) statusIcons += '<span class="status-icon status-stun">💫</span>';
-  if (unit.shield > 0) statusIcons += `<span class="status-icon status-shield">🛡${unit.shield}</span>`;
-  if (unit.marked > 0) statusIcons += '<span class="status-icon status-mark">🎯</span>';
+  if (unit.poisoned > 0) statusIcons += '<span class="bt-status-icon bt-status-poison">☠</span>';
+  if (unit.stunned) statusIcons += '<span class="bt-status-icon bt-status-stun">💫</span>';
+  if (unit.shield > 0) statusIcons += `<span class="bt-status-icon bt-status-shield">🛡${unit.shield}</span>`;
+  if (unit.marked > 0) statusIcons += '<span class="bt-status-icon bt-status-mark">🎯</span>';
 
-  const attackedClass = side === 'player' && battleData.attackedThisTurn?.includes(slotIndex) ? 'field-attacked' : '';
+  const attackedClass = side === 'player' && battleData.attackedThisTurn?.includes(slotIndex) ? 'bt-attacked' : '';
+  const sicknessClass = unit.justDeployed ? 'bt-sickness' : '';
 
   const abilityHtml = unit.ability_name ? `
-    <div class="field-unit-ability ${unit.usedAbility ? 'ability-used' : ''}">
-      <span class="ability-label">✦ ${unit.ability_name}</span>
-      ${unit.ability_desc ? `<span class="ability-desc">${unit.ability_desc}</span>` : ''}
+    <div class="bt-unit-ability ${unit.usedAbility ? 'bt-ability-used' : ''}">
+      <span class="bt-ability-label">✦ ${unit.ability_name}</span>
+      ${unit.ability_desc ? `<span class="bt-ability-desc">${unit.ability_desc}</span>` : ''}
+    </div>` : '';
+
+  const passiveHtml = unit.passive_desc ? `
+    <div class="bt-unit-passive">
+      <span class="bt-passive-label">🔸 ${unit.passive_desc}</span>
     </div>` : '';
 
   return `
-    <div class="field-unit ${isSelected ? 'field-selected' : ''} ${isTarget ? 'field-targetable' : ''} ${attackedClass}"
+    <div class="bt-unit ${isSelected ? 'bt-selected' : ''} ${isTarget ? 'bt-targetable' : ''} ${attackedClass} ${sicknessClass}"
          style="border-color: ${r.color}" data-slot="${slotIndex}" data-side="${side}">
-      <div class="field-unit-element" style="background:${elemColor}">${elemIcon}</div>
-      <div class="field-unit-emoji">${emoji}</div>
-      <div class="field-unit-name">${unit.name}</div>
-      <div class="field-unit-hp-section">
-        <span class="field-unit-hp-icon">❤️</span>
-        <div class="field-unit-hpbar">
-          <div class="field-unit-hpbar-fill" style="width:${hpPercent}%;background:${hpColor}"></div>
+      <div class="bt-unit-element" style="background:${elemColor}">${elemIcon}</div>
+      ${unit.justDeployed ? '<div class="bt-sickness-badge">💤</div>' : ''}
+      <div class="bt-unit-emoji">${emoji}</div>
+      <div class="bt-unit-name">${unit.name}</div>
+      <div class="bt-unit-hp">
+        <span class="bt-unit-hp-icon">❤️</span>
+        <div class="bt-unit-hpbar">
+          <div class="bt-unit-hpbar-fill" style="width:${hpPercent}%;background:${hpColor}"></div>
         </div>
-        <span class="field-unit-hp-text" style="color:${hpColor}">${unit.currentHp}/${unit.maxHp}</span>
+        <span class="bt-unit-hp-text" style="color:${hpColor}">${unit.currentHp}/${unit.maxHp}</span>
       </div>
-      <div class="field-unit-stats">
-        <span class="stat-atk">⚔️ ${totalAtk}</span>
-        <span class="stat-def">🛡️ ${totalDef}</span>
+      <div class="bt-unit-stats">
+        <span class="bt-stat-atk">⚔️ ${totalAtk}</span>
+        <span class="bt-stat-def">🛡️ ${totalDef}</span>
       </div>
-      ${statusIcons ? `<div class="field-unit-status">${statusIcons}</div>` : ''}
+      ${statusIcons ? `<div class="bt-unit-status">${statusIcons}</div>` : ''}
+      ${passiveHtml}
       ${abilityHtml}
     </div>
   `;
@@ -115,14 +177,24 @@ function renderFieldSlot(unit, slotIndex, side) {
 
 function renderEnemyField() {
   for (let i = 0; i < 3; i++) {
-    const slotEl = document.querySelector(`#enemy-field .field-slot[data-slot="${i}"]`);
+    const slotEl = document.querySelector(`#enemy-field .bt-slot[data-slot="${i}"]`);
     slotEl.innerHTML = renderFieldSlot(battleData.enemyField[i], i, 'enemy');
+  }
+  // Update avatar targetable state
+  const avatarEl = document.getElementById('enemy-avatar-hp');
+  if (avatarEl) {
+    const circle = avatarEl.querySelector('.bt-avatar-circle');
+    if (circle) {
+      const enemyAlive = battleData.enemyField.some(u => u && u.alive);
+      const isTargeting = actionMode === 'select_attack_target' || actionMode === 'select_ability_target';
+      circle.classList.toggle('bt-avatar-targetable', isTargeting && !enemyAlive);
+    }
   }
 }
 
 function renderPlayerField() {
   for (let i = 0; i < 3; i++) {
-    const slotEl = document.querySelector(`#player-field .field-slot[data-slot="${i}"]`);
+    const slotEl = document.querySelector(`#player-field .bt-slot[data-slot="${i}"]`);
     slotEl.innerHTML = renderFieldSlot(battleData.playerField[i], i, 'player');
   }
 }
@@ -130,7 +202,7 @@ function renderPlayerField() {
 function renderHand() {
   const hand = document.getElementById('player-hand');
   if (!battleData.playerHand || battleData.playerHand.length === 0) {
-    hand.innerHTML = '<div class="hand-empty">Main vide</div>';
+    hand.innerHTML = '<div class="bt-hand-empty">Main vide</div>';
     return;
   }
 
@@ -144,22 +216,22 @@ function renderHand() {
     const elemColor = ELEMENT_COLORS[card.element] || '#00ff41';
 
     return `
-      <div class="hand-card ${isObj ? 'hand-card-objet' : ''} ${canAfford ? '' : 'hand-card-expensive'} ${isSelected ? 'hand-card-selected' : ''}"
+      <div class="bt-card ${isObj ? 'bt-card--objet' : ''} ${canAfford ? '' : 'bt-card--expensive'} ${isSelected ? 'bt-card--selected' : ''}"
            style="border-color: ${r.color}"
            onclick="clickHandCard(${i})"
            title="${card.name}${isObj ? ' (Objet: ' + card.ability_desc + ')' : ''}">
-        <div class="hand-card-element" style="color:${elemColor}">${elemIcon}</div>
-        <div class="hand-card-cost">⚡${card.mana_cost}</div>
-        <div class="hand-card-emoji">${emoji}</div>
-        <div class="hand-card-name">${card.name}</div>
-        ${isObj ? `<div class="hand-card-type">OBJET</div>
-          <div class="hand-card-obj-desc">${card.ability_desc || ''}</div>` : `
-          <div class="hand-card-stats">
-            <span class="hand-stat-atk">⚔️ ${card.effectiveStats.attack}</span>
-            <span class="hand-stat-def">🛡️ ${card.effectiveStats.defense}</span>
-            <span class="hand-stat-hp">❤️ ${card.effectiveStats.hp}</span>
+        <div class="bt-card-element" style="color:${elemColor}">${elemIcon}</div>
+        <div class="bt-card-cost">⚡${card.mana_cost}</div>
+        <div class="bt-card-emoji">${emoji}</div>
+        <div class="bt-card-name">${card.name}</div>
+        ${isObj ? `<div class="bt-card-type">OBJET</div>
+          <div class="bt-card-obj-desc">${card.ability_desc || ''}</div>` : `
+          <div class="bt-card-stats">
+            <span class="bt-card-stat-atk">⚔️ ${card.effectiveStats.attack}</span>
+            <span class="bt-card-stat-def">🛡️ ${card.effectiveStats.defense}</span>
+            <span class="bt-card-stat-hp">❤️ ${card.effectiveStats.hp}</span>
           </div>
-          ${card.ability_name ? `<div class="hand-card-ability">✦ ${card.ability_name}</div>` : ''}
+          ${card.ability_name ? `<div class="bt-card-ability">✦ ${card.ability_name}</div>` : ''}
         `}
       </div>
     `;
@@ -197,7 +269,6 @@ function renderInstruction() {
 
 function getItemTarget(item) {
   if (!item) return null;
-  // Map ability names to target type
   const healItems = ['Soin mineur', 'Herboristerie', 'Premiers soins', 'Miracle'];
   const buffAllyItems = ['Rage chimique', 'Protection', 'Enchantement'];
   const enemyItems = ['Lancer', 'Lancer precis', 'Aveuglement', 'Empoisonnement', 'Foudroiement'];
@@ -215,7 +286,7 @@ function getItemTarget(item) {
 // ========================
 
 function cancelAction() {
-  closeActionPopup();
+  hideActionPanel();
   actionMode = null;
   selectedHandIndex = null;
   selectedFieldSlot = null;
@@ -223,64 +294,82 @@ function cancelAction() {
   renderAll();
 }
 
-function showActionPopup(slotIndex, unit, abilityCost, canAttack, canAbility) {
-  closeActionPopup();
-  actionPopupSlot = slotIndex;
+function showActionPanel(slotIndex, unit, crystalCost, canAttack, canAbility, hasSickness, hasEnergy) {
+  actionPanelSlot = slotIndex;
   selectedFieldSlot = slotIndex;
 
-  // Render first so the field slot DOM is up to date, THEN append popup
+  // Render first so the field slot DOM is up to date
   renderAll();
 
-  const slotEl = document.querySelector(`#player-field .field-slot[data-slot="${slotIndex}"]`);
-  if (!slotEl) return;
+  const panel = document.getElementById('bt-actions');
+  const unitInfo = document.getElementById('bt-actions-unit');
+  const buttons = document.getElementById('bt-actions-buttons');
 
-  const popup = document.createElement('div');
-  popup.className = 'action-popup';
-  popup.id = 'action-popup';
+  // Unit info
+  const emoji = unit.emoji || ELEMENT_ICONS[unit.element] || '?';
+  const hpPercent = Math.round((unit.currentHp / unit.maxHp) * 100);
+  const hpColor = hpPercent > 50 ? '#22cc44' : hpPercent > 25 ? '#ccaa22' : '#cc2222';
 
-  // Attack button
-  const attackBtn = document.createElement('button');
-  attackBtn.className = 'action-popup-btn action-popup-attack';
-  attackBtn.innerHTML = `<span class="action-popup-label">⚔️ ATTAQUER</span><span class="action-popup-sub">gratuit, 1x/tour</span>`;
-  attackBtn.disabled = !canAttack;
-  attackBtn.onclick = (e) => {
-    e.stopPropagation();
-    closeActionPopup();
-    actionMode = 'select_attack_target';
-    renderAll();
-    showInstruction('Cliquez une cible ennemie pour attaquer');
-  };
+  unitInfo.innerHTML = `
+    <div class="bt-actions-unit-emoji">${emoji}</div>
+    <div class="bt-actions-unit-name">${unit.name}</div>
+    <div class="bt-actions-unit-hp">
+      <div class="bt-unit-hpbar">
+        <div class="bt-unit-hpbar-fill" style="width:${hpPercent}%;background:${hpColor}"></div>
+      </div>
+      <span class="bt-unit-hp-text">${unit.currentHp}/${unit.maxHp}</span>
+    </div>
+    ${unit.passive_desc ? `<div class="bt-actions-passive">🔸 ${unit.passive_desc}</div>` : ''}
+  `;
 
-  // Ability button
-  const abilityBtn = document.createElement('button');
-  abilityBtn.className = 'action-popup-btn action-popup-ability';
-  abilityBtn.innerHTML = `<span class="action-popup-label">✦ POUVOIR</span><span class="action-popup-sub">⚡${abilityCost} energie, 1x/combat</span>`;
-  abilityBtn.disabled = !canAbility;
-  abilityBtn.onclick = (e) => {
-    e.stopPropagation();
-    closeActionPopup();
-    actionMode = 'select_ability_target';
-    renderAll();
-    showInstruction("Cliquez une cible ennemie pour l'ability");
-  };
+  // Attack sub label
+  let atkSub = '⚡1 energie, 1x/tour';
+  if (hasSickness) atkSub = '💤 Vient d\'etre posee';
+  else if (!hasEnergy) atkSub = '⚡ Pas assez d\'energie';
+  else if (battleData.attackedThisTurn?.includes(slotIndex)) atkSub = '✓ Deja attaque';
 
-  // Ability name label
-  const abilityLabel = document.createElement('div');
-  abilityLabel.className = 'action-popup-ability-name';
-  abilityLabel.textContent = unit.ability_name;
-  abilityLabel.title = unit.ability_desc || '';
+  // Ability sub label
+  let abilitySub = `💎${crystalCost} crystal, 1x/combat`;
+  if (unit.usedAbility) abilitySub = '✓ Deja utilisee';
+  else if ((battleData.playerCrystal || 0) < crystalCost) abilitySub = `💎 Pas assez (${crystalCost} requis)`;
 
-  popup.appendChild(attackBtn);
-  popup.appendChild(abilityBtn);
-  popup.appendChild(abilityLabel);
-  slotEl.style.position = 'relative';
-  slotEl.appendChild(popup);
+  // Buttons
+  buttons.innerHTML = `
+    <button class="bt-action-btn bt-action-btn--attack ${!canAttack ? 'disabled' : ''}"
+            onclick="actionAttack(event)" ${!canAttack ? 'disabled' : ''}>
+      <span class="bt-action-label">⚔️ ATTAQUER</span>
+      <span class="bt-action-sub">${atkSub}</span>
+    </button>
+    <button class="bt-action-btn bt-action-btn--ability ${!canAbility ? 'disabled' : ''}"
+            onclick="actionAbility(event)" ${!canAbility ? 'disabled' : ''}>
+      <span class="bt-action-label">✦ POUVOIR</span>
+      <span class="bt-action-sub">${abilitySub}</span>
+    </button>
+    ${unit.ability_name ? `<div class="bt-actions-ability-name" title="${unit.ability_desc || ''}">${unit.ability_name}</div>` : ''}
+  `;
+
+  panel.classList.remove('hidden');
 }
 
-function closeActionPopup() {
-  const existing = document.getElementById('action-popup');
-  if (existing) existing.remove();
-  actionPopupSlot = null;
+function hideActionPanel() {
+  document.getElementById('bt-actions').classList.add('hidden');
+  actionPanelSlot = null;
+}
+
+function actionAttack(e) {
+  e.stopPropagation();
+  hideActionPanel();
+  actionMode = 'select_attack_target';
+  renderAll();
+  showInstruction('Cliquez une cible ennemie pour attaquer');
+}
+
+function actionAbility(e) {
+  e.stopPropagation();
+  hideActionPanel();
+  actionMode = 'select_ability_target';
+  renderAll();
+  showInstruction("Cliquez une cible ennemie pour l'ability");
 }
 
 function clickHandCard(index) {
@@ -295,10 +384,8 @@ function clickHandCard(index) {
   }
 
   if (card.type === 'objet') {
-    // Item card
     const targetType = getItemTarget(card);
     if (targetType === 'team') {
-      // No target needed, use immediately
       useItem(index, null, null);
       return;
     }
@@ -306,7 +393,6 @@ function clickHandCard(index) {
     selectedHandIndex = index;
     actionMode = 'select_item_target';
   } else {
-    // Creature card - enter deploy mode
     selectedHandIndex = index;
     actionMode = 'select_deploy_slot';
   }
@@ -316,6 +402,7 @@ function clickHandCard(index) {
 
 function clickFieldSlot(side, slotIndex) {
   if (isAnimating || battleData.result) return;
+  slotClickedThisFrame = true;
 
   // Deploy mode: click empty player slot
   if (actionMode === 'select_deploy_slot' && side === 'player') {
@@ -369,14 +456,14 @@ function clickFieldSlot(side, slotIndex) {
     return;
   }
 
-  // Click on own field unit: show action choice popup
+  // Click on own field unit: show action panel
   if (side === 'player') {
     const unit = battleData.playerField[slotIndex];
     if (!unit || !unit.alive) return;
 
-    // If popup is open on this unit, close it
-    if (actionPopupSlot === slotIndex) {
-      closeActionPopup();
+    // If panel is open on this unit, close it
+    if (actionPanelSlot === slotIndex) {
+      hideActionPanel();
       cancelAction();
       return;
     }
@@ -387,45 +474,94 @@ function clickFieldSlot(side, slotIndex) {
       return;
     }
 
-    // Close any open popup first
-    closeActionPopup();
+    // Close any open panel first
+    hideActionPanel();
 
     if (unit.stunned) {
       showInstruction('Carte etourdie !');
       return;
     }
 
+    // Check summoning sickness
+    const hasSickness = unit.justDeployed;
+
     const enemyAlive = battleData.enemyField.some(u => u && u.alive);
-    const canAttack = !battleData.attackedThisTurn?.includes(slotIndex) && enemyAlive;
-    const abilityCost = Math.ceil(unit.mana_cost / 2);
-    const canAbility = !unit.usedAbility && battleData.playerEnergy >= abilityCost && enemyAlive;
+    const hasEnergy = battleData.playerEnergy >= 1;
+    const canAttack = !battleData.attackedThisTurn?.includes(slotIndex) && !hasSickness && hasEnergy && enemyAlive;
+    const crystalCost = unit.crystal_cost || 1;
+    const canAbility = !unit.usedAbility && (battleData.playerCrystal || 0) >= crystalCost && enemyAlive;
 
-    if (!canAttack && !canAbility) {
-      showInstruction('Aucune action disponible');
-      return;
-    }
-
-    // If only attack available, go directly to attack mode
-    if (canAttack && !canAbility) {
-      selectedFieldSlot = slotIndex;
-      actionMode = 'select_attack_target';
-      renderAll();
-      showInstruction('Cliquez une cible ennemie pour attaquer');
-      return;
-    }
-
-    // If only ability available, go directly to ability mode
-    if (!canAttack && canAbility) {
-      selectedFieldSlot = slotIndex;
-      actionMode = 'select_ability_target';
-      renderAll();
-      showInstruction("Cliquez une cible ennemie pour l'ability");
-      return;
-    }
-
-    // Both available: show choice popup
-    showActionPopup(slotIndex, unit, abilityCost, canAttack, canAbility);
+    // Always show action panel (even if some actions are disabled)
+    showActionPanel(slotIndex, unit, crystalCost, canAttack, canAbility, hasSickness, hasEnergy);
   }
+}
+
+function clickEnemyAvatar() {
+  if (isAnimating || battleData.result) return;
+
+  // Can only attack avatar when in attack mode
+  if (actionMode === 'select_attack_target') {
+    const enemyAlive = battleData.enemyField.some(u => u && u.alive);
+    if (enemyAlive) {
+      showInstruction('Il reste des cartes a eliminer !');
+      return;
+    }
+    attackAvatar(selectedFieldSlot);
+    return;
+  }
+
+  // Ability on avatar
+  if (actionMode === 'select_ability_target') {
+    const enemyAlive = battleData.enemyField.some(u => u && u.alive);
+    if (enemyAlive) {
+      showInstruction('Il reste des cartes a eliminer !');
+      return;
+    }
+    useAbilityOnAvatar(selectedFieldSlot);
+    return;
+  }
+}
+
+async function attackAvatar(fieldSlot) {
+  if (isAnimating) return;
+  isAnimating = true;
+
+  try {
+    const res = await fetch('/api/battle/attack-avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ battleId: battleData.battleId, fieldSlot })
+    });
+    const data = await res.json();
+    if (!res.ok) { showInstruction(data.error); isAnimating = false; return; }
+
+    await animateEvents(data.events);
+    updateBattleData(data);
+  } catch { showInstruction('Erreur reseau'); }
+
+  cancelAction();
+  isAnimating = false;
+}
+
+async function useAbilityOnAvatar(fieldSlot) {
+  if (isAnimating) return;
+  isAnimating = true;
+
+  try {
+    const res = await fetch('/api/battle/use-ability-avatar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ battleId: battleData.battleId, fieldSlot })
+    });
+    const data = await res.json();
+    if (!res.ok) { showInstruction(data.error); isAnimating = false; return; }
+
+    await animateEvents(data.events);
+    updateBattleData(data);
+  } catch { showInstruction('Erreur reseau'); }
+
+  cancelAction();
+  isAnimating = false;
 }
 
 function showInstruction(text) {
@@ -555,12 +691,20 @@ function updateBattleData(data) {
   battleData.playerField = data.playerField;
   battleData.playerEnergy = data.playerEnergy;
   battleData.playerMaxEnergy = data.playerMaxEnergy;
+  battleData.playerCrystal = data.playerCrystal;
+  battleData.playerMaxCrystal = data.playerMaxCrystal;
   battleData.playerDeckCount = data.playerDeckCount;
+  battleData.playerHp = data.playerHp;
+  battleData.playerMaxHp = data.playerMaxHp;
   battleData.enemyField = data.enemyField;
   battleData.enemyHandCount = data.enemyHandCount;
   battleData.enemyEnergy = data.enemyEnergy;
   battleData.enemyMaxEnergy = data.enemyMaxEnergy;
+  battleData.enemyCrystal = data.enemyCrystal;
+  battleData.enemyMaxCrystal = data.enemyMaxCrystal;
   battleData.enemyDeckCount = data.enemyDeckCount;
+  battleData.enemyHp = data.enemyHp;
+  battleData.enemyMaxHp = data.enemyMaxHp;
   battleData.turn = data.turn;
   battleData.result = data.result;
   battleData.attackedThisTurn = data.attackedThisTurn || [];
@@ -814,6 +958,19 @@ async function animateEvents(events) {
         cssClass = 'log-draw';
         break;
       }
+      case 'avatar_damage': {
+        text = `${event.attacker} → Adversaire : -${event.damage} PV (${event.targetHp} restants)`;
+        cssClass = event.side === 'player' ? 'log-player-attack' : 'log-enemy-attack';
+        // Flash avatar
+        const avatarId = event.side === 'player' ? 'enemy-avatar-hp' : 'player-avatar-hp';
+        const avatarCircle = document.querySelector(`#${avatarId} .bt-avatar-circle`);
+        if (avatarCircle) {
+          avatarCircle.classList.add('bt-avatar-hit');
+          setTimeout(() => avatarCircle.classList.remove('bt-avatar-hit'), 500);
+        }
+        animDuration = 400;
+        break;
+      }
       case 'type_passive': {
         text = `${event.desc}`;
         cssClass = 'log-passive';
@@ -834,8 +991,7 @@ async function animateEvents(events) {
 }
 
 function showDamageFloat(side, slotIndex, damage) {
-  const field = side === 'enemy' ? '#enemy-field' : '#player-field';
-  const slot = document.querySelector(`${field} .field-slot[data-slot="${slotIndex}"]`);
+  const slot = getSlotElement(side, slotIndex);
   if (!slot) return;
 
   const float = document.createElement('div');
@@ -846,8 +1002,7 @@ function showDamageFloat(side, slotIndex, damage) {
 }
 
 function animateSlot(side, slotIndex, animClass) {
-  const field = side === 'player' ? '#player-field' : '#enemy-field';
-  const slot = document.querySelector(`${field} .field-slot[data-slot="${slotIndex}"]`);
+  const slot = getSlotElement(side, slotIndex);
   if (!slot) return;
   slot.classList.add(animClass);
   setTimeout(() => slot.classList.remove(animClass), 500);
@@ -863,7 +1018,7 @@ function sleep(ms) {
 
 function getSlotElement(side, slotIndex) {
   const field = side === 'player' ? '#player-field' : '#enemy-field';
-  return document.querySelector(`${field} .field-slot[data-slot="${slotIndex}"]`);
+  return document.querySelector(`${field} .bt-slot[data-slot="${slotIndex}"]`);
 }
 
 function findSlotByName(name) {
@@ -889,7 +1044,7 @@ async function animateAttackMovement(attackerSide, attackerSlot, targetSide, tar
   const targetEl = getSlotElement(targetSide, targetSlot);
   if (!attackerEl || !targetEl) return;
 
-  const unitEl = attackerEl.querySelector('.field-unit');
+  const unitEl = attackerEl.querySelector('.bt-unit');
   if (!unitEl) return;
 
   const attackerRect = attackerEl.getBoundingClientRect();
@@ -922,7 +1077,7 @@ async function animateAttackMovement(attackerSide, attackerSlot, targetSide, tar
 function animateImpact(side, slotIndex) {
   const el = getSlotElement(side, slotIndex);
   if (!el) return;
-  const unit = el.querySelector('.field-unit');
+  const unit = el.querySelector('.bt-unit');
   if (!unit) return;
   unit.classList.add('impact-shake');
   const flash = document.createElement('div');
@@ -937,7 +1092,7 @@ function animateImpact(side, slotIndex) {
 function animateAbilityCast(side, slotIndex, color) {
   const el = getSlotElement(side, slotIndex);
   if (!el) return;
-  const unit = el.querySelector('.field-unit');
+  const unit = el.querySelector('.bt-unit');
   if (!unit) return;
   unit.style.boxShadow = `0 0 25px ${color}, 0 0 50px ${color}`;
   unit.classList.add('ability-casting');
@@ -950,7 +1105,7 @@ function animateAbilityCast(side, slotIndex, color) {
 function animateAbilityHit(side, slotIndex, color) {
   const el = getSlotElement(side, slotIndex);
   if (!el) return;
-  const unit = el.querySelector('.field-unit');
+  const unit = el.querySelector('.bt-unit');
   if (!unit) return;
   const flash = document.createElement('div');
   flash.className = 'ability-hit-flash';
@@ -983,7 +1138,7 @@ function showStatusFloat(side, slotIndex, icon, color) {
 function animateDeploy(side, slotIndex) {
   const el = getSlotElement(side, slotIndex);
   if (!el) return;
-  const unit = el.querySelector('.field-unit');
+  const unit = el.querySelector('.bt-unit');
   if (!unit) return;
   unit.classList.add('deploy-anim');
   setTimeout(() => unit.classList.remove('deploy-anim'), 500);
@@ -992,7 +1147,7 @@ function animateDeploy(side, slotIndex) {
 function animateKO(side, slotIndex) {
   const el = getSlotElement(side, slotIndex);
   if (!el) return;
-  const unit = el.querySelector('.field-unit');
+  const unit = el.querySelector('.bt-unit');
   if (!unit) return;
   unit.classList.add('ko-anim');
 }
@@ -1005,21 +1160,20 @@ function screenFlash() {
 }
 
 // ========================
-// ABILITY BUTTON (double-click on own unit)
+// RIGHT-CLICK ABILITY
 // ========================
 
-// Right-click on player field unit = use ability
 document.getElementById('player-field').addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  const slot = e.target.closest('.field-slot');
+  const slot = e.target.closest('.bt-slot');
   if (!slot) return;
   const slotIndex = parseInt(slot.dataset.slot);
   const unit = battleData.playerField[slotIndex];
   if (!unit || !unit.alive || unit.usedAbility || unit.stunned) return;
 
-  const abilityCost = Math.ceil(unit.mana_cost / 2);
-  if (battleData.playerEnergy < abilityCost) {
-    showInstruction(`Pas assez d'energie pour l'ability (${abilityCost})`);
+  const crystalCost = unit.crystal_cost || 1;
+  if ((battleData.playerCrystal || 0) < crystalCost) {
+    showInstruction(`Pas assez de crystal (${crystalCost} requis)`);
     return;
   }
 
@@ -1083,10 +1237,14 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') cancelAction();
 });
 
-// Click outside popup to close
+// Click outside panel to close
 document.addEventListener('click', (e) => {
-  if (actionPopupSlot !== null && !e.target.closest('.action-popup') && !e.target.closest('.field-slot')) {
-    closeActionPopup();
+  if (slotClickedThisFrame) {
+    slotClickedThisFrame = false;
+    return;
+  }
+  if (actionPanelSlot !== null && !e.target.closest('#bt-actions') && !e.target.closest('.bt-slot')) {
+    hideActionPanel();
     cancelAction();
   }
 });

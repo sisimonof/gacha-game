@@ -31,17 +31,16 @@
 
             <h3 class="wiki-subtitle">Debut de tour</h3>
             <ul>
-              <li>Vous recevez votre <span class="wiki-highlight">energie</span> du tour (+1 par tour, max 10)</li>
+              <li>Vous recevez votre <span class="wiki-highlight">mana</span> du tour (voir progression ci-dessous)</li>
+              <li>Votre <span class="wiki-highlight">jauge de crystal</span> augmente de +0.3</li>
               <li>Vous piochez <span class="wiki-highlight">1 carte</span> (max 7 en main)</li>
-              <li>Les passifs de debut de tour s'activent (Aura divine, etc.)</li>
             </ul>
 
             <h3 class="wiki-subtitle">Phase d'action (dans n'importe quel ordre)</h3>
             <ul>
-              <li><span class="wiki-action-deploy">DEPLOYER</span> — Jouez une creature de votre main sur un slot vide. Coute <span class="wiki-highlight">X energie</span> (= cout mana de la carte)</li>
-              <li><span class="wiki-action-attack">ATTAQUER</span> — Cliquez une de vos unites, puis choisissez "Attaquer". Ciblez un ennemi. <span class="wiki-highlight">Gratuit, 1x par carte par tour</span></li>
-              <li><span class="wiki-action-ability">POUVOIR</span> — Cliquez une de vos unites, puis choisissez "Pouvoir". Ciblez un ennemi. Coute <span class="wiki-highlight">ceil(mana/2) energie, 1x par carte par combat</span></li>
-              <li><span class="wiki-action-item">OBJET</span> — Jouez un objet depuis la main. Effet instantane, la carte est defaussee. Coute <span class="wiki-highlight">X energie</span></li>
+              <li><span class="wiki-action-deploy">DEPLOYER</span> — Jouez une creature sur un slot vide. Coute <span class="wiki-highlight">X mana</span></li>
+              <li><span class="wiki-action-attack">ATTAQUER</span> — Cliquez une de vos unites, ciblez un ennemi. <span class="wiki-highlight">Gratuit, 1x/carte/tour</span></li>
+              <li><span class="wiki-action-ability">POUVOIR</span> — Activez le pouvoir d'une unite. Coute <span class="wiki-highlight">💎 Crystal</span>, <span class="wiki-highlight">1x/carte/combat</span></li>
             </ul>
 
             <h3 class="wiki-subtitle">Fin de tour</h3>
@@ -55,82 +54,57 @@
             <ul>
               <li>L'ennemi n'a <span class="wiki-highlight">plus de cartes</span> (terrain + main + deck vides)</li>
               <li>Apres <span class="wiki-highlight">20 tours</span> : celui avec le plus de PV totaux gagne</li>
-              <li>Egalite = match nul (pas de recompense)</li>
             </ul>
           </div>
         </details>
 
         <!-- ============================================ -->
-        <!-- SYSTEME D'ENERGIE -->
+        <!-- SYSTEME DE MANA -->
         <!-- ============================================ -->
         <details class="wiki-section">
-          <summary class="wiki-section-title">SYSTEME D'ENERGIE</summary>
+          <summary class="wiki-section-title">SYSTEME DE MANA</summary>
           <div class="wiki-section-content">
-            <p>L'energie est la ressource principale du combat. Elle se renouvelle chaque tour.</p>
-
-            <div class="wiki-formula">Energie du tour = min(tour + 1, 10)</div>
+            <p>Le mana est la ressource pour <span class="wiki-highlight">deployer des creatures</span>. Il se renouvelle chaque tour selon cette progression :</p>
 
             <table class="wiki-table">
-              <tr><th>Tour</th><th>Energie</th></tr>
-              <tr><td>1</td><td>2</td></tr>
-              <tr><td>2</td><td>3</td></tr>
-              <tr><td>3</td><td>4</td></tr>
-              <tr><td>4</td><td>5</td></tr>
-              <tr><td>5-8</td><td>6 a 9</td></tr>
-              <tr><td>9+</td><td>10 (max)</td></tr>
+              <tr><th>Tour</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7+</th></tr>
+              <tr><td class="wiki-highlight">Mana</td><td>1</td><td>2</td><td>3</td><td>3</td><td>4</td><td>5</td><td>6</td></tr>
             </table>
 
-            <h3 class="wiki-subtitle">Couts en energie</h3>
+            <h3 class="wiki-subtitle">Couts en mana</h3>
             <ul>
-              <li><span class="wiki-action-deploy">Deployer</span> — Coute le <span class="wiki-highlight">mana de la carte</span> (1 a 3)</li>
-              <li><span class="wiki-action-ability">Pouvoir</span> — Coute <span class="wiki-highlight">ceil(mana / 2)</span> energie (1 a 2)</li>
+              <li><span class="wiki-action-deploy">Deployer</span> — Coute le <span class="wiki-highlight">mana de la carte</span> (1 a 5)</li>
               <li><span class="wiki-action-attack">Attaquer</span> — <span class="wiki-highlight">Gratuit !</span></li>
-              <li><span class="wiki-action-item">Objet</span> — Coute le <span class="wiki-highlight">mana de l'objet</span></li>
             </ul>
 
-            <p><em>L'energie non-depensee est perdue en fin de tour (pas d'accumulation).</em></p>
+            <p><em>Le mana non-depense est perdu en fin de tour (pas d'accumulation).</em></p>
           </div>
         </details>
 
         <!-- ============================================ -->
-        <!-- TYPES DE POUVOIRS -->
+        <!-- SYSTEME DE CRYSTAL -->
         <!-- ============================================ -->
         <details class="wiki-section">
-          <summary class="wiki-section-title">TYPES DE POUVOIRS</summary>
+          <summary class="wiki-section-title">SYSTEME DE CRYSTAL 💎</summary>
           <div class="wiki-section-content">
-            <p>Chaque creature possede un pouvoir unique utilisable <span class="wiki-highlight">1 fois par combat</span>. Le pouvoir coute de l'energie (ceil(mana/2)).</p>
+            <p>Le crystal est la ressource pour <span class="wiki-highlight">activer les pouvoirs</span> des creatures. Contrairement au mana, le crystal <span class="wiki-highlight">s'accumule</span> au fil des tours.</p>
+
+            <div class="wiki-formula">Crystal par tour = +0.3 (base) | Max = 2.0</div>
 
             <table class="wiki-table">
-              <tr><th>Type</th><th>Effet</th><th>Cible</th></tr>
-              <tr><td class="wiki-highlight">Degats directs</td><td>Inflige X degats a la cible</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Ignore DEF</td><td>L'attaque suivante ignore la defense</td><td>Soi</td></tr>
-              <tr><td class="wiki-highlight">Drain de vie</td><td>Inflige X degats et soigne l'unite</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Degats de zone (AoE)</td><td>Inflige X degats a TOUS les ennemis</td><td>Tous ennemis</td></tr>
-              <tr><td class="wiki-highlight">Buff ATK</td><td>+X ATK a l'unite (temporaire)</td><td>Soi</td></tr>
-              <tr><td class="wiki-highlight">Buff DEF</td><td>+X DEF a l'unite (temporaire)</td><td>Soi</td></tr>
-              <tr><td class="wiki-highlight">Buff equipe ATK</td><td>+X ATK a toute l'equipe</td><td>Equipe</td></tr>
-              <tr><td class="wiki-highlight">Buff equipe DEF</td><td>+X DEF a toute l'equipe</td><td>Equipe</td></tr>
-              <tr><td class="wiki-highlight">Debuff ATK</td><td>-X ATK a la cible</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Debuff DEF</td><td>-X DEF a la cible</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Stun</td><td>Etourdit la cible (saute son prochain tour)</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Poison</td><td>Inflige X degats par tour (persistant)</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Bouclier</td><td>Absorbe X degats avant les PV</td><td>Soi</td></tr>
-              <tr><td class="wiki-highlight">Soin allie</td><td>Soigne l'allie le plus blesse de X PV</td><td>Allie</td></tr>
-              <tr><td class="wiki-highlight">Soin equipe</td><td>Soigne toute l'equipe de X PV</td><td>Equipe</td></tr>
-              <tr><td class="wiki-highlight">Marque</td><td>Marque la cible (+X degats de toutes les sources)</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Contre-attaque</td><td>Reflete X degats a chaque attaquant</td><td>Soi</td></tr>
-              <tr><td class="wiki-highlight">Vol de vie</td><td>Les attaques normales soignent X% des degats</td><td>Soi</td></tr>
-              <tr><td class="wiki-highlight">Execute</td><td>Degats bonus si cible en-dessous de X% PV</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Sacrifice</td><td>Inflige des degats a soi-meme pour faire des degats enormes</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Degats aleatoires</td><td>Inflige X degats Y fois sur des cibles aleatoires</td><td>Ennemis</td></tr>
-              <tr><td class="wiki-highlight">Degats tour 1</td><td>Bonus de degats uniquement au premier tour</td><td>1 ennemi</td></tr>
-              <tr><td class="wiki-highlight">Degats + Soin</td><td>Inflige des degats ET soigne un allie</td><td>1 ennemi + 1 allie</td></tr>
-              <tr><td class="wiki-highlight">Degats conditionnels</td><td>Degats augmentes par allies morts</td><td>Ennemis</td></tr>
-              <tr><td class="wiki-highlight">Revive</td><td>Permet de revenir a la vie une fois avec X PV</td><td>Soi</td></tr>
-              <tr><td class="wiki-highlight">Combo</td><td>Enchaine plusieurs effets (legendaires)</td><td>Variable</td></tr>
+              <tr><th>Tour</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th></tr>
+              <tr><td class="wiki-highlight">Crystal total</td><td>0.3</td><td>0.6</td><td>0.9</td><td>1.2</td><td>1.5</td><td>1.8</td><td>2.0</td></tr>
             </table>
 
-            <p><em>Les <span class="wiki-type-mage">Mages</span> beneficient de +20% de degats sur les pouvoirs.</em></p>
+            <h3 class="wiki-subtitle">Cout des pouvoirs</h3>
+            <ul>
+              <li>Chaque pouvoir coute entre <span class="wiki-highlight">1.0 et 1.5 crystal</span></li>
+              <li>Un pouvoir est utilisable <span class="wiki-highlight">1 seule fois par combat</span></li>
+              <li>Premier pouvoir disponible vers le <span class="wiki-highlight">tour 4</span> (1.2 crystal)</li>
+            </ul>
+
+            <h3 class="wiki-subtitle">Cartes Crystal</h3>
+            <p>Des <span class="wiki-highlight">cartes crystal</span> speciales (disponibles dans les boosters) permettent d'augmenter la vitesse de remplissage de la jauge.</p>
           </div>
         </details>
 
@@ -140,7 +114,7 @@
         <details class="wiki-section">
           <summary class="wiki-section-title">AVANTAGES ELEMENTAIRES</summary>
           <div class="wiki-section-content">
-            <p>Les elements influencent les degats d'attaque.</p>
+            <p>3 elements forment un <span class="wiki-highlight">triangle d'avantages</span> :</p>
 
             <div class="wiki-formula">Fort = x1.5 degats | Faible = x0.75 degats</div>
 
@@ -161,85 +135,88 @@
               <tr><td class="wiki-elem-feu">&#128293; Feu</td><td class="wiki-elem-terre">&#127793; Terre</td><td class="wiki-elem-eau">&#128167; Eau</td></tr>
               <tr><td class="wiki-elem-terre">&#127793; Terre</td><td class="wiki-elem-eau">&#128167; Eau</td><td class="wiki-elem-feu">&#128293; Feu</td></tr>
               <tr><td class="wiki-elem-eau">&#128167; Eau</td><td class="wiki-elem-feu">&#128293; Feu</td><td class="wiki-elem-terre">&#127793; Terre</td></tr>
-              <tr><td class="wiki-elem-lumiere">&#10024; Lumiere</td><td class="wiki-elem-ombre">&#127761; Ombre</td><td class="wiki-elem-ombre">&#127761; Ombre</td></tr>
-              <tr><td class="wiki-elem-ombre">&#127761; Ombre</td><td class="wiki-elem-lumiere">&#10024; Lumiere</td><td class="wiki-elem-lumiere">&#10024; Lumiere</td></tr>
-            </table>
-
-            <p><em>Lumiere et Ombre sont mutuellement fortes ET faibles (les combats sont plus volatils).</em></p>
-          </div>
-        </details>
-
-        <!-- ============================================ -->
-        <!-- PASSIFS DE TYPE -->
-        <!-- ============================================ -->
-        <details class="wiki-section">
-          <summary class="wiki-section-title">PASSIFS DE TYPE</summary>
-          <div class="wiki-section-content">
-            <p>Chaque type de carte possede des <span class="wiki-highlight">passifs permanents</span> en combat.</p>
-
-            <table class="wiki-table">
-              <tr><th>Type</th><th>Passif 1</th><th>Passif 2</th></tr>
-              <tr>
-                <td class="wiki-type-guerrier">&#9876; Guerrier</td>
-                <td><span class="wiki-highlight">+10% PV max</span> — Les guerriers sont plus resistants</td>
-                <td><span class="wiki-highlight">Fortification</span> — +2 DEF quand PV &lt; 30%</td>
-              </tr>
-              <tr>
-                <td class="wiki-type-mage">&#9733; Mage</td>
-                <td><span class="wiki-highlight">+20% degats d'ability</span> — Les pouvoirs font plus mal</td>
-                <td><span class="wiki-highlight">Fragilite</span> — +1 degat subi des attaques normales</td>
-              </tr>
-              <tr>
-                <td class="wiki-type-bete">&#128062; Bete</td>
-                <td><span class="wiki-highlight">Feroce</span> — +1 ATK permanent par ennemi KO</td>
-                <td><span class="wiki-highlight">Meute</span> — +1 ATK si 2+ Betes sur le terrain</td>
-              </tr>
-              <tr>
-                <td class="wiki-type-divin">&#9734; Divin</td>
-                <td><span class="wiki-highlight">Aura</span> — Soigne 1 PV/tour a toute l'equipe</td>
-                <td><span class="wiki-highlight">Grace</span> — 15% de chance de survivre a 1 PV</td>
-              </tr>
             </table>
           </div>
         </details>
 
         <!-- ============================================ -->
-        <!-- OBJETS -->
+        <!-- LISTE DES CARTES -->
         <!-- ============================================ -->
         <details class="wiki-section">
-          <summary class="wiki-section-title">CARTES OBJET</summary>
+          <summary class="wiki-section-title">LISTE DES CARTES</summary>
           <div class="wiki-section-content">
-            <p>Les objets sont des cartes speciales jouees <span class="wiki-highlight">depuis la main</span>. Leur effet est instantane et elles ne prennent <span class="wiki-highlight">pas de slot</span> sur le terrain.</p>
 
-            <h3 class="wiki-subtitle">Communes (mana 1)</h3>
+            <h3 class="wiki-subtitle">&#9898; Communes</h3>
             <table class="wiki-table">
-              <tr><th>Nom</th><th>Cible</th><th>Effet</th></tr>
-              <tr><td>&#129514; Potion mineure</td><td>Allie</td><td>+5 PV</td></tr>
-              <tr><td>&#129704; Pierre lancee</td><td>Ennemi</td><td>3 degats</td></tr>
-              <tr><td>&#127807; Herbe medicinale</td><td>Allie</td><td>+3 PV</td></tr>
-              <tr><td>&#129657; Bandage</td><td>Allie</td><td>+4 PV</td></tr>
-              <tr><td>&#128142; Caillou pointu</td><td>Ennemi</td><td>2 degats (ignore DEF)</td></tr>
+              <tr><th>Carte</th><th>Element</th><th>Mana</th><th>ATK</th><th>DEF</th><th>PV</th><th>Pouvoir (💎)</th><th>Passif</th></tr>
+              <tr>
+                <td>&#128481; Goblin</td>
+                <td class="wiki-elem-terre">&#127793; Terre</td>
+                <td>1</td><td>2</td><td>1</td><td>3</td>
+                <td>Appel gobelin (1.0) — Invoque un Goblin 1/1/2</td>
+                <td>+1 ATK si un autre Goblin est sur le terrain</td>
+              </tr>
+              <tr>
+                <td>&#128034; Tortue des Rivieres</td>
+                <td class="wiki-elem-eau">&#128167; Eau</td>
+                <td>4</td><td>1</td><td>4</td><td>5</td>
+                <td>Carapace marine (1.0) — +2 DEF a un allie ce tour</td>
+                <td>Les unites Eau alliees invoquees gagnent +1 PV</td>
+              </tr>
             </table>
 
-            <h3 class="wiki-subtitle">Rares (mana 2)</h3>
+            <h3 class="wiki-subtitle">&#128309; Rares</h3>
             <table class="wiki-table">
-              <tr><th>Nom</th><th>Cible</th><th>Effet</th></tr>
-              <tr><td>&#128170; Potion de force</td><td>Allie</td><td>+3 ATK ce tour</td></tr>
-              <tr><td>&#128737; Armure legere</td><td>Allie</td><td>+4 bouclier</td></tr>
-              <tr><td>&#128168; Bombe fumigene</td><td>Ennemi</td><td>Stun</td></tr>
-              <tr><td>&#9760; Fiole de poison</td><td>Ennemi</td><td>Poison 2/tour</td></tr>
-              <tr><td>&#128220; Parchemin de soin</td><td>Equipe</td><td>+3 PV a tous</td></tr>
+              <tr><th>Carte</th><th>Element</th><th>Mana</th><th>ATK</th><th>DEF</th><th>PV</th><th>Pouvoir (💎)</th><th>Passif</th></tr>
+              <tr>
+                <td>&#128013; Serpent des Marees</td>
+                <td class="wiki-elem-eau">&#128167; Eau</td>
+                <td>2</td><td>2</td><td>1</td><td>3</td>
+                <td>Frappe rapide (1.0) — 2 degats directs</td>
+                <td>Peut renvoyer la cible en main si degats infliges</td>
+              </tr>
+              <tr>
+                <td>&#127754; Mage de Foudre</td>
+                <td class="wiki-elem-eau">&#128167; Eau</td>
+                <td>3</td><td>3</td><td>1</td><td>3</td>
+                <td>Eclair (1.0) — 2 degats a une cible</td>
+                <td>1ere action du tour : 3 degats au lieu de 2</td>
+              </tr>
+              <tr>
+                <td>&#127807; Esprit des Forets</td>
+                <td class="wiki-elem-terre">&#127793; Terre</td>
+                <td>3</td><td>1</td><td>3</td><td>4</td>
+                <td>Croissance (1.5) — Invoque Pousse (0/1/1) qui evolue</td>
+                <td>Les unites Terre alliees gagnent +1 DEF</td>
+              </tr>
+              <tr>
+                <td>&#129422; Salamandre Ardente</td>
+                <td class="wiki-elem-feu">&#128293; Feu</td>
+                <td>3</td><td>3</td><td>1</td><td>3</td>
+                <td>Flamme adjacente (1.0) — 1 degat a un ennemi</td>
+                <td>Si elle detruit un ennemi, +1 ATK tour suivant</td>
+              </tr>
             </table>
 
-            <h3 class="wiki-subtitle">Epiques (mana 3)</h3>
+            <h3 class="wiki-subtitle">&#128995; Epiques</h3>
             <table class="wiki-table">
-              <tr><th>Nom</th><th>Cible</th><th>Effet</th></tr>
-              <tr><td>&#9876; Epee enchantee</td><td>Allie</td><td>+5 ATK permanent</td></tr>
-              <tr><td>&#128213; Grimoire de foudre</td><td>Ennemi</td><td>7 degats</td></tr>
-              <tr><td>&#128511; Totem de guerre</td><td>Equipe</td><td>+2 ATK a tous</td></tr>
-              <tr><td>&#10024; Elixir de vie</td><td>Allie</td><td>+12 PV</td></tr>
-              <tr><td>&#128220; Parchemin interdit</td><td>Tous ennemis</td><td>4 degats AoE</td></tr>
+              <tr><th>Carte</th><th>Element</th><th>Mana</th><th>ATK</th><th>DEF</th><th>PV</th><th>Pouvoir (💎)</th><th>Passif</th></tr>
+              <tr>
+                <td>&#128009; Dragonnet de Braise</td>
+                <td class="wiki-elem-feu">&#128293; Feu</td>
+                <td>4</td><td>3</td><td>2</td><td>4</td>
+                <td>Souffle de braise (1.5) — 1 degat a tous les ennemis</td>
+                <td>Si une unite meurt ce tour, +1 ATK temporaire</td>
+              </tr>
+              <tr>
+                <td>&#129704; Golem de Roche</td>
+                <td class="wiki-elem-terre">&#127793; Terre</td>
+                <td>5</td><td>2</td><td>5</td><td>7</td>
+                <td>Fortification (1.0) — +3 DEF jusqu'a fin du tour</td>
+                <td>Subit 1 degat de moins de toutes les attaques</td>
+              </tr>
             </table>
+
           </div>
         </details>
 
@@ -255,22 +232,53 @@
 
             <h3 class="wiki-subtitle">Etapes du calcul</h3>
             <ol>
-              <li><span class="wiki-highlight">ATK effective</span> = ATK de base + buffs (Feroce, Meute, objets)</li>
-              <li><span class="wiki-highlight">DEF effective</span> = DEF de base + buffs (Fortification si PV &lt; 30%)</li>
+              <li><span class="wiki-highlight">ATK effective</span> = ATK de base + buffs</li>
+              <li><span class="wiki-highlight">DEF effective</span> = DEF de base + buffs</li>
               <li><span class="wiki-highlight">Degats bruts</span> = max(ATK - DEF, 1) — minimum 1 degat</li>
               <li><span class="wiki-highlight">Modificateur element</span> — x1.5 si fort, x0.75 si faible</li>
-              <li><span class="wiki-highlight">Marque</span> — +X degats si la cible est marquee</li>
-              <li><span class="wiki-highlight">Fragilite Mage</span> — +1 degat si la cible est un Mage</li>
             </ol>
 
             <h3 class="wiki-subtitle">Mecaniques speciales</h3>
             <ul>
-              <li><span class="wiki-highlight">Bouclier</span> — Absorbe les degats avant les PV. Si degats &gt; bouclier, le surplus va aux PV</li>
-              <li><span class="wiki-highlight">Poison</span> — Inflige X degats au debut du tour ennemi (ignore DEF et bouclier)</li>
-              <li><span class="wiki-highlight">Contre-attaque</span> — Quand l'unite est attaquee, reflete X degats a l'attaquant</li>
-              <li><span class="wiki-highlight">Vol de vie</span> — L'unite se soigne d'un % des degats infliges par attaque</li>
-              <li><span class="wiki-highlight">Execute</span> — Degats multiplies si la cible est en-dessous d'un seuil de PV</li>
+              <li><span class="wiki-highlight">Bouclier</span> — Absorbe les degats avant les PV</li>
+              <li><span class="wiki-highlight">Poison</span> — Inflige X degats par tour (ignore DEF et bouclier)</li>
+              <li><span class="wiki-highlight">Stun</span> — L'unite ne peut pas agir pendant 1 tour</li>
             </ul>
+          </div>
+        </details>
+
+        <!-- ============================================ -->
+        <!-- BOOSTERS -->
+        <!-- ============================================ -->
+        <details class="wiki-section">
+          <summary class="wiki-section-title">BOOSTERS</summary>
+          <div class="wiki-section-content">
+            <table class="wiki-table">
+              <tr><th>Booster</th><th>Prix</th><th>Cartes</th><th>Taux Shiny</th></tr>
+              <tr>
+                <td class="wiki-highlight">Booster Origines</td>
+                <td>300 CR</td>
+                <td>5 cartes</td>
+                <td>2%</td>
+              </tr>
+              <tr>
+                <td class="wiki-highlight">Booster Rift</td>
+                <td>415 CR</td>
+                <td>7 cartes</td>
+                <td>5%</td>
+              </tr>
+            </table>
+
+            <h3 class="wiki-subtitle">Taux de drop</h3>
+            <table class="wiki-table">
+              <tr><th>Rarete</th><th>Origines</th><th>Rift</th></tr>
+              <tr><td>Commune</td><td>60%</td><td>50%</td></tr>
+              <tr><td>Rare</td><td>25%</td><td>28%</td></tr>
+              <tr><td>Epique</td><td>12%</td><td>16%</td></tr>
+              <tr><td>Legendaire</td><td>3%</td><td>6%</td></tr>
+            </table>
+
+            <p><em>Le Booster Rift a de meilleurs taux pour les cartes rares et epiques.</em></p>
           </div>
         </details>
 
@@ -280,13 +288,18 @@
         <details class="wiki-section">
           <summary class="wiki-section-title">DECK STARTER</summary>
           <div class="wiki-section-content">
-            <p>Le <span class="wiki-highlight">Deck Starter</span> est un deck de test gratuit disponible pour tous les joueurs. Il contient <span class="wiki-highlight">20 cartes communes faibles</span> (15 creatures + 5 objets).</p>
+            <p>Le <span class="wiki-highlight">Deck Starter</span> est un deck de test gratuit. Il contient <span class="wiki-highlight">20 cartes</span> equilibrees entre les 3 elements.</p>
             <ul>
-              <li>Les cartes du starter n'appartiennent <span class="wiki-highlight">pas</span> au joueur</li>
-              <li>Toutes les cartes coutent 1-2 mana</li>
-              <li>Ideal pour apprendre les mecaniques de combat</li>
-              <li>Accessible depuis le hub Combat &gt; PvP &gt; Deck Starter</li>
+              <li>4x Goblin (Terre, 1 mana)</li>
+              <li>3x Tortue des Rivieres (Eau, 4 mana)</li>
+              <li>3x Serpent des Marees (Eau, 2 mana)</li>
+              <li>3x Mage de Foudre (Eau, 3 mana)</li>
+              <li>2x Salamandre Ardente (Feu, 3 mana)</li>
+              <li>2x Esprit des Forets (Terre, 3 mana)</li>
+              <li>2x Dragonnet de Braise (Feu, 4 mana)</li>
+              <li>1x Golem de Roche (Terre, 5 mana)</li>
             </ul>
+            <p><em>Les cartes du starter n'appartiennent pas au joueur. Accessible depuis Combat &gt; Deck Starter.</em></p>
           </div>
         </details>
 

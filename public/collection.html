@@ -6,114 +6,142 @@
   <title>GACHA CARDS - Collection</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-  <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
-  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+<body class="collection-page">
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
 
-  <div class="crt-screen">
-    <div class="collection-wrapper">
-      <h1 class="menu-title">COLLECTION</h1>
-
-      <!-- Stats d'inventaire -->
-      <div class="collection-stats" id="collection-stats">
-        <div class="stat-chip stat-total"><span class="stat-icon">📦</span> <span id="stat-total">0</span> cartes</div>
-        <div class="stat-chip stat-commune"><span class="stat-icon">⚪</span> <span id="stat-commune">0</span></div>
-        <div class="stat-chip stat-rare"><span class="stat-icon">🔵</span> <span id="stat-rare">0</span></div>
-        <div class="stat-chip stat-epique"><span class="stat-icon">🟣</span> <span id="stat-epique">0</span></div>
-        <div class="stat-chip stat-legendaire"><span class="stat-icon">🟡</span> <span id="stat-legendaire">0</span></div>
-        <div class="stat-chip stat-shiny"><span class="stat-icon">✨</span> <span id="stat-shiny">0</span></div>
+  <!-- ===== TOPBAR ===== -->
+  <nav class="dash-navbar">
+    <div class="dash-navbar-inner">
+      <div class="dash-nav-logo">GACHA CARDS</div>
+      <div class="dash-nav-links">
+        <a href="/menu" class="dash-nav-link">ACCUEIL</a>
+        <a href="/shop" class="dash-nav-link dash-nav-link--shop">BOUTIQUE</a>
+        <a href="/collection" class="dash-nav-link dash-nav-link--active">COLLECTION</a>
+        <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
+        <a href="/wiki" class="dash-nav-link">WIKI</a>
       </div>
-
-      <!-- Toolbar de filtres -->
-      <div class="collection-toolbar" id="collection-toolbar">
-
-        <!-- Recherche -->
-        <div class="filter-row search-row">
-          <input type="text" class="search-input" id="search-input" placeholder="> Rechercher une carte..." autocomplete="off">
-        </div>
-
-        <!-- Filtres Rarete -->
-        <div class="filter-row">
-          <span class="filter-label">RARETE</span>
-          <button class="filter-btn active" data-filter="rarity" data-value="all">TOUS</button>
-          <button class="filter-btn" data-filter="rarity" data-value="commune">COMMUNE</button>
-          <button class="filter-btn" data-filter="rarity" data-value="rare">RARE</button>
-          <button class="filter-btn" data-filter="rarity" data-value="epique">EPIQUE</button>
-          <button class="filter-btn" data-filter="rarity" data-value="legendaire">LEGEND.</button>
-        </div>
-
-        <!-- Filtres Element -->
-        <div class="filter-row">
-          <span class="filter-label">ELEMENT</span>
-          <button class="filter-btn active" data-filter="element" data-value="all">TOUS</button>
-          <button class="filter-btn" data-filter="element" data-value="feu">🔥 FEU</button>
-          <button class="filter-btn" data-filter="element" data-value="eau">💧 EAU</button>
-          <button class="filter-btn" data-filter="element" data-value="terre">🌿 TERRE</button>
-          <button class="filter-btn" data-filter="element" data-value="lumiere">✨ LUMIERE</button>
-          <button class="filter-btn" data-filter="element" data-value="ombre">🌑 OMBRE</button>
-        </div>
-
-        <!-- Filtres Type -->
-        <div class="filter-row">
-          <span class="filter-label">TYPE</span>
-          <button class="filter-btn active" data-filter="type" data-value="all">TOUS</button>
-          <button class="filter-btn" data-filter="type" data-value="guerrier">⚔ GUERRIER</button>
-          <button class="filter-btn" data-filter="type" data-value="mage">🔮 MAGE</button>
-          <button class="filter-btn" data-filter="type" data-value="bete">🐾 BETE</button>
-          <button class="filter-btn" data-filter="type" data-value="divin">👼 DIVIN</button>
-        </div>
-
-        <!-- Special + Tri -->
-        <div class="filter-row filter-row-bottom">
-          <div class="filter-special">
-            <button class="filter-btn filter-toggle" id="filter-shiny" data-filter="shiny">✨ SHINY</button>
-            <button class="filter-btn filter-toggle" id="filter-fused" data-filter="fused">🔗 FUSE</button>
-          </div>
-          <div class="filter-sort">
-            <select class="sort-select" id="sort-select">
-              <option value="rarity">Tri: Rarete</option>
-              <option value="atk">Tri: ATK</option>
-              <option value="def">Tri: DEF</option>
-              <option value="hp">Tri: PV</option>
-              <option value="name_asc">Tri: Nom A-Z</option>
-              <option value="name_desc">Tri: Nom Z-A</option>
-              <option value="price">Tri: Prix</option>
-            </select>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Compteur resultats -->
-      <div class="filter-result-count" id="filter-result-count"></div>
-
-      <!-- Grille de cartes -->
-      <div class="collection-grid" id="collection-grid">
-        <!-- Rempli par JS -->
-      </div>
-
-      <p class="collection-empty hidden" id="empty-msg">Aucune carte. Visitez la boutique !</p>
-      <p class="collection-empty hidden" id="no-results-msg">Aucune carte ne correspond aux filtres.</p>
-
-      <!-- Zone de vente -->
-      <div class="sell-zone" id="sell-zone">
-        <div class="sell-zone-icon">&#9876;</div>
-        <div class="sell-zone-text">VENDRE</div>
-        <div class="sell-zone-hint">Glissez une carte ici</div>
+      <div class="dash-nav-user">
+        <span class="dash-nav-stat" title="Credits">&#128176; <span id="nav-credits">0</span></span>
+        <span class="dash-nav-stat" title="Cartes">&#128230; <span id="nav-cards">0</span></span>
+        <span class="dash-nav-username" id="nav-username">???</span>
       </div>
     </div>
+  </nav>
+
+  <!-- ===== LAYOUT ===== -->
+  <div class="coll-layout">
+
+    <!-- SIDEBAR -->
+    <aside class="coll-sidebar">
+      <div class="coll-sidebar-section">
+        <div class="coll-sidebar-title">COLLECTION</div>
+        <div class="coll-sidebar-nav">
+          <div class="coll-nav-item coll-nav-item--active" data-view="all">&#128214; Toutes les cartes</div>
+          <div class="coll-nav-item" data-view="shiny">&#10024; Shiny</div>
+          <div class="coll-nav-item" data-view="doubles">&#128257; Doubles</div>
+          <div class="coll-nav-item" data-view="fused">&#128279; Fusion</div>
+        </div>
+      </div>
+
+      <div class="coll-sidebar-section">
+        <div class="coll-sidebar-title">STATISTIQUES</div>
+        <div class="coll-progress">
+          <div class="coll-progress-label">
+            <span>Cartes</span>
+            <span id="coll-progress-text">0</span>
+          </div>
+          <div class="coll-progress-bar">
+            <div class="coll-progress-fill" id="coll-progress-fill"></div>
+          </div>
+        </div>
+        <div class="coll-stat-list">
+          <div class="coll-stat-row"><span class="coll-stat-dot" style="background:#888"></span><span class="coll-stat-label">Commune</span><span class="coll-stat-value" id="coll-stat-commune">0</span></div>
+          <div class="coll-stat-row"><span class="coll-stat-dot" style="background:#4488ff"></span><span class="coll-stat-label">Rare</span><span class="coll-stat-value" id="coll-stat-rare">0</span></div>
+          <div class="coll-stat-row"><span class="coll-stat-dot" style="background:#cc44ff"></span><span class="coll-stat-label">Epique</span><span class="coll-stat-value" id="coll-stat-epique">0</span></div>
+          <div class="coll-stat-row"><span class="coll-stat-dot" style="background:#ffaa00"></span><span class="coll-stat-label">Legendaire</span><span class="coll-stat-value" id="coll-stat-legendaire">0</span></div>
+          <div class="coll-stat-row"><span class="coll-stat-dot" style="background:linear-gradient(90deg,#ff0,#0ff,#f0f)"></span><span class="coll-stat-label">Shiny</span><span class="coll-stat-value" id="coll-stat-shiny">0</span></div>
+        </div>
+      </div>
+
+      <div class="coll-sidebar-section">
+        <div class="coll-sidebar-title">ELEMENTS</div>
+        <div class="coll-sidebar-filters">
+          <button class="coll-filter-btn active" data-filter="element" data-value="all">Tous</button>
+          <button class="coll-filter-btn" data-filter="element" data-value="feu" style="--accent:#ff4422">&#128293; Feu</button>
+          <button class="coll-filter-btn" data-filter="element" data-value="eau" style="--accent:#2299ff">&#128167; Eau</button>
+          <button class="coll-filter-btn" data-filter="element" data-value="terre" style="--accent:#44aa33">&#127807; Terre</button>
+          <button class="coll-filter-btn" data-filter="element" data-value="lumiere" style="--accent:#ffcc00">&#10024; Lumiere</button>
+          <button class="coll-filter-btn" data-filter="element" data-value="ombre" style="--accent:#9944cc">&#127761; Ombre</button>
+        </div>
+      </div>
+
+      <div class="coll-sidebar-section">
+        <div class="coll-sidebar-title">TYPES</div>
+        <div class="coll-sidebar-filters">
+          <button class="coll-filter-btn active" data-filter="type" data-value="all">Tous</button>
+          <button class="coll-filter-btn" data-filter="type" data-value="guerrier" style="--accent:#ff4444">&#9876; Guerrier</button>
+          <button class="coll-filter-btn" data-filter="type" data-value="mage" style="--accent:#cc44ff">&#128302; Mage</button>
+          <button class="coll-filter-btn" data-filter="type" data-value="bete" style="--accent:#44aa33">&#128062; Bete</button>
+          <button class="coll-filter-btn" data-filter="type" data-value="divin" style="--accent:#ffcc00">&#128124; Divin</button>
+        </div>
+      </div>
+
+      <div class="coll-sidebar-section coll-sidebar-sell">
+        <div class="coll-sell-zone" id="sell-zone">
+          <div class="coll-sell-icon">&#9876;</div>
+          <div class="coll-sell-text">VENDRE</div>
+          <div class="coll-sell-hint">Glissez une carte ici</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CONTENU PRINCIPAL -->
+    <main class="coll-main">
+      <div class="coll-header">
+        <div class="coll-header-left">
+          <h1 class="coll-title">COLLECTION</h1>
+          <span class="coll-subtitle" id="coll-count-label">0 cartes</span>
+        </div>
+        <div class="coll-header-pills">
+          <span class="coll-pill" style="--pill-color:#888" data-filter="rarity" data-value="commune"><span class="coll-pill-count" id="pill-commune">0</span> Commune</span>
+          <span class="coll-pill" style="--pill-color:#4488ff" data-filter="rarity" data-value="rare"><span class="coll-pill-count" id="pill-rare">0</span> Rare</span>
+          <span class="coll-pill" style="--pill-color:#cc44ff" data-filter="rarity" data-value="epique"><span class="coll-pill-count" id="pill-epique">0</span> Epique</span>
+          <span class="coll-pill" style="--pill-color:#ffaa00" data-filter="rarity" data-value="legendaire"><span class="coll-pill-count" id="pill-legendaire">0</span> Legend.</span>
+        </div>
+      </div>
+
+      <div class="coll-filter-bar">
+        <input type="text" class="coll-search" id="coll-search" placeholder="> Rechercher une carte..." autocomplete="off">
+        <select class="coll-sort-select" id="coll-sort">
+          <option value="rarity">Tri: Rarete</option>
+          <option value="atk">Tri: ATK</option>
+          <option value="def">Tri: DEF</option>
+          <option value="hp">Tri: PV</option>
+          <option value="name_asc">Tri: Nom A-Z</option>
+          <option value="name_desc">Tri: Nom Z-A</option>
+          <option value="price">Tri: Prix</option>
+        </select>
+        <button class="coll-reset-btn" id="coll-reset">RESET</button>
+      </div>
+
+      <div class="coll-results-bar">
+        <span class="coll-results-count" id="coll-result-count"></span>
+      </div>
+
+      <div class="coll-grid" id="collection-grid"></div>
+
+      <p class="coll-empty hidden" id="empty-msg">Aucune carte. Visitez la boutique !</p>
+      <p class="coll-empty hidden" id="no-results-msg">Aucune carte ne correspond aux filtres.</p>
+    </main>
   </div>
 
-  <!-- Overlay animation de vente -->
+  <!-- Overlays -->
   <div class="sell-overlay hidden" id="sell-overlay">
     <div class="sell-card-container" id="sell-card-container"></div>
     <div class="sell-price-popup" id="sell-price-popup"></div>
   </div>
-
-  <!-- Flash ecran -->
   <div class="screen-flash hidden" id="screen-flash"></div>
-
-  <div class="version-tag">v0.7.0</div>
 
   <script src="/js/card-renderer.js"></script>
   <script src="/js/collection.js"></script>

@@ -126,793 +126,76 @@ db.exec(`
   )
 `);
 
-// --- Système d'éléments ---
+// --- Système d'éléments (3 classes uniquement) ---
 const ELEMENT_ADVANTAGES = {
-  feu:     { strong: 'terre',   weak: 'eau' },
-  terre:   { strong: 'eau',     weak: 'feu' },
-  eau:     { strong: 'feu',     weak: 'terre' },
-  lumiere: { strong: 'ombre',   weak: 'ombre' },
-  ombre:   { strong: 'lumiere', weak: 'lumiere' },
-  neutre:  { strong: null, weak: null }
+  feu:   { strong: 'terre', weak: 'eau' },
+  terre: { strong: 'eau',   weak: 'feu' },
+  eau:   { strong: 'feu',   weak: 'terre' }
 };
 
 const ELEMENT_CONFIG = {
-  feu:     { icon: '🔥', color: '#ff4422', name: 'Feu' },
-  eau:     { icon: '💧', color: '#2299ff', name: 'Eau' },
-  terre:   { icon: '🌿', color: '#44aa33', name: 'Terre' },
-  lumiere: { icon: '✨', color: '#ffcc00', name: 'Lumière' },
-  ombre:   { icon: '🌑', color: '#9944cc', name: 'Ombre' },
-  neutre:  { icon: '🔧', color: '#888888', name: 'Neutre' }
+  feu:   { icon: '🔥', color: '#ff4422', name: 'Feu' },
+  eau:   { icon: '💧', color: '#2299ff', name: 'Eau' },
+  terre: { icon: '🌿', color: '#44aa33', name: 'Terre' }
 };
 
-// --- Seed des cartes ---
-const cardCount = db.prepare('SELECT COUNT(*) as c FROM cards').get().c;
-if (cardCount === 0) {
-  const insert = db.prepare(`
-    INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  const seedCards = db.transaction(() => {
-    insert.run('Soldat',  'commune', 'guerrier', 'terre',   3, 4, 20, 2, 'Charge',       '+2 ATK ce tour',     'soldat.png');
-    insert.run('Loup',    'commune', 'bete',     'ombre',   4, 2, 15, 1, 'Morsure',      '2 degats directs',   'loup.png');
-    insert.run('Archer',  'commune', 'guerrier', 'eau',     3, 2, 14, 2, 'Tir percant',  'Ignore la DEF',      'archer.png');
-    insert.run('Chevalier', 'rare', 'guerrier', 'lumiere', 5, 7, 30, 3, 'Rempart',       '+4 DEF ce tour',     'chevalier.png');
-    insert.run('Mage',      'rare', 'mage',     'feu',     6, 3, 18, 3, 'Boule de feu',  '5 degats',           'mage.png');
-    insert.run('Sorciere', 'epique', 'mage',  'ombre',   7, 4, 22, 4, 'Drain de vie',   '4 degats +2 PV',    'sorciere.png');
-    insert.run('Dragon',   'epique', 'bete',  'feu',     9, 6, 35, 5, 'Souffle ardent', '6 degats a tous',    'dragon.png');
-    insert.run('Archange', 'legendaire', 'divin', 'lumiere', 8, 8, 40, 6, 'Jugement divin', '10 degats',       'archange.png');
-    insert.run('Phenix',   'legendaire', 'bete',  'feu',     9, 5, 35, 6, 'Renaissance',    'Revient avec 15 PV une fois', 'phenix.png');
-  });
-
-  seedCards();
-  console.log('Cartes seedees.');
+// --- Progression de mana par tour ---
+const MANA_PROGRESSION = [0, 1, 2, 3, 3, 4, 5, 6]; // index = tour
+function getManaForTurn(turn) {
+  if (turn <= 0) return 1;
+  if (turn >= MANA_PROGRESSION.length) return 6;
+  return MANA_PROGRESSION[turn];
 }
 
-// --- Migration : ajout nouvelles cartes ---
-const newCards = [
-  ['Golem',  'epique', 'bete',    'terre', 5, 9, 38, 4, 'Seisme',          '3 degats + stun 1 tour',   'golem.png'],
-  ['Sirene', 'rare',   'mage',    'eau',   4, 5, 24, 3, 'Chant envoutant', 'Reduit ATK ennemi de 3',   'sirene.png'],
-  ['Phenix', 'legendaire', 'bete','feu',   9, 5, 35, 6, 'Renaissance',     'Revient avec 15 PV une fois', 'phenix.png'],
-  ['Gobelin',    'commune', 'guerrier', 'terre',   4, 2, 12, 1, 'Embuscade',      '3 degats si premier tour',   'gobelin.png'],
-  ['Fantome',    'commune', 'mage',     'ombre',   3, 1, 10, 1, 'Traversee',      'Ignore la DEF',              'fantome.png'],
-  ['Grenouille', 'commune', 'guerrier', 'eau',     2, 5, 18, 2, 'Bouclier algue', '+3 DEF ce tour',             'grenouille.png'],
-  ['Luciole',    'commune', 'mage',     'lumiere', 3, 3, 13, 1, 'Flash',          'Aveugle 1 tour',             'luciole.png'],
-  ['Pyromane',   'commune', 'mage',     'feu',    4, 1, 11, 1, 'Jonglerie',      '2 degats aleatoires x2',     'pyromane.png'],
-];
-{
-  const insertMigrate = db.prepare(`
-    INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  for (const c of newCards) {
-    const exists = db.prepare('SELECT id FROM cards WHERE name = ?').get(c[0]);
-    if (!exists) {
-      insertMigrate.run(...c);
-      console.log(`Carte ajoutee : ${c[0]}`);
-    }
-  }
-}
+// --- Cartes : pas de seed automatique, ajout via admin ou script ---
+// Les cartes seront ajoutees manuellement
 
-// --- Migration : pool de 200 cartes ---
-{
-  const insert200 = db.prepare(`
-    INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  const cards200 = [
-    // ===== COMMUNES - TERRE (18) =====
-    ['Mineur',        'commune','guerrier','terre',  3,4,18,2,'Charge',        '+2 ATK ce tour',''],
-    ['Taupe',         'commune','bete',    'terre',  2,3,16,1,'Morsure rapide','2 degats 1er tour',''],
-    ['Scarabee',      'commune','bete',    'terre',  3,5,14,1,'Carapace',      '+2 DEF ce tour',''],
-    ['Paysan',        'commune','guerrier','terre',  3,3,20,1,'Coup de poing', '1 degat direct',''],
-    ['Caillou vivant','commune','bete',    'terre',  2,6,22,2,'Mur de pierre', '+2 DEF ce tour',''],
-    ['Ver de terre',  'commune','bete',    'terre',  1,2,12,1,'Regeneration',  '1 degat +2 PV',''],
-    ['Herboriste',    'commune','mage',    'terre',  2,3,15,2,'Toxine',        '-2 ATK ennemi',''],
-    ['Champignon',    'commune','bete',    'terre',  2,4,18,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Terrassier',    'commune','guerrier','terre',  4,3,16,2,'Griffure',      '2 degats directs',''],
-    ['Rat',           'commune','bete',    'terre',  3,1,10,1,'Morsure rapide','2 degats 1er tour',''],
-    ['Sentinelle',    'commune','guerrier','terre',  3,5,20,2,'Mur de pierre', '+2 DEF ce tour',''],
-    ['Fourmi',        'commune','bete',    'terre',  2,2,12,1,'Rafale',        '1 degat x3',''],
-    ['Brigand',       'commune','guerrier','terre',  4,2,14,1,'Coup sournois', '3 degats 1er tour',''],
-    ['Bucheron',      'commune','guerrier','terre',  4,3,18,2,'Griffure',      '2 degats directs',''],
-    ['Sanglier',      'commune','bete',    'terre',  4,3,17,1,'Charge',        '+2 ATK ce tour',''],
-    ['Herisson',      'commune','bete',    'terre',  2,5,15,1,'Piqure',        '1 degat direct',''],
-    ['Alchimiste',    'commune','mage',    'terre',  3,2,13,2,'Siphon',        '2 degats +1 PV',''],
-    ['Fermier',       'commune','guerrier','terre',  3,4,19,2,'Cri de guerre', '+2 ATK ce tour',''],
-    // ===== COMMUNES - EAU (18) =====
-    ['Poisson',       'commune','bete',    'eau',    3,2,14,1,'Piqure',        '1 degat direct',''],
-    ['Crabe',         'commune','bete',    'eau',    3,5,18,1,'Griffure',      '2 degats directs',''],
-    ['Marin',         'commune','guerrier','eau',    3,3,16,2,'Paralysie',     'Stun 1 tour',''],
-    ['Pieuvre',        'commune','bete',    'eau',    4,2,15,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Meduse',        'commune','bete',    'eau',    2,1,12,1,'Paralysie',     'Stun 1 tour',''],
-    ['Triton',        'commune','guerrier','eau',    3,4,20,2,'Griffure',      '2 degats directs',''],
-    ['Hippocampe',    'commune','bete',    'eau',    2,3,14,1,'Carapace',      '+2 DEF ce tour',''],
-    ['Nymphe',        'commune','mage',    'eau',    3,2,13,2,'Toxine',        '-2 ATK ennemi',''],
-    ['Pirate',        'commune','guerrier','eau',    4,2,15,1,'Morsure rapide','2 degats 1er tour',''],
-    ['Pelican',       'commune','bete',    'eau',    3,2,14,1,'Morsure rapide','2 degats 1er tour',''],
-    ['Phoque',        'commune','bete',    'eau',    2,4,18,1,'Carapace',      '+2 DEF ce tour',''],
-    ['Coquillage',    'commune','bete',    'eau',    1,6,22,1,'Ecran de fumee','+3 DEF ce tour',''],
-    ['Naiade',        'commune','mage',    'eau',    3,3,15,2,'Griffure',      '2 degats directs',''],
-    ['Loutre',        'commune','bete',    'eau',    3,3,16,1,'Carapace',      '+2 DEF ce tour',''],
-    ['Moussaillon',   'commune','guerrier','eau',    3,2,14,1,'Cri de guerre', '+2 ATK ce tour',''],
-    ['Anguille',      'commune','bete',    'eau',    4,1,11,1,'Griffure',      '2 degats directs',''],
-    ['Tortue',        'commune','bete',    'eau',    2,5,20,1,'Ecran de fumee','+3 DEF ce tour',''],
-    ['Mouette',       'commune','bete',    'eau',    3,2,13,1,'Piqure',        '1 degat direct',''],
-    // ===== COMMUNES - FEU (19) =====
-    ['Torche',        'commune','mage',    'feu',    4,1,12,1,'Griffure',      '2 degats directs',''],
-    ['Salamandre',    'commune','bete',    'feu',    4,2,14,1,'Griffure',      '2 degats directs',''],
-    ['Forgeron',      'commune','guerrier','feu',    4,4,18,2,'Charge',        '+2 ATK ce tour',''],
-    ['Braise',        'commune','bete',    'feu',    3,1,10,1,'Coup sournois', '3 degats 1er tour',''],
-    ['Artificier',    'commune','guerrier','feu',    4,1,12,1,'Rafale',        '1 degat x3',''],
-    ['Fennec',        'commune','bete',    'feu',    3,2,13,1,'Morsure rapide','2 degats 1er tour',''],
-    ['Cactus ardent', 'commune','bete',    'feu',    2,5,18,1,'Piqure',        '1 degat direct',''],
-    ['Charbon',       'commune','bete',    'feu',    2,3,16,1,'Charge',        '+2 ATK ce tour',''],
-    ['Lezard',        'commune','bete',    'feu',    3,2,14,1,'Carapace',      '+2 DEF ce tour',''],
-    ['Volcanologue',  'commune','mage',    'feu',    3,2,14,2,'Griffure',      '2 degats directs',''],
-    ['Charbonnier',   'commune','guerrier','feu',    3,3,16,2,'Toxine',        '-2 ATK ennemi',''],
-    ['Etincelle',     'commune','mage',    'feu',    4,1,11,1,'Morsure rapide','2 degats 1er tour',''],
-    ['Chien de feu',  'commune','bete',    'feu',    4,2,15,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Danseur',       'commune','guerrier','feu',    4,2,14,1,'Charge',        '+2 ATK ce tour',''],
-    ['Magma',         'commune','bete',    'feu',    3,4,18,2,'Griffure',      '2 degats directs',''],
-    ['Cuisinier',     'commune','guerrier','feu',    3,3,16,1,'Griffure',      '2 degats directs',''],
-    ['Mouche de feu', 'commune','bete',    'feu',    3,1,10,1,'Morsure rapide','2 degats 1er tour',''],
-    ['Fumigene',      'commune','mage',    'feu',    2,3,15,2,'Ecran de fumee','+3 DEF ce tour',''],
-    ['Flambeau',      'commune','guerrier','feu',    3,2,14,1,'Coup de poing', '1 degat direct',''],
-    // ===== COMMUNES - OMBRE (19) =====
-    ['Chauve-souris', 'commune','bete',    'ombre',  3,1,12,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Araignee',      'commune','bete',    'ombre',  3,2,14,1,'Paralysie',     'Stun 1 tour',''],
-    ['Voleur',        'commune','guerrier','ombre',  4,1,13,1,'Coup sournois', '3 degats 1er tour',''],
-    ['Corbeau',       'commune','bete',    'ombre',  3,2,13,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Rat noir',      'commune','bete',    'ombre',  3,1,11,1,'Griffure',      '2 degats directs',''],
-    ['Spectre',       'commune','mage',    'ombre',  4,1,10,1,'Passe-muraille','Ignore la DEF',''],
-    ['Bandit',        'commune','guerrier','ombre',  4,2,14,1,'Coup sournois', '3 degats 1er tour',''],
-    ['Zombie',        'commune','guerrier','ombre',  3,3,20,1,'Siphon',        '2 degats +1 PV',''],
-    ['Squelette',     'commune','guerrier','ombre',  3,2,14,1,'Griffure',      '2 degats directs',''],
-    ['Chat noir',     'commune','bete',    'ombre',  3,3,14,1,'Griffure',      '2 degats directs',''],
-    ['Ombre rampante','commune','mage',    'ombre',  3,2,13,1,'Siphon',        '2 degats +1 PV',''],
-    ['Larve',         'commune','bete',    'ombre',  2,2,16,1,'Ecran de fumee','+3 DEF ce tour',''],
-    ['Assassin novice','commune','guerrier','ombre', 5,1,11,1,'Griffure',      '2 degats directs',''],
-    ['Crapaud sombre','commune','bete',    'ombre',  2,4,18,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Ectoplasme',    'commune','mage',    'ombre',  3,1,12,1,'Effroi',        'Stun 1 tour',''],
-    ['Goule',         'commune','bete',    'ombre',  4,2,16,1,'Siphon',        '2 degats +1 PV',''],
-    ['Marionnette',   'commune','mage',    'ombre',  3,3,15,2,'Paralysie',     'Stun 1 tour',''],
-    ['Serpent venimeux','commune','bete',   'ombre',  3,2,13,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Pilleur',       'commune','guerrier','ombre',  4,2,15,1,'Morsure rapide','2 degats 1er tour',''],
-    // ===== COMMUNES - LUMIERE (18) =====
-    ['Moineau celeste','commune','bete',   'lumiere',3,2,14,1,'Elan',          '+1 ATK ce tour',''],
-    ['Pretre novice', 'commune','mage',    'lumiere',2,3,16,2,'Regeneration',  '1 degat +2 PV',''],
-    ['Eclaireur',     'commune','guerrier','lumiere',3,3,16,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Papillon',      'commune','bete',    'lumiere',2,2,12,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Abeille sacree','commune','bete',    'lumiere',3,2,13,1,'Griffure',      '2 degats directs',''],
-    ['Gardien',       'commune','guerrier','lumiere',3,5,20,2,'Ecran de fumee','+3 DEF ce tour',''],
-    ['Apprenti mage', 'commune','mage',    'lumiere',3,2,14,2,'Griffure',      '2 degats directs',''],
-    ['Agneau',        'commune','bete',    'lumiere',1,4,18,1,'Carapace',      '+2 DEF ce tour',''],
-    ['Colombe',       'commune','bete',    'lumiere',2,3,15,1,'Carapace',      '+2 DEF ce tour',''],
-    ['Paladin novice','commune','guerrier','lumiere',4,4,18,2,'Griffure',      '2 degats directs',''],
-    ['Lutin',         'commune','bete',    'lumiere',3,2,13,1,'Toxine',        '-2 ATK ennemi',''],
-    ['Moine',         'commune','guerrier','lumiere',2,4,18,2,'Ecran de fumee','+3 DEF ce tour',''],
-    ['Cerf blanc',    'commune','bete',    'lumiere',3,3,16,1,'Cri de guerre', '+2 ATK ce tour',''],
-    ['Fee',           'commune','mage',    'lumiere',2,2,12,1,'Regeneration',  '1 degat +2 PV',''],
-    ['Heraut',        'commune','guerrier','lumiere',3,3,16,1,'Cri de guerre', '+2 ATK ce tour',''],
-    ['Chat blanc',    'commune','bete',    'lumiere',3,2,14,1,'Carapace',      '+2 DEF ce tour',''],
-    ['Scarabee dore', 'commune','bete',    'lumiere',3,4,16,1,'Griffure',      '2 degats directs',''],
-    ['Messager',      'commune','guerrier','lumiere',3,2,14,1,'Morsure rapide','2 degats 1er tour',''],
-    // ===== RARES - TERRE (11) =====
-    ['Centaure',      'rare','guerrier','terre',  5,5,28,3,'Galop',          '+3 ATK ce tour',''],
-    ['Druidesse',     'rare','mage',    'terre',  4,6,26,3,'Ronces',         '2 degats + stun',''],
-    ['Taureau',       'rare','bete',    'terre',  6,4,25,2,'Coup fatal',     '5 degats 1er tour',''],
-    ['Treant',        'rare','bete',    'terre',  4,7,32,3,'Forteresse',     '+5 DEF ce tour',''],
-    ['Gladiateur',    'rare','guerrier','terre',  6,5,26,3,'Frappe lourde',  '4 degats directs',''],
-    ['Tortue geante', 'rare','bete',    'terre',  3,7,30,3,'Forteresse',     '+5 DEF ce tour',''],
-    ['Nain mineur',   'rare','guerrier','terre',  5,6,28,3,'Frappe lourde',  '4 degats directs',''],
-    ['Basilic',       'rare','bete',    'terre',  5,4,24,3,'Ronces',         '2 degats + stun',''],
-    ['Geomancien',    'rare','mage',    'terre',  5,5,22,3,'Rugissement',    '-3 ATK ennemi',''],
-    ['Ours brun',     'rare','bete',    'terre',  6,5,28,2,'Frappe lourde',  '4 degats directs',''],
-    ['Sage des forets','rare','mage',   'terre',  4,5,24,3,'Guerison',       '2 degats +4 PV',''],
-    // ===== RARES - EAU (10) =====
-    ['Requin',        'rare','bete',    'eau',    7,3,24,2,'Frenzy',         '2 degats x3',''],
-    ['Ondine',        'rare','mage',    'eau',    5,5,24,3,'Vague glacee',   '2 degats + stun',''],
-    ['Corsaire',      'rare','guerrier','eau',    6,4,26,3,'Coup fatal',     '5 degats 1er tour',''],
-    ['Morse',         'rare','bete',    'eau',    4,6,30,3,'Benediction',    '+4 DEF ce tour',''],
-    ['Elementaire d eau','rare','mage', 'eau',    5,5,26,3,'Torrent',        '4 degats directs',''],
-    ['Kappa',         'rare','bete',    'eau',    5,5,24,3,'Rugissement',    '-3 ATK ennemi',''],
-    ['Pirate fantome','rare','guerrier','eau',    6,3,22,2,'Lame spectrale', 'Ignore la DEF',''],
-    ['Dauphin',       'rare','bete',    'eau',    4,4,24,2,'Rugissement',    '-3 ATK ennemi',''],
-    ['Invoqueuse de pluie','rare','mage','eau',   5,4,22,3,'Pluie de feu',  '3 degats a tous',''],
-    ['Narval',        'rare','bete',    'eau',    6,4,26,2,'Torrent',        '4 degats directs',''],
-    // ===== RARES - FEU (11) =====
-    ['Ifrit',         'rare','mage',    'feu',    7,3,22,3,'Pluie de feu',  '3 degats a tous',''],
-    ['Berserker',     'rare','guerrier','feu',    7,2,24,2,'Rage',           '+4 ATK ce tour',''],
-    ['Minotaure',     'rare','guerrier','feu',    6,5,28,3,'Frappe lourde',  '4 degats directs',''],
-    ['Serpent de lave','rare','bete',    'feu',    5,4,24,3,'Soif de sang',  '4 degats +3 PV',''],
-    ['Chimere',       'rare','bete',    'feu',    6,4,26,3,'Frenzy',         '2 degats x3',''],
-    ['Lion de feu',   'rare','bete',    'feu',    6,4,26,2,'Rugissement',    '-3 ATK ennemi',''],
-    ['Pyromancien',   'rare','mage',    'feu',    6,3,20,3,'Pluie de feu',  '3 degats a tous',''],
-    ['Scorpion geant','rare','bete',    'feu',    5,5,24,2,'Soif de sang',  '4 degats +3 PV',''],
-    ['Djinn',         'rare','mage',    'feu',    5,4,22,3,'Galop',          '+3 ATK ce tour',''],
-    ['Raptor',        'rare','bete',    'feu',    7,3,22,2,'Coup fatal',     '5 degats 1er tour',''],
-    ['Samourai de feu','rare','guerrier','feu',   6,5,26,3,'Frappe lourde',  '4 degats directs',''],
-    // ===== RARES - OMBRE (10) =====
-    ['Vampire',       'rare','mage',    'ombre',  6,3,22,3,'Soif de sang',  '4 degats +3 PV',''],
-    ['Loup-garou',    'rare','bete',    'ombre',  7,3,24,2,'Rage',           '+4 ATK ce tour',''],
-    ['Necromancien',  'rare','mage',    'ombre',  5,4,22,3,'Malediction',    '-4 ATK ennemi',''],
-    ['Assassin',      'rare','guerrier','ombre',  7,2,20,2,'Coup fatal',     '5 degats 1er tour',''],
-    ['Harpie',        'rare','bete',    'ombre',  5,3,22,2,'Ronces',         '2 degats + stun',''],
-    ['Wraith',        'rare','mage',    'ombre',  6,2,20,3,'Lame spectrale', 'Ignore la DEF',''],
-    ['Chevalier noir','rare','guerrier','ombre',  6,6,28,3,'Benediction',    '+4 DEF ce tour',''],
-    ['Manticore',     'rare','bete',    'ombre',  6,4,26,3,'Soif de sang',   '4 degats +3 PV',''],
-    ['Liche',         'rare','mage',    'ombre',  5,5,24,3,'Pluie de feu',  '3 degats a tous',''],
-    ['Panthere noire','rare','bete',    'ombre',  6,3,22,2,'Coup fatal',     '5 degats 1er tour',''],
-    // ===== RARES - LUMIERE (10) =====
-    ['Paladin',       'rare','guerrier','lumiere', 5,7,30,3,'Benediction',   '+4 DEF ce tour',''],
-    ['Ange gardien',  'rare','divin',   'lumiere', 5,5,26,3,'Benediction',   '+4 DEF ce tour',''],
-    ['Licorne',       'rare','bete',    'lumiere', 5,5,28,3,'Corne sacree',  '3 degats +3 PV',''],
-    ['Griffon',       'rare','bete',    'lumiere', 6,5,26,3,'Frappe lourde', '4 degats directs',''],
-    ['Pretre',        'rare','mage',    'lumiere', 4,6,28,3,'Guerison',      '2 degats +4 PV',''],
-    ['Templier',      'rare','guerrier','lumiere', 6,6,28,3,'Frappe lourde', '4 degats directs',''],
-    ['Pegase',        'rare','bete',    'lumiere', 5,4,24,2,'Lame spectrale','Ignore la DEF',''],
-    ['Mage blanc',    'rare','mage',    'lumiere', 5,4,24,3,'Pluie de feu', '3 degats a tous',''],
-    ['Valkyrie',      'rare','guerrier','lumiere', 6,5,26,3,'Coup fatal',    '5 degats 1er tour',''],
-    ['Esprit sacre',  'rare','mage',    'lumiere', 4,5,26,3,'Guerison',      '2 degats +4 PV',''],
-    // ===== EPIQUES - TERRE (6) =====
-    ['Titan de pierre','epique','guerrier','terre',7,9,38,5,'Avalanche',     '5 degats a tous',''],
-    ['Roi des nains', 'epique','guerrier','terre', 8,7,34,4,'Marteau runique','7 degats directs',''],
-    ['Hydre de terre','epique','bete',    'terre', 7,6,36,4,'Multi-tetes',   '3 degats x3',''],
-    ['Druide ancien', 'epique','mage',    'terre', 6,7,32,4,'Eveil naturel', '5 degats +4 PV',''],
-    ['Behemoth',      'epique','bete',    'terre', 8,8,38,5,'Avalanche',     '5 degats a tous',''],
-    ['Sphinx',        'epique','bete',    'terre', 7,6,30,4,'Terreur nocturne','5 degats + stun',''],
-    // ===== EPIQUES - EAU (5) =====
-    ['Kraken',        'epique','bete',    'eau',   8,5,34,4,'Multi-tetes',   '3 degats x3',''],
-    ['Leviathan',     'epique','bete',    'eau',   9,6,36,5,'Raz-de-maree',  '6 degats a tous',''],
-    ['Sorcier des mers','epique','mage',  'eau',   7,6,28,4,'Terreur nocturne','5 degats + stun',''],
-    ['Amiral fantome','epique','guerrier','eau',   8,5,30,4,'Purification',  '7 degats directs',''],
-    ['Roi triton',    'epique','guerrier','eau',   7,7,34,4,'Trident royal', '5 degats +3 PV',''],
-    // ===== EPIQUES - FEU (6) =====
-    ['Demon de feu',  'epique','mage',    'feu',   9,4,30,4,'Inferno',       '6 degats a tous',''],
-    ['Hydre de feu',  'epique','bete',    'feu',   8,5,32,4,'Multi-tetes',   '3 degats x3',''],
-    ['Wyvern',        'epique','bete',    'feu',   8,6,34,5,'Charge divine', '6 degats 1er tour',''],
-    ['Efreet',        'epique','divin',   'feu',   8,5,32,4,'Festin de sang','6 degats +4 PV',''],
-    ['Roi volcanique','epique','guerrier','feu',   7,7,34,5,'Inferno',       '6 degats a tous',''],
-    ['Guerrier infernal','epique','guerrier','feu',8,6,30,4,'Marteau runique','7 degats directs',''],
-    // ===== EPIQUES - OMBRE (5) =====
-    ['Faucheur',      'epique','mage',    'ombre', 9,3,28,4,'Faux mortelle', 'Ignore la DEF',''],
-    ['Dragon d ombre','epique','bete',    'ombre', 8,6,34,5,'Avalanche',     '5 degats a tous',''],
-    ['Seigneur vampire','epique','mage',  'ombre', 7,5,30,4,'Festin de sang','6 degats +4 PV',''],
-    ['Roi des morts', 'epique','guerrier','ombre', 8,7,36,5,'Avalanche',     '5 degats a tous',''],
-    ['Cauchemar',     'epique','bete',    'ombre', 8,4,30,4,'Terreur nocturne','5 degats + stun',''],
-    // ===== EPIQUES - LUMIERE (5) =====
-    ['Seraphin',      'epique','divin',   'lumiere',7,8,36,5,'Lumiere divine','5 degats a tous',''],
-    ['Champion sacre','epique','guerrier','lumiere',8,7,34,4,'Purification',  '7 degats directs',''],
-    ['Druide celeste','epique','mage',    'lumiere',6,7,32,4,'Eveil naturel', '5 degats +4 PV',''],
-    ['Chimere celeste','epique','bete',   'lumiere',8,6,32,4,'Charge divine', '6 degats 1er tour',''],
-    ['Inquisiteur',   'epique','guerrier','lumiere',8,6,30,4,'Purification',  '7 degats directs',''],
-    // ===== LEGENDAIRES - TERRE (3) =====
-    ['Gaia',          'legendaire','divin',   'terre',  9,10,50,7,'Colere terrestre','8 degats a tous',''],
-    ['Roi des forets','legendaire','divin',   'terre',  9,8,45,6,'Renaissance totale','Revient avec 25 PV',''],
-    ['Atlas',         'legendaire','guerrier','terre',  10,9,48,6,'Poids du monde','6 degats + stun',''],
-    // ===== LEGENDAIRES - EAU (3) =====
-    ['Poseidon',      'legendaire','divin','eau',      9,8,45,6,'Tsunami',     '8 degats a tous',''],
-    ['Serpent de mer', 'legendaire','bete', 'eau',      10,7,42,6,'Abime',      '8 degats +5 PV',''],
-    ['Reine des glaces','legendaire','mage','eau',      9,7,40,6,'Blizzard',   '7 degats a tous',''],
-    // ===== LEGENDAIRES - FEU (2) =====
-    ['Ifrit supreme', 'legendaire','divin','feu',      10,6,40,6,'Apocalypse', '9 degats a tous',''],
-    ['Empereur dragon','legendaire','bete', 'feu',      10,8,45,7,'Supernova',  '9 degats a tous',''],
-    // ===== LEGENDAIRES - OMBRE (3) =====
-    ['Thanatos',      'legendaire','divin','ombre',     10,6,38,6,'Sentence mortelle','15 degats directs',''],
-    ['Roi demon',     'legendaire','divin','ombre',     10,7,42,6,'Apocalypse', '9 degats a tous',''],
-    ['Fenrir',        'legendaire','bete', 'ombre',     10,5,40,6,'Ragnarok',   '5 degats x3',''],
-    // ===== LEGENDAIRES - LUMIERE (2) =====
-    ['Zeus',          'legendaire','divin','lumiere',   10,8,45,7,'Foudre supreme','12 degats directs',''],
-    ['Gardien eternel','legendaire','divin','lumiere',  8,10,50,7,'Immortalite','Revient avec 25 PV',''],
-  ];
-  const add200 = db.transaction(() => {
-    let added = 0;
-    for (const c of cards200) {
-      const exists = db.prepare('SELECT id FROM cards WHERE name = ?').get(c[0]);
-      if (!exists) { insert200.run(...c); added++; }
-    }
-    if (added > 0) console.log(`${added} nouvelles cartes ajoutees (pool 200).`);
-  });
-  add200();
-}
+// --- Anciennes migrations de cartes supprimees ---
+// Les cartes seront ajoutees via l'admin ou par script
 
-// --- Migration : abilities uniques pour chaque carte ---
-{
-  // Check if migration already ran by looking for a unique new ability name
-  const check = db.prepare("SELECT id FROM cards WHERE ability_name = 'Pioche brutale'").get();
-  if (!check) {
-    const upd = db.prepare('UPDATE cards SET ability_name = ?, ability_desc = ? WHERE name = ?');
-    const runUpd = db.transaction(() => {
-      let count = 0;
-
-      // ===== COMMUNES - TERRE =====
-      upd.run('Pioche brutale',     '2 degats directs',        'Mineur');
-      upd.run('Griffe de terre',    '2 degats directs',        'Taupe');
-      upd.run('Carapace blindee',   '+3 DEF ce tour',          'Scarabee');
-      upd.run('Coup de massue',     '1 degat direct',          'Paysan');
-      upd.run('Mur mineral',        '+3 DEF ce tour',          'Caillou vivant');
-      // Ver de terre keeps Regeneration
-      upd.run('Herbe toxique',      '-2 ATK ennemi',           'Herboriste');
-      upd.run('Spores nocives',     'Poison 2 par tour',       'Champignon');
-      upd.run('Tranchant rocheux',  '2 degats directs',        'Terrassier');
-      upd.run('Morsure de rat',     '2 degats 1er tour',       'Rat');
-      upd.run('Garde de pierre',    '+2 DEF ce tour',          'Sentinelle');
-      upd.run('Nuee de mandibules', '1 degat x3',              'Fourmi');
-      upd.run('Coup bas',           '3 degats 1er tour',       'Brigand');
-      upd.run('Hache de bois',      '2 degats directs',        'Bucheron');
-      upd.run('Charge sauvage',     '+2 ATK ce tour',          'Sanglier');
-      upd.run('Piquants',           'Contre 2 degats',         'Herisson');
-      upd.run('Elixir acide',       '2 degats +1 PV',          'Alchimiste');
-      upd.run('Appel aux armes',    '+1 ATK equipe',           'Fermier');
-
-      // ===== COMMUNES - EAU =====
-      upd.run('Ecaille coupante',   '1 degat direct',          'Poisson');
-      upd.run('Pince acier',        '2 degats directs',        'Crabe');
-      upd.run('Filet marin',        'Stun 1 tour',             'Marin');
-      upd.run('Jet d encre',        '-2 ATK ennemi',           'Pieuvre');
-      upd.run('Decharge electrique','Stun + 1 degat',          'Meduse');
-      upd.run('Lance de corail',    '2 degats directs',        'Triton');
-      upd.run('Nage defensive',     '+2 DEF ce tour',          'Hippocampe');
-      upd.run('Brume aquatique',    '-2 DEF ennemi',           'Nymphe');
-      upd.run('Sabre de bord',      '2 degats 1er tour',       'Pirate');
-      upd.run('Plongeon',           '2 degats 1er tour',       'Pelican');
-      upd.run('Glissade',           '+2 DEF ce tour',          'Phoque');
-      upd.run('Barricade nacrée',   '+3 DEF ce tour',          'Coquillage');
-      upd.run('Onde glaciale',      '2 degats directs',        'Naiade');
-      upd.run('Jeu aquatique',      'Soigne allie 2 PV',       'Loutre');
-      upd.run('Cri du matelot',     '+2 ATK ce tour',          'Moussaillon');
-      upd.run('Electrocution',      '2 degats directs',        'Anguille');
-      upd.run('Retrait protecteur', 'Bouclier +3',             'Tortue');
-      upd.run('Bec tranchant',      '1 degat direct',          'Mouette');
-
-      // ===== COMMUNES - FEU =====
-      upd.run('Flamme dansante',    '2 degats directs',        'Torche');
-      upd.run('Queue enflammee',    '2 degats directs',        'Salamandre');
-      upd.run('Marteau ardent',     '+2 ATK ce tour',          'Forgeron');
-      upd.run('Brulure soudaine',   '3 degats 1er tour',       'Braise');
-      upd.run('Bombe artisanale',   '1 degat x3',              'Artificier');
-      upd.run('Croc brulant',       '2 degats 1er tour',       'Fennec');
-      upd.run('Epines brulantes',   'Contre 2 degats',         'Cactus ardent');
-      upd.run('Combustion lente',   'Poison 2 par tour',       'Charbon');
-      upd.run('Ecaille de braise',  '+2 DEF ce tour',          'Lezard');
-      upd.run('Eruption mineure',   '2 degats directs',        'Volcanologue');
-      upd.run('Suie aveuglante',    '-2 ATK ennemi',           'Charbonnier');
-      upd.run('Etincelle vive',     '2 degats 1er tour',       'Etincelle');
-      upd.run('Morsure de flamme',  'Poison 2 par tour',       'Chien de feu');
-      upd.run('Pas de feu',         '+2 ATK ce tour',          'Danseur');
-      upd.run('Coulée de lave',     '2 degats directs',        'Magma');
-      upd.run('Broche ardente',     'Soigne allie 2 PV',       'Cuisinier');
-      upd.run('Dard de flamme',     '2 degats 1er tour',       'Mouche de feu');
-      upd.run('Voile de cendres',   '+3 DEF ce tour',          'Fumigene');
-      upd.run('Torche vive',        '1 degat direct',          'Flambeau');
-
-      // ===== COMMUNES - OMBRE =====
-      upd.run('Cri ultrason',       '-2 ATK ennemi',           'Chauve-souris');
-      upd.run('Toile collante',     'Stun 1 tour',             'Araignee');
-      upd.run('Lame furtive',       '3 degats 1er tour',       'Voleur');
-      upd.run('Mauvais presage',    '-2 DEF ennemi',           'Corbeau');
-      upd.run('Rongement',          '2 degats directs',        'Rat noir');
-      // Spectre keeps Passe-muraille
-      upd.run('Embuscade sombre',   '3 degats 1er tour',       'Bandit');
-      upd.run('Etreinte mortelle',  '2 degats +1 PV',          'Zombie');
-      upd.run('Os tranchant',       '2 degats directs',        'Squelette');
-      upd.run('Griffe d ombre',     '2 degats directs',        'Chat noir');
-      upd.run('Toucher spectral',   '2 degats +1 PV',          'Ombre rampante');
-      upd.run('Cocon ténébreux',    '+3 DEF ce tour',          'Larve');
-      upd.run('Dague empoisonnee',  'Poison 2 par tour',       'Assassin novice');
-      upd.run('Mucus toxique',      '-2 ATK ennemi',           'Crapaud sombre');
-      // Ectoplasme keeps Effroi
-      upd.run('Morsure vorace',     '2 degats +1 PV',          'Goule');
-      upd.run('Fils invisibles',    'Stun 1 tour',             'Marionnette');
-      upd.run('Venin nocturne',     'Poison 2 par tour',       'Serpent venimeux');
-      upd.run('Raid eclair',        '2 degats 1er tour',       'Pilleur');
-
-      // ===== COMMUNES - LUMIERE =====
-      upd.run('Elan celeste',       '+1 ATK ce tour',          'Moineau celeste');
-      upd.run('Priere mineure',     'Soigne allie 2 PV',       'Pretre novice');
-      upd.run('Oeil du faucon',     '-2 DEF ennemi',           'Eclaireur');
-      upd.run('Poussiere d or',     '-2 ATK ennemi',           'Papillon');
-      upd.run('Dard sacre',         '2 degats directs',        'Abeille sacree');
-      upd.run('Mur de lumiere',     '+3 DEF ce tour',          'Gardien');
-      upd.run('Trait lumineux',     '2 degats directs',        'Apprenti mage');
-      upd.run('Toison protectrice', '+2 DEF ce tour',          'Agneau');
-      upd.run('Plume doree',        'Soigne allie 2 PV',       'Colombe');
-      upd.run('Frappe vertueuse',   '2 degats directs',        'Paladin novice');
-      upd.run('Farce magique',      '-2 ATK ennemi',           'Lutin');
-      upd.run('Meditation',         '+3 DEF ce tour',          'Moine');
-      upd.run('Bois sacre',         '+2 ATK ce tour',          'Cerf blanc');
-      upd.run('Soin feerique',      'Soigne allie 2 PV',       'Fee');
-      upd.run('Fanfare',            '+1 ATK equipe',           'Heraut');
-      upd.run('Ronronnement',       'Soigne allie 2 PV',       'Chat blanc');
-      upd.run('Reflet d or',        '2 degats directs',        'Scarabee dore');
-      upd.run('Courrier rapide',    '2 degats 1er tour',       'Messager');
-
-      // ===== RARES - TERRE =====
-      // Centaure keeps Galop
-      // Druidesse keeps Ronces
-      // Taureau keeps Coup fatal
-      // Treant keeps Forteresse
-      // Gladiateur keeps Frappe lourde
-      upd.run('Muraille vivante',   'Bouclier +5',             'Tortue geante');
-      upd.run('Pioche runique',     'Vol de vie 30%',          'Nain mineur');
-      upd.run('Regard petrifiant',  'Marque +2 degats',        'Basilic');
-      upd.run('Onde tellurique',    '-3 DEF ennemi',           'Geomancien');
-      upd.run('Rage ursine',        '+4 ATK ce tour',          'Ours brun');
-      // Sage des forets keeps Guerison
-
-      // ===== RARES - EAU =====
-      // Requin keeps Frenzy
-      // Ondine keeps Vague glacee
-      upd.run('Assaut corsaire',    '5 degats 1er tour',       'Corsaire');
-      upd.run('Benediction marine', 'Bouclier +5',             'Morse');
-      // Elementaire d eau keeps Torrent
-      upd.run('Aura apaisante',     '-3 ATK ennemi',           'Kappa');
-      // Pirate fantome keeps Lame spectrale
-      upd.run('Echo aquatique',     '-3 DEF ennemi',           'Dauphin');
-      upd.run('Orage marin',        '3 degats a tous',         'Invoqueuse de pluie');
-      upd.run('Corne de narval',    '5 degats directs',        'Narval');
-
-      // ===== RARES - FEU =====
-      // Ifrit keeps Pluie de feu
-      // Berserker keeps Rage
-      upd.run('Corne de taureau',   '5 degats directs',        'Minotaure');
-      // Serpent de lave keeps Soif de sang
-      upd.run('Griffes multiples',  '2 degats x3',             'Chimere');
-      // Lion de feu keeps Rugissement
-      upd.run('Brasier',            '3 degats a tous',         'Pyromancien');
-      upd.run('Dard venimeux',      '4 degats +3 PV',          'Scorpion geant');
-      upd.run('Flamme mystique',    '+3 ATK ce tour',          'Djinn');
-      upd.run('Assaut predateur',   '5 degats 1er tour',       'Raptor');
-      upd.run('Katana de braise',   'Vol de vie 30%',          'Samourai de feu');
-
-      // ===== RARES - OMBRE =====
-      upd.run('Morsure vampirique', '4 degats +3 PV',          'Vampire');
-      upd.run('Hurlement bestial',  '+4 ATK ce tour',          'Loup-garou');
-      // Necromancien keeps Malediction
-      upd.run('Lame de l ombre',    '5 degats 1er tour',       'Assassin');
-      upd.run('Griffes de harpie',  '2 degats + stun',         'Harpie');
-      upd.run('Toucher du neant',   'Ignore la DEF',           'Wraith');
-      upd.run('Bouclier maudit',    'Bouclier +5',             'Chevalier noir');
-      upd.run('Queue de manticore', '4 degats +3 PV',          'Manticore');
-      upd.run('Flamme necrotique',  '3 degats a tous',         'Liche');
-      upd.run('Bond furtif',        '5 degats 1er tour',       'Panthere noire');
-
-      // ===== RARES - LUMIERE =====
-      // Paladin keeps Benediction
-      upd.run('Aegis celeste',      'Bouclier +5',             'Ange gardien');
-      // Licorne keeps Corne sacree
-      upd.run('Serres divines',     '4 degats directs',        'Griffon');
-      upd.run('Priere de soin',     'Soigne allie 4 PV',       'Pretre');
-      upd.run('Epee de justice',    '4 degats directs',        'Templier');
-      upd.run('Charge ailee',       'Ignore la DEF',           'Pegase');
-      upd.run('Rayon purificateur', '3 degats a tous',         'Mage blanc');
-      upd.run('Lance celeste',      '5 degats 1er tour',       'Valkyrie');
-      upd.run('Aura bienveillante', 'Soigne allie 4 PV',       'Esprit sacre');
-
-      // ===== EPIQUES - TERRE =====
-      // Titan de pierre keeps Avalanche
-      // Roi des nains keeps Marteau runique
-      // Hydre de terre keeps Multi-tetes
-      // Druide ancien keeps Eveil naturel
-      upd.run('Pietinement',        '12 degats, -5 PV soi',    'Behemoth');
-      // Sphinx keeps Terreur nocturne
-
-      // ===== EPIQUES - EAU =====
-      upd.run('Tentacules geants',  '3 degats x3',             'Kraken');
-      // Leviathan keeps Raz-de-maree
-      upd.run('Maelstrom',          '5 degats + stun',         'Sorcier des mers');
-      // Amiral fantome keeps Purification
-      // Roi triton keeps Trident royal
-
-      // ===== EPIQUES - FEU =====
-      // Demon de feu keeps Inferno
-      upd.run('Souffle triple',     '3 degats x3',             'Hydre de feu');
-      // Wyvern keeps Charge divine
-      // Efreet keeps Festin de sang
-      upd.run('Eruption royale',    '12 degats, -5 PV soi',    'Roi volcanique');
-      upd.run('Marteau infernal',   'Execute sous 30% PV',     'Guerrier infernal');
-
-      // ===== EPIQUES - OMBRE =====
-      // Faucheur keeps Faux mortelle
-      upd.run('Souffle des ombres', '5 degats a tous',         'Dragon d ombre');
-      upd.run('Festin sanguinaire', '6 degats +4 PV',          'Seigneur vampire');
-      upd.run('Armee de morts',     '5 degats a tous',         'Roi des morts');
-      upd.run('Cauchemar vivant',   '5 degats + soin 3',       'Cauchemar');
-
-      // ===== EPIQUES - LUMIERE =====
-      // Seraphin keeps Lumiere divine
-      upd.run('Frappe sainte',      'Execute sous 30% PV',     'Champion sacre');
-      upd.run('Harmonie celeste',   '5 degats + soin 4',       'Druide celeste');
-      upd.run('Plongeon celeste',   '6 degats 1er tour',       'Chimere celeste');
-      upd.run('Marteau de lumiere', '7 degats directs',        'Inquisiteur');
-
-      // ===== LEGENDAIRES =====
-      upd.run('Eveil de Gaia',      'AoE 5 + soin 3 + DEF 2', 'Gaia');
-      upd.run('Appel de la foret',  'Soin 4 + ATK 2 + Shield','Roi des forets');
-      upd.run('Poids du monde',     '8 degats + stun + marque','Atlas');
-      upd.run('Maree divine',       'AoE 6 + debuff ATK 3',   'Poseidon');
-      upd.run('Abime eternel',      '8 degats + poison + soin','Serpent de mer');
-      upd.run('Ere glaciaire',      'AoE 5 + stun + DEF 2',   'Reine des glaces');
-      upd.run('Flamme eternelle',   '-10 PV, 18 degats',       'Ifrit supreme');
-      upd.run('Supernova',          'AoE 7 + poison 3 + ATK', 'Empereur dragon');
-      upd.run('Jugement final',     'Execute sous 40% PV',     'Thanatos');
-      upd.run('Apocalypse',         'AoE 6 + debuff + soin 5','Roi demon');
-      upd.run('Rage du loup',       '5+5/allie mort, AoE',    'Fenrir');
-      upd.run('Foudre olympienne',  '8 degats + stun + marque','Zeus');
-      upd.run('Immortalite',        'Revive 20 + soin + shield','Gardien eternel');
-      upd.run('Jugement divin',     '6 degats + soin 3 + DEF','Archange');
-      upd.run('Renaissance eternelle','Revient avec 20 PV',    'Phenix');
-
-      console.log('Migration abilities uniques terminee.');
-    });
-    runUpd();
-  }
-}
-
-// --- Migration : ajout colonne emoji ---
+// --- Migrations schema ---
 {
   const cardCols = db.prepare("PRAGMA table_info(cards)").all().map(c => c.name);
   if (!cardCols.includes('emoji')) {
     db.exec("ALTER TABLE cards ADD COLUMN emoji TEXT DEFAULT ''");
-    console.log('Migration: emoji ajouté');
-
-    const updEmoji = db.prepare('UPDATE cards SET emoji = ? WHERE name = ?');
-    const runEmoji = db.transaction(() => {
-      // COMMUNES - TERRE
-      updEmoji.run('⛏️', 'Mineur');
-      updEmoji.run('🐹', 'Taupe');
-      updEmoji.run('🪲', 'Scarabee');
-      updEmoji.run('👨‍🌾', 'Paysan');
-      updEmoji.run('🪨', 'Caillou vivant');
-      updEmoji.run('🪱', 'Ver de terre');
-      updEmoji.run('🌿', 'Herboriste');
-      updEmoji.run('🍄', 'Champignon');
-      updEmoji.run('💪', 'Terrassier');
-      updEmoji.run('🐀', 'Rat');
-      updEmoji.run('💂', 'Sentinelle');
-      updEmoji.run('🐜', 'Fourmi');
-      updEmoji.run('🗡️', 'Brigand');
-      updEmoji.run('🪓', 'Bucheron');
-      updEmoji.run('🐗', 'Sanglier');
-      updEmoji.run('🦔', 'Herisson');
-      updEmoji.run('⚗️', 'Alchimiste');
-      updEmoji.run('🌾', 'Fermier');
-      // COMMUNES - EAU
-      updEmoji.run('🐟', 'Poisson');
-      updEmoji.run('🦀', 'Crabe');
-      updEmoji.run('⚓', 'Marin');
-      updEmoji.run('🐙', 'Pieuvre');
-      updEmoji.run('🪼', 'Meduse');
-      updEmoji.run('🔱', 'Triton');
-      updEmoji.run('🐴', 'Hippocampe');
-      updEmoji.run('🧚', 'Nymphe');
-      updEmoji.run('🏴‍☠️', 'Pirate');
-      updEmoji.run('🦅', 'Pelican');
-      updEmoji.run('🦭', 'Phoque');
-      updEmoji.run('🐚', 'Coquillage');
-      updEmoji.run('💧', 'Naiade');
-      updEmoji.run('🦦', 'Loutre');
-      updEmoji.run('🚣', 'Moussaillon');
-      updEmoji.run('🐍', 'Anguille');
-      updEmoji.run('🐢', 'Tortue');
-      updEmoji.run('🕊️', 'Mouette');
-      // COMMUNES - FEU
-      updEmoji.run('🔥', 'Torche');
-      updEmoji.run('🦎', 'Salamandre');
-      updEmoji.run('🔨', 'Forgeron');
-      updEmoji.run('🔥', 'Braise');
-      updEmoji.run('💣', 'Artificier');
-      updEmoji.run('🦊', 'Fennec');
-      updEmoji.run('🌵', 'Cactus ardent');
-      updEmoji.run('🪨', 'Charbon');
-      updEmoji.run('🦎', 'Lezard');
-      updEmoji.run('🌋', 'Volcanologue');
-      updEmoji.run('🧑‍🏭', 'Charbonnier');
-      updEmoji.run('⚡', 'Etincelle');
-      updEmoji.run('🐕‍🦺', 'Chien de feu');
-      updEmoji.run('💃', 'Danseur');
-      updEmoji.run('🌊', 'Magma');
-      updEmoji.run('🍳', 'Cuisinier');
-      updEmoji.run('🪰', 'Mouche de feu');
-      updEmoji.run('💨', 'Fumigene');
-      updEmoji.run('🕯️', 'Flambeau');
-      // COMMUNES - OMBRE
-      updEmoji.run('🦇', 'Chauve-souris');
-      updEmoji.run('🕷️', 'Araignee');
-      updEmoji.run('🥷', 'Voleur');
-      updEmoji.run('🐦‍⬛', 'Corbeau');
-      updEmoji.run('🐀', 'Rat noir');
-      updEmoji.run('👻', 'Spectre');
-      updEmoji.run('🏴', 'Bandit');
-      updEmoji.run('🧟', 'Zombie');
-      updEmoji.run('💀', 'Squelette');
-      updEmoji.run('🐈‍⬛', 'Chat noir');
-      updEmoji.run('👤', 'Ombre rampante');
-      updEmoji.run('🐛', 'Larve');
-      updEmoji.run('🗡️', 'Assassin novice');
-      updEmoji.run('🐸', 'Crapaud sombre');
-      updEmoji.run('👻', 'Ectoplasme');
-      updEmoji.run('😈', 'Goule');
-      updEmoji.run('🎭', 'Marionnette');
-      updEmoji.run('🐍', 'Serpent venimeux');
-      updEmoji.run('💰', 'Pilleur');
-      // COMMUNES - LUMIERE
-      updEmoji.run('🐦', 'Moineau celeste');
-      updEmoji.run('🙏', 'Pretre novice');
-      updEmoji.run('🔭', 'Eclaireur');
-      updEmoji.run('🦋', 'Papillon');
-      updEmoji.run('🐝', 'Abeille sacree');
-      updEmoji.run('🛡️', 'Gardien');
-      updEmoji.run('🧙', 'Apprenti mage');
-      updEmoji.run('🐑', 'Agneau');
-      updEmoji.run('🕊️', 'Colombe');
-      updEmoji.run('⚔️', 'Paladin novice');
-      updEmoji.run('🧝', 'Lutin');
-      updEmoji.run('🧘', 'Moine');
-      updEmoji.run('🦌', 'Cerf blanc');
-      updEmoji.run('🧚', 'Fee');
-      updEmoji.run('📯', 'Heraut');
-      updEmoji.run('🐱', 'Chat blanc');
-      updEmoji.run('✨', 'Scarabee dore');
-      updEmoji.run('📨', 'Messager');
-      // RARES - TERRE
-      updEmoji.run('🐎', 'Centaure');
-      updEmoji.run('🌳', 'Druidesse');
-      updEmoji.run('🐂', 'Taureau');
-      updEmoji.run('🌲', 'Treant');
-      updEmoji.run('⚔️', 'Gladiateur');
-      updEmoji.run('🐢', 'Tortue geante');
-      updEmoji.run('⛏️', 'Nain mineur');
-      updEmoji.run('🐍', 'Basilic');
-      updEmoji.run('🪨', 'Geomancien');
-      updEmoji.run('🐻', 'Ours brun');
-      updEmoji.run('🧙‍♂️', 'Sage des forets');
-      // RARES - EAU
-      updEmoji.run('🦈', 'Requin');
-      updEmoji.run('🧜‍♀️', 'Ondine');
-      updEmoji.run('🏴‍☠️', 'Corsaire');
-      updEmoji.run('🦭', 'Morse');
-      updEmoji.run('💧', 'Elementaire d eau');
-      updEmoji.run('🐸', 'Kappa');
-      updEmoji.run('👻', 'Pirate fantome');
-      updEmoji.run('🐬', 'Dauphin');
-      updEmoji.run('🌧️', 'Invoqueuse de pluie');
-      updEmoji.run('🦄', 'Narval');
-      // RARES - FEU
-      updEmoji.run('🧞', 'Ifrit');
-      updEmoji.run('😤', 'Berserker');
-      updEmoji.run('🐂', 'Minotaure');
-      updEmoji.run('🐍', 'Serpent de lave');
-      updEmoji.run('🦁', 'Chimere');
-      updEmoji.run('🦁', 'Lion de feu');
-      updEmoji.run('🔥', 'Pyromancien');
-      updEmoji.run('🦂', 'Scorpion geant');
-      updEmoji.run('🧞‍♂️', 'Djinn');
-      updEmoji.run('🦖', 'Raptor');
-      updEmoji.run('🥷', 'Samourai de feu');
-      // RARES - OMBRE
-      updEmoji.run('🧛', 'Vampire');
-      updEmoji.run('🐺', 'Loup-garou');
-      updEmoji.run('💀', 'Necromancien');
-      updEmoji.run('🗡️', 'Assassin');
-      updEmoji.run('🦅', 'Harpie');
-      updEmoji.run('👻', 'Wraith');
-      updEmoji.run('🖤', 'Chevalier noir');
-      updEmoji.run('🦂', 'Manticore');
-      updEmoji.run('☠️', 'Liche');
-      updEmoji.run('🐆', 'Panthere noire');
-      // RARES - LUMIERE
-      updEmoji.run('🛡️', 'Paladin');
-      updEmoji.run('😇', 'Ange gardien');
-      updEmoji.run('🦄', 'Licorne');
-      updEmoji.run('🦅', 'Griffon');
-      updEmoji.run('⛪', 'Pretre');
-      updEmoji.run('⚔️', 'Templier');
-      updEmoji.run('🐴', 'Pegase');
-      updEmoji.run('🧙‍♂️', 'Mage blanc');
-      updEmoji.run('⚔️', 'Valkyrie');
-      updEmoji.run('✝️', 'Esprit sacre');
-      // EPIQUES - TERRE
-      updEmoji.run('🗿', 'Titan de pierre');
-      updEmoji.run('👑', 'Roi des nains');
-      updEmoji.run('🐲', 'Hydre de terre');
-      updEmoji.run('🌿', 'Druide ancien');
-      updEmoji.run('🦣', 'Behemoth');
-      updEmoji.run('🦁', 'Sphinx');
-      // EPIQUES - EAU
-      updEmoji.run('🦑', 'Kraken');
-      updEmoji.run('🐋', 'Leviathan');
-      updEmoji.run('🧙', 'Sorcier des mers');
-      updEmoji.run('⚓', 'Amiral fantome');
-      updEmoji.run('👑', 'Roi triton');
-      // EPIQUES - FEU
-      updEmoji.run('😈', 'Demon de feu');
-      updEmoji.run('🐲', 'Hydre de feu');
-      updEmoji.run('🐉', 'Wyvern');
-      updEmoji.run('🔥', 'Efreet');
-      updEmoji.run('👑', 'Roi volcanique');
-      updEmoji.run('👹', 'Guerrier infernal');
-      // EPIQUES - OMBRE
-      updEmoji.run('💀', 'Faucheur');
-      updEmoji.run('🐉', 'Dragon d ombre');
-      updEmoji.run('🧛‍♂️', 'Seigneur vampire');
-      updEmoji.run('👑', 'Roi des morts');
-      updEmoji.run('😱', 'Cauchemar');
-      // EPIQUES - LUMIERE
-      updEmoji.run('👼', 'Seraphin');
-      updEmoji.run('🏆', 'Champion sacre');
-      updEmoji.run('🌿', 'Druide celeste');
-      updEmoji.run('✨', 'Chimere celeste');
-      updEmoji.run('⚖️', 'Inquisiteur');
-      // LEGENDAIRES
-      updEmoji.run('🌍', 'Gaia');
-      updEmoji.run('🌳', 'Roi des forets');
-      updEmoji.run('🏔️', 'Atlas');
-      updEmoji.run('🔱', 'Poseidon');
-      updEmoji.run('🐍', 'Serpent de mer');
-      updEmoji.run('❄️', 'Reine des glaces');
-      updEmoji.run('🔥', 'Ifrit supreme');
-      updEmoji.run('🐉', 'Empereur dragon');
-      updEmoji.run('💀', 'Thanatos');
-      updEmoji.run('👿', 'Roi demon');
-      updEmoji.run('🐺', 'Fenrir');
-      updEmoji.run('⚡', 'Zeus');
-      updEmoji.run('🛡️', 'Gardien eternel');
-      // Seed cards
-      updEmoji.run('⚔️', 'Soldat');
-      updEmoji.run('🐺', 'Loup');
-      updEmoji.run('🏹', 'Archer');
-      updEmoji.run('🛡️', 'Chevalier');
-      updEmoji.run('🧙', 'Mage');
-      updEmoji.run('🧙‍♀️', 'Sorciere');
-      updEmoji.run('🐉', 'Dragon');
-      updEmoji.run('👼', 'Archange');
-      updEmoji.run('🔥', 'Phenix');
-      updEmoji.run('🗿', 'Golem');
-      updEmoji.run('🧜‍♀️', 'Sirene');
-      updEmoji.run('👺', 'Gobelin');
-      updEmoji.run('👻', 'Fantome');
-      updEmoji.run('🐸', 'Grenouille');
-      updEmoji.run('✨', 'Luciole');
-      updEmoji.run('🤡', 'Pyromane');
-
-      console.log('Migration emojis terminee.');
-    });
-    runEmoji();
+    console.log('Migration: colonne emoji ajoutee');
+  }
+  if (!cardCols.includes('passive_desc')) {
+    db.exec("ALTER TABLE cards ADD COLUMN passive_desc TEXT DEFAULT ''");
+    console.log('Migration: colonne passive_desc ajoutee');
+  }
+  if (!cardCols.includes('crystal_cost')) {
+    db.exec("ALTER TABLE cards ADD COLUMN crystal_cost REAL DEFAULT 1.0");
+    console.log('Migration: colonne crystal_cost ajoutee');
   }
 }
 
-// --- Migration : cartes objet ---
+// --- Seed : cartes de base (8 cartes) ---
 {
-  const hasItems = db.prepare("SELECT id FROM cards WHERE type = 'objet'").get();
-  if (!hasItems) {
-    const insertItem = db.prepare(`
-      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image, emoji)
-      VALUES (?, ?, 'objet', 'neutre', 0, 0, 0, ?, ?, ?, '', ?)
+  const count = db.prepare('SELECT COUNT(*) as c FROM cards').get().c;
+  if (count === 0) {
+    const insertCard = db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+      VALUES (?, ?, 'creature', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    const addItems = db.transaction(() => {
-      // Communes (mana 1)
-      insertItem.run('Potion mineure',  'commune', 1, 'Soin mineur',     '+5 PV a un allie',           '🧪');
-      insertItem.run('Pierre lancee',   'commune', 1, 'Lancer',          '3 degats a un ennemi',       '🪨');
-      insertItem.run('Herbe medicinale','commune', 1, 'Herboristerie',   '+3 PV a un allie',           '🌿');
-      insertItem.run('Bandage',         'commune', 1, 'Premiers soins',  '+4 PV a un allie',           '🩹');
-      insertItem.run('Caillou pointu',  'commune', 1, 'Lancer precis',   '2 degats (ignore DEF)',      '💎');
-      // Rares (mana 2)
-      insertItem.run('Potion de force', 'rare', 2, 'Rage chimique',     '+3 ATK a un allie ce tour',   '💪');
-      insertItem.run('Armure legere',   'rare', 2, 'Protection',        '+4 bouclier a un allie',      '🛡️');
-      insertItem.run('Bombe fumigene',  'rare', 2, 'Aveuglement',       'Stun un ennemi',              '💨');
-      insertItem.run('Fiole de poison', 'rare', 2, 'Empoisonnement',    'Empoisonne ennemi (2/tour)',   '☠️');
-      insertItem.run('Parchemin de soin','rare',2, 'Soin de groupe',    '+3 PV a toute l equipe',      '📜');
-      // Epiques (mana 3)
-      insertItem.run('Epee enchantee',  'epique', 3, 'Enchantement',    '+5 ATK permanent a un allie', '⚔️');
-      insertItem.run('Grimoire de foudre','epique',3,'Foudroiement',    '7 degats a un ennemi',        '📕');
-      insertItem.run('Totem de guerre', 'epique', 3, 'Cri de guerre',   '+2 ATK a tous les allies',    '🗿');
-      insertItem.run('Elixir de vie',   'epique', 3, 'Miracle',         '+12 PV a un allie',           '✨');
-      insertItem.run('Parchemin interdit','epique',3,'Destruction',     '4 degats a tous les ennemis', '📜');
-      console.log('15 cartes objet ajoutees.');
+    const seedCards = [
+      // [name, rarity, element, atk, def, hp, mana, ability_name, ability_desc, emoji, passive_desc, crystal_cost]
+      ['Goblin',              'commune',  'terre', 2, 1, 3,  1, 'Appel gobelin',    'Invoque un Goblin 1/1/2',              '🗡️', '+1 ATK si un autre Goblin est sur le terrain', 1.0],
+      ['Tortue des Rivieres', 'commune',  'eau',   1, 4, 5,  4, 'Carapace marine',  '+2 DEF a un allie ce tour',            '🐢', 'Les unites Eau alliees invoquees gagnent +1 PV', 1.0],
+      ['Serpent des Marees',  'rare',     'eau',   2, 1, 3,  2, 'Frappe rapide',    '2 degats directs (attaque immediate)', '🐍', 'Si il inflige des degats, peut renvoyer la cible en main', 1.0],
+      ['Mage de Foudre',     'rare',     'eau',   3, 1, 3,  3, 'Eclair',           '2 degats a une cible (3 si 1ere action)','🌊', 'Premiere action du tour : 3 degats au lieu de 2', 1.0],
+      ['Esprit des Forets',  'rare',     'terre', 1, 3, 4,  3, 'Croissance',       'Invoque une Pousse (0/1/1) qui evolue','🌿', 'Les unites Terre alliees gagnent +1 DEF', 1.5],
+      ['Salamandre Ardente', 'rare',     'feu',   3, 1, 3,  3, 'Flamme adjacente', '1 degat supplementaire a un ennemi',   '🦎', 'Si elle detruit un ennemi, +1 ATK tour suivant', 1.0],
+      ['Dragonnet de Braise','epique',   'feu',   3, 2, 4,  4, 'Souffle de braise','1 degat a tous les ennemis',           '🐉', 'Si une unite meurt ce tour, +1 ATK temporaire', 1.5],
+      ['Golem de Roche',     'epique',   'terre', 2, 5, 7,  5, 'Fortification',    '+3 DEF jusqu a fin du tour',           '🪨', 'Subit 1 degat de moins de toutes les attaques', 1.0],
+    ];
+    const addSeed = db.transaction(() => {
+      for (const c of seedCards) {
+        insertCard.run(...c);
+      }
+      console.log(`${seedCards.length} cartes de base ajoutees.`);
     });
-    addItems();
+    addSeed();
   }
 }
 
@@ -947,7 +230,17 @@ const BOOSTERS = [
     description: '5 cartes du monde originel.',
     price: 300,
     cardsPerPack: 5,
-    weights: { commune: 60, rare: 25, epique: 12, legendaire: 3 }
+    weights: { commune: 60, rare: 25, epique: 12, legendaire: 3 },
+    shinyRate: 0.02
+  },
+  {
+    id: 'rift',
+    name: 'BOOSTER RIFT',
+    description: '7 cartes de la faille dimensionnelle.',
+    price: 415,
+    cardsPerPack: 7,
+    weights: { commune: 50, rare: 28, epique: 16, legendaire: 6 },
+    shinyRate: 0.05
   }
 ];
 
@@ -967,12 +260,14 @@ function openBooster(boosterId, userId) {
 
   const drawnCards = [];
   const insertCard = db.prepare('INSERT INTO user_cards (user_id, card_id, is_shiny) VALUES (?, ?, ?)');
+  const shinyRate = booster.shinyRate || 0.02;
 
   for (let i = 0; i < booster.cardsPerPack; i++) {
     const rarity = rollRarity(booster.weights);
     const cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(rarity);
+    if (!cards.length) continue;
     const card = cards[Math.floor(Math.random() * cards.length)];
-    const isShiny = Math.random() < 0.05 ? 1 : 0;
+    const isShiny = Math.random() < shinyRate ? 1 : 0;
     insertCard.run(userId, card.id, isShiny);
     drawnCards.push({ ...card, is_shiny: isShiny });
   }
@@ -1273,6 +568,16 @@ const ABILITY_MAP = {
   'Garde de pierre':    { type: 'buff_def',          value: 2 },
   'Coup bas':           { type: 'first_turn_damage', value: 3 },
   'Filet marin':        { type: 'stun',              damage: 0 },
+
+  // ===== NOUVELLES CARTES (v2) =====
+  'Appel gobelin':      { type: 'buff_team_atk',     value: 1 },   // Goblin — simplifie (devrait invoquer token)
+  'Carapace marine':    { type: 'buff_def',          value: 2 },   // Tortue des Rivieres
+  'Frappe rapide':      { type: 'direct_damage',     value: 2 },   // Serpent des Marees
+  'Eclair':             { type: 'direct_damage',     value: 2 },   // Mage de Foudre (3 si 1ere action — TODO)
+  'Croissance':         { type: 'buff_team_def',     value: 1 },   // Esprit des Forets — simplifie (devrait invoquer Pousse)
+  'Flamme adjacente':   { type: 'direct_damage',     value: 1 },   // Salamandre Ardente
+  'Souffle de braise':  { type: 'aoe_damage',        value: 1 },   // Dragonnet de Braise
+  'Fortification':      { type: 'buff_def',          value: 3 },   // Golem de Roche
 };
 
 // ============================================
@@ -1313,11 +618,18 @@ function getElementMod(attackerElem, defenderElem) {
   return 1;
 }
 
-function calcDamage(attacker, defender, ignoreDef) {
+function calcDamage(attacker, defender, ignoreDef, attackerField) {
   const atkStats = attacker.effectiveStats || getEffectiveStats(attacker);
   const defStats = defender.effectiveStats || getEffectiveStats(defender);
   const defVal = ignoreDef ? 0 : (defStats.defense + (defender.buffDef || 0) + (defender.permanentBonusDef || 0));
-  const atkVal = atkStats.attack + (attacker.buffAtk || 0) + (attacker.permanentBonusAtk || 0);
+  let atkVal = atkStats.attack + (attacker.buffAtk || 0) + (attacker.permanentBonusAtk || 0);
+
+  // Passif Goblin : +1 ATK si un autre Goblin est sur le terrain
+  if (attacker.name === 'Goblin' && attackerField) {
+    const otherGoblins = attackerField.filter(u => u && u.alive && u.name === 'Goblin' && u !== attacker).length;
+    if (otherGoblins > 0) atkVal += 1;
+  }
+
   let baseDamage = Math.max(1, atkVal - defVal);
   // Passif Mark : bonus degats si cible marquee
   if (defender.marked > 0) baseDamage += defender.marked;
@@ -1325,6 +637,10 @@ function calcDamage(attacker, defender, ignoreDef) {
   let dmg = Math.max(1, Math.floor(baseDamage * elemMod));
   // Passif Mage : Fragilite (+1 degat subi des attaques normales)
   if (defender.type === 'mage') dmg += 1;
+
+  // Passif Golem de Roche : -1 degat subi
+  if (defender.name === 'Golem de Roche') dmg = Math.max(1, dmg - 1);
+
   return dmg;
 }
 
@@ -1894,6 +1210,8 @@ function makeHandCard(card) {
     is_shiny: card.is_shiny || 0,
     ability_name: card.ability_name,
     ability_desc: card.ability_desc,
+    passive_desc: card.passive_desc || '',
+    crystal_cost: card.crystal_cost || 1,
     effectiveStats: es,
   };
 }
@@ -1921,6 +1239,8 @@ function makeDeckFieldUnit(handCard, side) {
     is_shiny: handCard.is_shiny,
     ability_name: handCard.ability_name,
     ability_desc: handCard.ability_desc,
+    passive_desc: handCard.passive_desc || '',
+    crystal_cost: handCard.crystal_cost || 1,
     effectiveStats: es,
     side,
     currentHp: es.hp,
@@ -1963,13 +1283,23 @@ function createDeckBattleState(playerCards, enemyCards, battleType) {
     playerDeck: pDeck,
     playerHand: pHand,
     playerField: [null, null, null],
-    playerEnergy: 2,
-    playerMaxEnergy: 2,
+    playerEnergy: getManaForTurn(1),
+    playerMaxEnergy: getManaForTurn(1),
+    playerCrystal: 0,
+    playerCrystalRate: 0.3,
+    playerMaxCrystal: 2,
+    playerHp: 20,
+    playerMaxHp: 20,
     enemyDeck: eDeck,
     enemyHand: eHand,
     enemyField: [null, null, null],
-    enemyEnergy: 2,
-    enemyMaxEnergy: 2,
+    enemyEnergy: getManaForTurn(1),
+    enemyMaxEnergy: getManaForTurn(1),
+    enemyCrystal: 0,
+    enemyCrystalRate: 0.3,
+    enemyMaxCrystal: 2,
+    enemyHp: 20,
+    enemyMaxHp: 20,
     attackedThisTurn: [],
     log: [],
     result: null,
@@ -1990,12 +1320,20 @@ function getDeckBattleSnapshot(battle) {
     playerField: battle.playerField,
     playerEnergy: battle.playerEnergy,
     playerMaxEnergy: battle.playerMaxEnergy,
+    playerCrystal: Math.round((battle.playerCrystal || 0) * 100) / 100,
+    playerMaxCrystal: battle.playerMaxCrystal || 2,
     playerDeckCount: battle.playerDeck.length,
+    playerHp: battle.playerHp,
+    playerMaxHp: battle.playerMaxHp,
     enemyField: battle.enemyField,
     enemyHandCount: battle.enemyHand.length,
     enemyEnergy: battle.enemyEnergy,
     enemyMaxEnergy: battle.enemyMaxEnergy,
+    enemyCrystal: Math.round((battle.enemyCrystal || 0) * 100) / 100,
+    enemyMaxCrystal: battle.enemyMaxCrystal || 2,
     enemyDeckCount: battle.enemyDeck.length,
+    enemyHp: battle.enemyHp,
+    enemyMaxHp: battle.enemyMaxHp,
     attackedThisTurn: battle.attackedThisTurn || [],
   };
 }
@@ -2017,25 +1355,20 @@ function getPackBonus(field, unit) {
 }
 
 function checkDeckWin(battle) {
-  const enemyFieldAlive = battle.enemyField.some(u => u !== null && u.alive);
-  const enemyHasCards = battle.enemyHand.length > 0 || battle.enemyDeck.length > 0;
-  if (!enemyFieldAlive && !enemyHasCards) {
+  // Win by reducing opponent HP to 0
+  if (battle.enemyHp <= 0) {
     battle.result = 'victory';
     return 'victory';
   }
 
-  const playerFieldAlive = battle.playerField.some(u => u !== null && u.alive);
-  const playerHasCards = battle.playerHand.length > 0 || battle.playerDeck.length > 0;
-  if (!playerFieldAlive && !playerHasCards) {
+  if (battle.playerHp <= 0) {
     battle.result = 'defeat';
     return 'defeat';
   }
 
   if (battle.turn > battle.maxTurns) {
-    const pHP = getFieldAlive(battle.playerField).reduce((s, u) => s + u.currentHp, 0);
-    const eHP = getFieldAlive(battle.enemyField).reduce((s, u) => s + u.currentHp, 0);
-    if (pHP > eHP) { battle.result = 'victory'; return 'victory'; }
-    if (eHP > pHP) { battle.result = 'defeat'; return 'defeat'; }
+    if (battle.playerHp > battle.enemyHp) { battle.result = 'victory'; return 'victory'; }
+    if (battle.enemyHp > battle.playerHp) { battle.result = 'defeat'; return 'defeat'; }
     battle.result = 'draw';
     return 'draw';
   }
@@ -2133,6 +1466,15 @@ function aiDeckTurn(battle) {
     events.push({ type: 'type_passive', desc: `Aura divine ennemie : +${divinCount} PV` });
   }
 
+  // Passif Esprit des Forets : +1 DEF pour les unites Terre ennemies
+  const espritCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Esprit des Forets').length;
+  if (espritCountE > 0) {
+    getFieldAlive(battle.enemyField).filter(u => u.element === 'terre').forEach(u => {
+      u.buffDef += espritCountE;
+    });
+    events.push({ type: 'type_passive', desc: `Esprit des Forets ennemi : +${espritCountE} DEF Terre` });
+  }
+
   // 1. Deploy: play most expensive affordable creature to empty slots
   let keepDeploying = true;
   while (keepDeploying) {
@@ -2157,21 +1499,33 @@ function aiDeckTurn(battle) {
       battle.enemyHand.splice(handIdx, 1);
 
       const unit = makeDeckFieldUnit(card, 'enemy');
+      unit.justDeployed = true; // summoning sickness
       battle.enemyField[slot] = unit;
       battle.enemyEnergy -= card.mana_cost;
 
       events.push({ type: 'enemy_deploy', slot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost });
+
+      // Passif Tortue : unites Eau invoquees +1 PV
+      if (unit.element === 'eau') {
+        const tortueCount = getFieldAlive(battle.enemyField).filter(u => u.name === 'Tortue des Rivieres' && u !== unit).length;
+        if (tortueCount > 0) {
+          unit.maxHp += tortueCount;
+          unit.currentHp += tortueCount;
+          events.push({ type: 'type_passive', desc: `Tortue : +${tortueCount} PV a ${unit.name}` });
+        }
+      }
+
       keepDeploying = true;
     }
   }
 
-  // 2. Use abilities (costs ceil(mana_cost/2) energy)
+  // 2. Use abilities (costs crystal)
   for (let i = 0; i < 3; i++) {
     const unit = battle.enemyField[i];
     if (!unit || !unit.alive || unit.usedAbility || unit.stunned) continue;
 
-    const abilityCost = Math.ceil(unit.mana_cost / 2);
-    if (battle.enemyEnergy < abilityCost) continue;
+    const crystalCost = unit.crystal_cost || 1;
+    if ((battle.enemyCrystal || 0) < crystalCost) continue;
 
     const ability = ABILITY_MAP[unit.ability_name];
     if (!ability) continue;
@@ -2184,7 +1538,7 @@ function aiDeckTurn(battle) {
 
     const abilityEvents = resolveAbility(unit, playerAlive, enemyAlive, playerAlive, battle);
     events.push(...abilityEvents);
-    battle.enemyEnergy -= abilityCost;
+    battle.enemyCrystal -= crystalCost;
 
     cleanDeadFromField(battle.playerField);
     if (checkDeckWin(battle)) return events;
@@ -2225,16 +1579,22 @@ function aiDeckTurn(battle) {
     if (checkDeckWin(battle)) return events;
   }
 
-  // 4. Attack with each field creature (target weakest player unit)
+  // 4. Attack with each field creature (target weakest player unit or avatar)
   for (let i = 0; i < 3; i++) {
     const unit = battle.enemyField[i];
     if (!unit || !unit.alive) continue;
+
+    // Summoning sickness: skip attack if just deployed
+    if (unit.justDeployed) continue;
 
     if (unit.stunned) {
       unit.stunned = false;
       events.push({ type: 'stunned', unit: unit.name });
       continue;
     }
+
+    // Attacks cost 1 energy for AI too
+    if (battle.enemyEnergy < 1) break;
 
     // Fortification Guerrier
     if (unit.type === 'guerrier' && !unit.lowHpDefTriggered && unit.currentHp / unit.maxHp < 0.3) {
@@ -2244,7 +1604,18 @@ function aiDeckTurn(battle) {
     }
 
     const playerAlive = getFieldAlive(battle.playerField);
-    if (playerAlive.length === 0) break;
+
+    if (playerAlive.length === 0) {
+      // No player cards on field: attack player avatar
+      const totalAtk = unit.effectiveStats.attack + (unit.buffAtk || 0) + (unit.permanentBonusAtk || 0);
+      const dmg = Math.max(1, totalAtk);
+      battle.playerHp = Math.max(0, battle.playerHp - dmg);
+      battle.enemyEnergy -= 1;
+      events.push({ type: 'avatar_damage', attacker: unit.name, damage: dmg, targetHp: battle.playerHp, side: 'enemy' });
+      if (checkDeckWin(battle)) return events;
+      continue;
+    }
+
     const target = playerAlive.reduce((a, b) => a.currentHp < b.currentHp ? a : b);
 
     const ignoreDef = ABILITY_MAP[unit.ability_name]?.type === 'ignore_def';
@@ -2252,17 +1623,24 @@ function aiDeckTurn(battle) {
     // Bete pack bonus (temp)
     const packBonus = getPackBonus(battle.enemyField, unit);
     unit.permanentBonusAtk += packBonus;
-    const dmg = calcDamage(unit, target, ignoreDef);
+    const dmg = calcDamage(unit, target, ignoreDef, battle.enemyField);
     unit.permanentBonusAtk -= packBonus;
 
     applyDamage(target, dmg, events, unit);
     const targetSlot = battle.playerField.indexOf(target);
     events.push({ type: 'attack', attacker: unit.name, attackerSlot: i, target: target.name, targetSlot, damage: dmg, side: 'enemy' });
 
+    battle.enemyEnergy -= 1;
+
     // Lifesteal
     if (unit.lifestealPercent > 0) {
       const healed = Math.floor(dmg * unit.lifestealPercent / 100);
       unit.currentHp = Math.min(unit.maxHp, unit.currentHp + healed);
+    }
+    // Passif Salamandre : +1 ATK si elle detruit un ennemi
+    if (unit.name === 'Salamandre Ardente' && !target.alive) {
+      unit.permanentBonusAtk += 1;
+      events.push({ type: 'type_passive', desc: `${unit.name} s'enflamme ! +1 ATK` });
     }
     // Feroce Bete
     if (!target.alive && unit.type === 'bete') {
@@ -3000,10 +2378,21 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
   battle.playerHand.splice(handIndex, 1);
   battle.playerField[fieldSlot] = null; // clean dead
   const unit = makeDeckFieldUnit(card, 'player');
+  unit.justDeployed = true; // summoning sickness
   battle.playerField[fieldSlot] = unit;
   battle.playerEnergy -= card.mana_cost;
 
   const events = [{ type: 'deploy', slot: fieldSlot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost }];
+
+  // Passif Tortue des Rivieres : unites Eau invoquees gagnent +1 PV
+  if (unit.element === 'eau') {
+    const tortueCount = getFieldAlive(battle.playerField).filter(u => u.name === 'Tortue des Rivieres' && u !== unit).length;
+    if (tortueCount > 0) {
+      unit.maxHp += tortueCount;
+      unit.currentHp += tortueCount;
+      events.push({ type: 'type_passive', desc: `Tortue des Rivieres : +${tortueCount} PV max a ${unit.name}` });
+    }
+  }
 
   res.json({ events, ...getDeckBattleSnapshot(battle) });
 });
@@ -3022,10 +2411,15 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
   const attacker = battle.playerField[fieldSlot];
   if (!attacker || !attacker.alive) return res.status(400).json({ error: 'Pas de carte dans ce slot' });
   if (attacker.stunned) return res.status(400).json({ error: 'Carte etourdie' });
+  if (attacker.justDeployed) return res.status(400).json({ error: 'Carte vient d etre posee (sommeil d invocation)' });
   if (battle.attackedThisTurn.includes(fieldSlot)) return res.status(400).json({ error: 'Deja attaque ce tour' });
+  if (battle.playerEnergy < 1) return res.status(400).json({ error: 'Pas assez d energie pour attaquer' });
 
   const target = battle.enemyField[targetSlot];
   if (!target || !target.alive) return res.status(400).json({ error: 'Pas de cible dans ce slot' });
+
+  // Attacks cost 1 energy
+  battle.playerEnergy -= 1;
 
   const events = [];
 
@@ -3041,11 +2435,17 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
   // Bete pack bonus
   const packBonus = getPackBonus(battle.playerField, attacker);
   attacker.permanentBonusAtk += packBonus;
-  const dmg = calcDamage(attacker, target, ignoreDef);
+  const dmg = calcDamage(attacker, target, ignoreDef, battle.playerField);
   attacker.permanentBonusAtk -= packBonus;
 
   applyDamage(target, dmg, events, attacker);
   events.push({ type: 'attack', attacker: attacker.name, attackerSlot: fieldSlot, target: target.name, targetSlot, damage: dmg, side: 'player' });
+
+  // Passif Salamandre : +1 ATK tour suivant si elle detruit un ennemi
+  if (attacker.name === 'Salamandre Ardente' && !target.alive) {
+    attacker.permanentBonusAtk += 1;
+    events.push({ type: 'type_passive', desc: `${attacker.name} s'enflamme ! +1 ATK` });
+  }
 
   battle.attackedThisTurn.push(fieldSlot);
 
@@ -3083,8 +2483,9 @@ app.post('/api/battle/use-ability', requireAuth, (req, res) => {
   if (unit.usedAbility) return res.status(400).json({ error: 'Ability deja utilisee ce combat' });
   if (unit.stunned) return res.status(400).json({ error: 'Carte etourdie' });
 
-  const abilityCost = Math.ceil(unit.mana_cost / 2);
-  if (battle.playerEnergy < abilityCost) return res.status(400).json({ error: 'Pas assez d energie' });
+  // Pouvoir coute du crystal (pas de l'energie)
+  const crystalCost = unit.crystal_cost || 1;
+  if ((battle.playerCrystal || 0) < crystalCost) return res.status(400).json({ error: `Pas assez de crystal (${crystalCost} requis)` });
 
   const ability = ABILITY_MAP[unit.ability_name];
   if (!ability) return res.status(400).json({ error: 'Pas d ability' });
@@ -3099,7 +2500,7 @@ app.post('/api/battle/use-ability', requireAuth, (req, res) => {
   }
 
   const events = resolveAbility(unit, targets, playerAlive, enemyAlive, battle);
-  battle.playerEnergy -= abilityCost;
+  battle.playerCrystal -= crystalCost;
 
   cleanDeadFromField(battle.enemyField);
   cleanDeadFromField(battle.playerField);
@@ -3152,6 +2553,95 @@ app.post('/api/battle/use-item', requireAuth, (req, res) => {
   res.json({ events, ...getDeckBattleSnapshot(battle) });
 });
 
+// Attack enemy avatar (only when no enemy cards on field)
+app.post('/api/battle/attack-avatar', requireAuth, (req, res) => {
+  const { battleId, fieldSlot } = req.body;
+
+  const battle = activeBattles.get(battleId);
+  if (!battle || !battle.isDeckBattle) return res.status(404).json({ error: 'Combat introuvable' });
+  if (battle.result) return res.status(400).json({ error: 'Combat termine' });
+  if (battle.phase !== 'player_turn') return res.status(400).json({ error: 'Pas votre tour' });
+
+  battle.lastAction = Date.now();
+
+  const attacker = battle.playerField[fieldSlot];
+  if (!attacker || !attacker.alive) return res.status(400).json({ error: 'Pas de carte dans ce slot' });
+  if (attacker.stunned) return res.status(400).json({ error: 'Carte etourdie' });
+  if (attacker.justDeployed) return res.status(400).json({ error: 'Sommeil d invocation' });
+  if (battle.attackedThisTurn.includes(fieldSlot)) return res.status(400).json({ error: 'Deja attaque ce tour' });
+  if (battle.playerEnergy < 1) return res.status(400).json({ error: 'Pas assez d energie' });
+
+  const enemyAlive = getFieldAlive(battle.enemyField);
+  if (enemyAlive.length > 0) return res.status(400).json({ error: 'Il reste des cartes ennemies' });
+
+  battle.playerEnergy -= 1;
+
+  const totalAtk = attacker.effectiveStats.attack + (attacker.buffAtk || 0) + (attacker.permanentBonusAtk || 0);
+  const dmg = Math.max(1, totalAtk);
+
+  battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
+  battle.attackedThisTurn.push(fieldSlot);
+
+  const events = [{ type: 'avatar_damage', attacker: attacker.name, damage: dmg, targetHp: battle.enemyHp, side: 'player' }];
+
+  checkDeckWin(battle);
+  res.json({ events, ...getDeckBattleSnapshot(battle) });
+});
+
+// Use ability on enemy avatar (only when no enemy cards on field)
+app.post('/api/battle/use-ability-avatar', requireAuth, (req, res) => {
+  const { battleId, fieldSlot } = req.body;
+
+  const battle = activeBattles.get(battleId);
+  if (!battle || !battle.isDeckBattle) return res.status(404).json({ error: 'Combat introuvable' });
+  if (battle.result) return res.status(400).json({ error: 'Combat termine' });
+  if (battle.phase !== 'player_turn') return res.status(400).json({ error: 'Pas votre tour' });
+
+  battle.lastAction = Date.now();
+
+  const unit = battle.playerField[fieldSlot];
+  if (!unit || !unit.alive) return res.status(400).json({ error: 'Pas de carte dans ce slot' });
+  if (unit.usedAbility) return res.status(400).json({ error: 'Ability deja utilisee' });
+  if (unit.stunned) return res.status(400).json({ error: 'Carte etourdie' });
+
+  const crystalCost = unit.crystal_cost || 1;
+  if ((battle.playerCrystal || 0) < crystalCost) return res.status(400).json({ error: 'Pas assez de crystal' });
+
+  const enemyAlive = getFieldAlive(battle.enemyField);
+  if (enemyAlive.length > 0) return res.status(400).json({ error: 'Il reste des cartes ennemies' });
+
+  const ability = ABILITY_MAP[unit.ability_name];
+  if (!ability) return res.status(400).json({ error: 'Pas d ability' });
+
+  // Direct damage abilities deal to avatar
+  let dmg = 0;
+  if (['direct_damage', 'aoe_damage', 'ignore_def'].includes(ability.type)) {
+    dmg = ability.value || 1;
+  } else if (ability.type === 'sacrifice') {
+    unit.currentHp = Math.max(1, unit.currentHp - Math.floor(unit.maxHp * ability.selfPercent / 100));
+    dmg = ability.value || 3;
+  } else {
+    // Buff/heal/etc abilities - just resolve normally on allies
+    const playerAlive = getFieldAlive(battle.playerField);
+    const events = resolveAbility(unit, [], playerAlive, [], battle);
+    battle.playerCrystal -= crystalCost;
+    checkDeckWin(battle);
+    return res.json({ events, ...getDeckBattleSnapshot(battle) });
+  }
+
+  battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
+  battle.playerCrystal -= crystalCost;
+  unit.usedAbility = true;
+
+  const events = [
+    { type: 'ability', unit: unit.name, ability: unit.ability_name, desc: unit.ability_desc },
+    { type: 'avatar_damage', attacker: unit.name, damage: dmg, targetHp: battle.enemyHp, side: 'player' }
+  ];
+
+  checkDeckWin(battle);
+  res.json({ events, ...getDeckBattleSnapshot(battle) });
+});
+
 // End player turn — process effects + AI turn + new turn
 app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   const { battleId } = req.body;
@@ -3189,9 +2679,16 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // 3. Enemy turn
   battle.phase = 'enemy_turn';
 
-  // Enemy energy for this turn
-  battle.enemyMaxEnergy = Math.min(battle.turn + 1, 10);
+  // Clear summoning sickness on enemy units
+  for (const unit of getFieldAlive(battle.enemyField)) {
+    unit.justDeployed = false;
+  }
+
+  // Enemy energy for this turn (new mana progression)
+  battle.enemyMaxEnergy = getManaForTurn(battle.turn);
   battle.enemyEnergy = battle.enemyMaxEnergy;
+  // Enemy crystal fills
+  battle.enemyCrystal = Math.min(battle.enemyMaxCrystal, (battle.enemyCrystal || 0) + (battle.enemyCrystalRate || 0.3));
 
   // Enemy draws 1 card
   if (battle.enemyHand.length < 7 && battle.enemyDeck.length > 0) {
@@ -3234,9 +2731,16 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   battle.phase = 'player_turn';
   battle.attackedThisTurn = [];
 
-  // Player energy
-  battle.playerMaxEnergy = Math.min(battle.turn + 1, 10);
+  // Clear summoning sickness on player units
+  for (const unit of getFieldAlive(battle.playerField)) {
+    unit.justDeployed = false;
+  }
+
+  // Player energy (new mana progression)
+  battle.playerMaxEnergy = getManaForTurn(battle.turn);
   battle.playerEnergy = battle.playerMaxEnergy;
+  // Player crystal fills
+  battle.playerCrystal = Math.min(battle.playerMaxCrystal, (battle.playerCrystal || 0) + (battle.playerCrystalRate || 0.3));
 
   // Player draws 1 card
   if (battle.playerHand.length < 7 && battle.playerDeck.length > 0) {
@@ -3252,6 +2756,15 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       u.currentHp = Math.min(u.maxHp, u.currentHp + divinCountP);
     });
     events.push({ type: 'type_passive', desc: `Aura divine : +${divinCountP} PV` });
+  }
+
+  // Passif Esprit des Forets : +1 DEF pour toutes les unites Terre alliees (buff temporaire)
+  const espritCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Esprit des Forets').length;
+  if (espritCountP > 0) {
+    getFieldAlive(battle.playerField).filter(u => u.element === 'terre').forEach(u => {
+      u.buffDef += espritCountP;
+    });
+    events.push({ type: 'type_passive', desc: `Esprit des Forets : +${espritCountP} DEF aux unites Terre` });
   }
 
   // Check turn limit
@@ -3408,27 +2921,34 @@ app.post('/api/admin/set-credits', requireAdmin, (req, res) => {
 
 // Starter deck — cartes faibles pour tester sans collection
 const STARTER_DECK = [
-  { name:'Paysan',emoji:'👨‍🌾',rarity:'commune',type:'guerrier',element:'terre',attack:2,defense:2,hp:12,mana_cost:1,ability_name:'Coup de massue',ability_desc:'1 degat direct' },
-  { name:'Rat',emoji:'🐀',rarity:'commune',type:'bete',element:'terre',attack:2,defense:1,hp:10,mana_cost:1,ability_name:'Morsure de rat',ability_desc:'2 degats 1er tour' },
-  { name:'Fourmi',emoji:'🐜',rarity:'commune',type:'bete',element:'terre',attack:1,defense:3,hp:10,mana_cost:1,ability_name:'Nuee de mandibules',ability_desc:'1 degat x3' },
-  { name:'Poisson',emoji:'🐟',rarity:'commune',type:'bete',element:'eau',attack:2,defense:2,hp:12,mana_cost:1,ability_name:'Ecaille coupante',ability_desc:'1 degat direct' },
-  { name:'Crabe',emoji:'🦀',rarity:'commune',type:'bete',element:'eau',attack:3,defense:3,hp:14,mana_cost:1,ability_name:'Pince acier',ability_desc:'2 degats directs' },
-  { name:'Salamandre',emoji:'🦎',rarity:'commune',type:'bete',element:'feu',attack:3,defense:1,hp:10,mana_cost:1,ability_name:'Queue enflammee',ability_desc:'2 degats directs' },
-  { name:'Braise',emoji:'🔥',rarity:'commune',type:'bete',element:'feu',attack:2,defense:2,hp:10,mana_cost:1,ability_name:'Brulure soudaine',ability_desc:'3 degats 1er tour' },
-  { name:'Chauve-souris',emoji:'🦇',rarity:'commune',type:'bete',element:'ombre',attack:2,defense:1,hp:10,mana_cost:1,ability_name:'Cri ultrason',ability_desc:'-2 ATK ennemi' },
-  { name:'Araignee',emoji:'🕷️',rarity:'commune',type:'bete',element:'ombre',attack:3,defense:2,hp:12,mana_cost:1,ability_name:'Toile collante',ability_desc:'Stun 1 tour' },
-  { name:'Moineau celeste',emoji:'🐦',rarity:'commune',type:'bete',element:'lumiere',attack:2,defense:2,hp:12,mana_cost:1,ability_name:'Elan celeste',ability_desc:'+1 ATK ce tour' },
-  { name:'Papillon',emoji:'🦋',rarity:'commune',type:'bete',element:'lumiere',attack:1,defense:1,hp:10,mana_cost:1,ability_name:'Poussiere d or',ability_desc:'-2 ATK ennemi' },
-  { name:'Sentinelle',emoji:'💂',rarity:'commune',type:'guerrier',element:'lumiere',attack:2,defense:4,hp:14,mana_cost:2,ability_name:'Garde de pierre',ability_desc:'+2 DEF ce tour' },
-  { name:'Brigand',emoji:'🗡️',rarity:'commune',type:'guerrier',element:'ombre',attack:3,defense:1,hp:12,mana_cost:1,ability_name:'Coup bas',ability_desc:'3 degats 1er tour' },
-  { name:'Marin',emoji:'⚓',rarity:'commune',type:'guerrier',element:'eau',attack:2,defense:2,hp:12,mana_cost:1,ability_name:'Filet marin',ability_desc:'Stun 1 tour' },
-  { name:'Flambeau',emoji:'🕯️',rarity:'commune',type:'guerrier',element:'feu',attack:3,defense:1,hp:10,mana_cost:1,ability_name:'Torche vive',ability_desc:'1 degat direct' },
-  // Objets starter
-  { name:'Potion mineure',emoji:'🧪',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Soin mineur',ability_desc:'+5 PV a un allie' },
-  { name:'Pierre lancee',emoji:'🪨',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Lancer',ability_desc:'3 degats a un ennemi' },
-  { name:'Bandage',emoji:'🩹',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Premiers soins',ability_desc:'+4 PV a un allie' },
-  { name:'Herbe medicinale',emoji:'🌿',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Herboristerie',ability_desc:'+3 PV a un allie' },
-  { name:'Caillou pointu',emoji:'💎',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Lancer precis',ability_desc:'2 degats (ignore DEF)' },
+  // 4x Goblin (1 mana, terre)
+  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
+  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
+  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
+  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
+  // 3x Tortue des Rivieres (4 mana, eau)
+  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie ce tour',crystal_cost:1 },
+  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie ce tour',crystal_cost:1 },
+  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie ce tour',crystal_cost:1 },
+  // 3x Serpent des Marees (2 mana, eau)
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe rapide',ability_desc:'2 degats directs',crystal_cost:1 },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe rapide',ability_desc:'2 degats directs',crystal_cost:1 },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe rapide',ability_desc:'2 degats directs',crystal_cost:1 },
+  // 3x Mage de Foudre (3 mana, eau)
+  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats a une cible',crystal_cost:1 },
+  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats a une cible',crystal_cost:1 },
+  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats a une cible',crystal_cost:1 },
+  // 2x Salamandre Ardente (3 mana, feu)
+  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat a un ennemi',crystal_cost:1 },
+  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat a un ennemi',crystal_cost:1 },
+  // 2x Esprit des Forets (3 mana, terre)
+  { name:'Esprit des Forets',emoji:'🌿',rarity:'rare',type:'creature',element:'terre',attack:1,defense:3,hp:4,mana_cost:3,ability_name:'Croissance',ability_desc:'+1 DEF equipe',crystal_cost:1.5 },
+  { name:'Esprit des Forets',emoji:'🌿',rarity:'rare',type:'creature',element:'terre',attack:1,defense:3,hp:4,mana_cost:3,ability_name:'Croissance',ability_desc:'+1 DEF equipe',crystal_cost:1.5 },
+  // 2x Dragonnet de Braise (4 mana, feu)
+  { name:'Dragonnet de Braise',emoji:'🐉',rarity:'epique',type:'creature',element:'feu',attack:3,defense:2,hp:4,mana_cost:4,ability_name:'Souffle de braise',ability_desc:'1 degat a tous les ennemis',crystal_cost:1.5 },
+  { name:'Dragonnet de Braise',emoji:'🐉',rarity:'epique',type:'creature',element:'feu',attack:3,defense:2,hp:4,mana_cost:4,ability_name:'Souffle de braise',ability_desc:'1 degat a tous les ennemis',crystal_cost:1.5 },
+  // 1x Golem de Roche (5 mana, terre)
+  { name:'Golem de Roche',emoji:'🪨',rarity:'epique',type:'creature',element:'terre',attack:2,defense:5,hp:7,mana_cost:5,ability_name:'Fortification',ability_desc:'+3 DEF ce tour',crystal_cost:1 },
 ];
 
 // GET /api/decks — Liste des decks du joueur

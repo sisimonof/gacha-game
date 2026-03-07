@@ -3,22 +3,24 @@ async function loadUser() {
     const res = await fetch('/api/me');
     if (!res.ok) { window.location.href = '/'; return; }
     const data = await res.json();
+
+    // Navbar stats
     document.getElementById('username-display').textContent = data.username;
     document.getElementById('stat-credits').textContent = data.credits;
     document.getElementById('stat-cards').textContent = data.cardCount;
 
-    // Rang du joueur
-    updateRank(data.cardCount);
+    // Profile sidebar
+    const profileUser = document.getElementById('profile-username');
+    if (profileUser) profileUser.textContent = data.username;
+    const profileCards = document.getElementById('profile-cards');
+    if (profileCards) profileCards.textContent = data.cardCount;
+    const profileCredits = document.getElementById('profile-credits');
+    if (profileCredits) profileCredits.textContent = data.credits;
+    const collDesc = document.getElementById('collection-desc');
+    if (collDesc) collDesc.textContent = data.cardCount + ' cartes collectees';
 
-    // Bonus quotidien
-    if (!data.canClaimDaily) {
-      const item = document.getElementById('daily-item');
-      const btn = document.getElementById('daily-btn');
-      const sub = document.getElementById('daily-sub');
-      if (item) item.classList.add('daily-claimed');
-      if (btn) btn.classList.add('daily-claimed');
-      if (sub) sub.textContent = 'Demain';
-    }
+    // Rang
+    updateRank(data.cardCount);
 
     // Check admin
     checkAdminAccess();
@@ -39,56 +41,27 @@ async function checkAdminAccess() {
   } catch {}
 }
 
-async function claimDaily() {
-  const item = document.getElementById('daily-item');
-  const btn = document.getElementById('daily-btn');
-  const sub = document.getElementById('daily-sub');
-
-  // Deja claimed
-  if (item && item.classList.contains('daily-claimed')) return;
-
-  try {
-    const res = await fetch('/api/daily', { method: 'POST' });
-    const data = await res.json();
-
-    if (data.success) {
-      if (item) item.classList.add('daily-claimed');
-      if (btn) {
-        btn.classList.add('daily-claimed');
-        btn.classList.add('daily-flash');
-      }
-      if (sub) sub.textContent = 'Recu !';
-      document.getElementById('stat-credits').textContent = data.credits;
-    } else {
-      if (item) item.classList.add('daily-claimed');
-      if (btn) btn.classList.add('daily-claimed');
-      if (sub) sub.textContent = 'Demain';
-    }
-  } catch {}
-}
-
 function updateRank(cardCount) {
-  const rankLabel = document.querySelector('.rank-label');
-  if (!rankLabel) return;
+  const rankLabels = document.querySelectorAll('.rank-label');
+  const profileRank = document.getElementById('profile-rank');
+  let rank = 'RECRUE';
 
-  if (cardCount >= 100) {
-    rankLabel.textContent = 'MAITRE';
-  } else if (cardCount >= 50) {
-    rankLabel.textContent = 'VETERAN';
-  } else if (cardCount >= 20) {
-    rankLabel.textContent = 'SOLDAT';
-  } else {
-    rankLabel.textContent = 'RECRUE';
-  }
+  if (cardCount >= 100) rank = 'MAITRE';
+  else if (cardCount >= 50) rank = 'VETERAN';
+  else if (cardCount >= 20) rank = 'SOLDAT';
+
+  rankLabels.forEach(el => el.textContent = rank);
+  if (profileRank) profileRank.textContent = rank;
 }
 
+// Event listeners
 document.getElementById('logout-btn').addEventListener('click', async () => {
   await fetch('/api/logout', { method: 'POST' });
   window.location.href = '/';
 });
 
-// Patch Notes
-document.getElementById('version-tag').addEventListener('click', () => {
+// Patch Notes — triggered by the card now
+document.getElementById('patchnotes-trigger').addEventListener('click', () => {
   document.getElementById('patchnotes-overlay').classList.add('active');
 });
 document.getElementById('patchnotes-close').addEventListener('click', () => {

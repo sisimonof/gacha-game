@@ -6,81 +6,102 @@
   <title>GACHA CARDS - Combat</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="battle-page">
   <div class="bg-grid"></div>
   <div class="scanline-bar"></div>
 
-  <div class="crt-screen">
-    <div class="battle-wrapper">
+  <!-- ===== BARRE SUPERIEURE ===== -->
+  <div class="bt-topbar">
+    <div class="bt-topbar-left">
+      <span class="bt-opponent" id="opponent-name">VS ???</span>
+      <span class="bt-info-chip bt-info-deck">🃏 <span id="enemy-deck-count">0</span></span>
+      <span class="bt-info-chip bt-info-hand">✋ <span id="enemy-hand-count">0</span></span>
+      <span class="bt-info-chip bt-energy-enemy">⚡<span id="enemy-energy">0</span>/<span id="enemy-max-energy">0</span></span>
+      <span class="bt-crystal-chip bt-crystal-enemy" title="Crystal ennemi">
+        💎<span id="enemy-crystal-text">0</span>
+        <span class="bt-crystal-bar"><span class="bt-crystal-fill" id="enemy-crystal-fill"></span></span>
+      </span>
+    </div>
+    <div class="bt-topbar-center">
+      <span class="bt-turn" id="battle-turn">TOUR 1</span>
+    </div>
+    <div class="bt-topbar-right">
+      <span class="bt-crystal-chip bt-crystal-player" title="Crystal joueur">
+        💎<span id="player-crystal-text">0</span>
+        <span class="bt-crystal-bar"><span class="bt-crystal-fill" id="player-crystal-fill"></span></span>
+      </span>
+      <span class="bt-info-chip bt-energy-player">⚡<span id="player-energy">1</span>/<span id="player-max-energy">1</span></span>
+      <span class="bt-info-chip bt-info-deck">🃏 <span id="player-deck-count">0</span></span>
+    </div>
+  </div>
 
-      <!-- Header: Turn + Energy info -->
-      <div class="battle-header">
-        <div class="battle-info-left">
-          <span class="battle-opponent" id="opponent-name">VS ???</span>
-          <span class="battle-deck-count enemy-deck-count">🃏 <span id="enemy-deck-count">0</span></span>
-          <span class="battle-hand-count">✋ <span id="enemy-hand-count">0</span></span>
+  <!-- ===== ZONE PRINCIPALE ===== -->
+  <div class="bt-arena">
+
+    <!-- Champs de bataille -->
+    <div class="bt-fields">
+      <!-- Avatar ennemi (PV adversaire) -->
+      <div class="bt-avatar-row bt-avatar-row--enemy" id="enemy-avatar-hp"></div>
+
+      <!-- Zone ennemie -->
+      <div class="bt-field bt-field--enemy" id="enemy-field">
+        <div class="bt-slot" data-slot="0" data-side="enemy" onclick="clickFieldSlot('enemy', 0)">
+          <div class="bt-slot-empty">VIDE</div>
         </div>
-        <div class="battle-turn-display" id="battle-turn">TOUR 1</div>
-        <div class="battle-info-right">
-          <span class="battle-energy enemy-energy">⚡<span id="enemy-energy">0</span>/<span id="enemy-max-energy">0</span></span>
+        <div class="bt-slot" data-slot="1" data-side="enemy" onclick="clickFieldSlot('enemy', 1)">
+          <div class="bt-slot-empty">VIDE</div>
+        </div>
+        <div class="bt-slot" data-slot="2" data-side="enemy" onclick="clickFieldSlot('enemy', 2)">
+          <div class="bt-slot-empty">VIDE</div>
         </div>
       </div>
 
-      <!-- Enemy field (3 slots) -->
-      <div class="battle-field enemy-field" id="enemy-field">
-        <div class="field-slot" data-slot="0" data-side="enemy" onclick="clickFieldSlot('enemy', 0)">
-          <div class="field-slot-empty">VIDE</div>
+      <!-- Separateur -->
+      <div class="bt-midline"></div>
+
+      <!-- Zone joueur -->
+      <div class="bt-field bt-field--player" id="player-field">
+        <div class="bt-slot" data-slot="0" data-side="player" onclick="clickFieldSlot('player', 0)">
+          <div class="bt-slot-empty">VIDE</div>
         </div>
-        <div class="field-slot" data-slot="1" data-side="enemy" onclick="clickFieldSlot('enemy', 1)">
-          <div class="field-slot-empty">VIDE</div>
+        <div class="bt-slot" data-slot="1" data-side="player" onclick="clickFieldSlot('player', 1)">
+          <div class="bt-slot-empty">VIDE</div>
         </div>
-        <div class="field-slot" data-slot="2" data-side="enemy" onclick="clickFieldSlot('enemy', 2)">
-          <div class="field-slot-empty">VIDE</div>
+        <div class="bt-slot" data-slot="2" data-side="player" onclick="clickFieldSlot('player', 2)">
+          <div class="bt-slot-empty">VIDE</div>
         </div>
       </div>
 
-      <!-- Battle log -->
-      <div class="battle-log" id="battle-log"></div>
+      <!-- Avatar joueur (PV joueur) -->
+      <div class="bt-avatar-row bt-avatar-row--player" id="player-avatar-hp"></div>
+    </div>
 
-      <!-- Midline separator -->
-      <div class="battle-midline"></div>
+    <!-- Panneau d'actions (droite) -->
+    <div class="bt-actions hidden" id="bt-actions">
+      <div class="bt-actions-title">ACTIONS</div>
+      <div class="bt-actions-unit" id="bt-actions-unit"></div>
+      <div class="bt-actions-buttons" id="bt-actions-buttons"></div>
+    </div>
+  </div>
 
-      <!-- Player field (3 slots) -->
-      <div class="battle-field player-field" id="player-field">
-        <div class="field-slot" data-slot="0" data-side="player" onclick="clickFieldSlot('player', 0)">
-          <div class="field-slot-empty">VIDE</div>
-        </div>
-        <div class="field-slot" data-slot="1" data-side="player" onclick="clickFieldSlot('player', 1)">
-          <div class="field-slot-empty">VIDE</div>
-        </div>
-        <div class="field-slot" data-slot="2" data-side="player" onclick="clickFieldSlot('player', 2)">
-          <div class="field-slot-empty">VIDE</div>
-        </div>
-      </div>
+  <!-- ===== MAIN DU JOUEUR ===== -->
+  <div class="bt-hand-bar">
+    <div class="bt-hand" id="player-hand"></div>
+    <button class="bt-end-turn" id="end-turn-btn" onclick="endTurn()">FIN DU TOUR ⏩</button>
+  </div>
 
-      <!-- Player info bar -->
-      <div class="battle-player-bar">
-        <span class="battle-energy player-energy">⚡<span id="player-energy">2</span>/<span id="player-max-energy">2</span></span>
-        <span class="battle-deck-count player-deck-count">🃏 <span id="player-deck-count">0</span></span>
-        <div class="battle-action-buttons">
-          <button class="btn-end-turn" id="end-turn-btn" onclick="endTurn()">FIN DU TOUR ⏩</button>
-        </div>
-      </div>
+  <!-- ===== INSTRUCTION ===== -->
+  <div class="bt-instruction" id="battle-instruction"></div>
 
-      <!-- Player hand -->
-      <div class="battle-hand" id="player-hand"></div>
+  <!-- ===== LOG DE COMBAT ===== -->
+  <div class="bt-log" id="battle-log"></div>
 
-      <!-- Instruction bar -->
-      <div class="battle-instruction" id="battle-instruction"></div>
-
-      <!-- Result overlay -->
-      <div class="battle-result-overlay hidden" id="battle-result">
-        <div class="battle-result-box" id="battle-result-box">
-          <h1 id="result-title"></h1>
-          <div id="result-rewards"></div>
-          <button class="submit-btn" id="result-btn" onclick="leaveBattle()">CONTINUER</button>
-        </div>
-      </div>
+  <!-- ===== OVERLAYS ===== -->
+  <div class="battle-result-overlay hidden" id="battle-result">
+    <div class="battle-result-box" id="battle-result-box">
+      <h1 id="result-title"></h1>
+      <div id="result-rewards"></div>
+      <button class="submit-btn" id="result-btn" onclick="leaveBattle()">CONTINUER</button>
     </div>
   </div>
 

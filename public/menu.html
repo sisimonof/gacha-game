@@ -6,65 +6,126 @@
   <title>GACHA CARDS - Menu</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
+<body class="dashboard-page">
   <div class="bg-grid"></div>
   <div class="scanline-bar"></div>
 
-  <div class="crt-screen">
-    <div class="menu-wrapper">
-
-      <!-- Header barre -->
-      <div class="menu-header">
-        <div class="header-rank">&#9733; <span class="rank-label">RECRUE</span></div>
-        <div class="header-user"><span id="username-display">???</span><span class="cursor-blink">_</span></div>
-        <div class="header-stats">
-          <div class="header-stat">&#128230; <span id="stat-cards">0</span></div>
-          <div class="header-stat">&#128176; <span id="stat-credits">0</span></div>
-        </div>
+  <!-- ===== TOP NAVBAR ===== -->
+  <nav class="dash-navbar">
+    <div class="dash-navbar-inner">
+      <div class="dash-nav-logo" data-text="GACHA CARDS">GACHA CARDS</div>
+      <div class="dash-nav-links">
+        <a href="/menu" class="dash-nav-link dash-nav-link--active">ACCUEIL</a>
+        <a href="/shop" class="dash-nav-link dash-nav-link--shop">BOUTIQUE</a>
+        <a href="/collection" class="dash-nav-link">COLLECTION</a>
+        <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
+        <a href="/shop" class="dash-nav-link dash-nav-link--shop">BONUS</a>
+        <a href="/wiki" class="dash-nav-link">WIKI</a>
       </div>
+      <div class="dash-nav-user">
+        <span class="dash-nav-stat" title="Credits">&#128176; <span id="stat-credits">0</span></span>
+        <span class="dash-nav-stat" title="Cartes">&#128230; <span id="stat-cards">0</span></span>
+        <span class="dash-nav-username" id="username-display">???</span>
+      </div>
+    </div>
+  </nav>
 
-      <!-- Titre -->
-      <h1 class="menu-title" data-text="GACHA CARDS">GACHA CARDS</h1>
+  <!-- ===== DASHBOARD CONTENT ===== -->
+  <main class="dash-content">
 
-      <!-- Navigation : 4 boutons ronds -->
-      <div class="menu-nav">
-        <div class="nav-item" onclick="window.location.href='/shop'">
-          <div class="nav-btn nav-shop"><span>&#127978;</span></div>
-          <div class="nav-label">BOUTIQUE</div>
+    <!-- LEFT: Player Profile -->
+    <aside class="dash-profile">
+      <div class="dash-profile-card">
+        <div class="dash-avatar">
+          <span class="dash-avatar-icon">&#9876;</span>
         </div>
-        <div class="nav-item" onclick="window.location.href='/collection'">
-          <div class="nav-btn nav-collection"><span>&#128214;</span></div>
-          <div class="nav-label">COLLECTION</div>
+        <div class="dash-profile-name" id="profile-username">???</div>
+        <div class="dash-profile-rank">
+          <span class="dash-rank-badge">&#9733;</span>
+          <span class="dash-rank-label rank-label">RECRUE</span>
         </div>
-        <div class="nav-item" onclick="window.location.href='/combat'">
-          <div class="nav-btn nav-combat"><span>&#9876;</span></div>
-          <div class="nav-label">COMBAT</div>
-        </div>
-        <div class="nav-item" id="daily-item" onclick="claimDaily()">
-          <div class="nav-btn nav-daily" id="daily-btn"><span>&#127873;</span></div>
-          <div class="nav-label">BONUS</div>
-          <div class="nav-sub" id="daily-sub">+200 CR</div>
-        </div>
-        <div class="nav-item" onclick="window.location.href='/wiki'">
-          <div class="nav-btn nav-wiki"><span>&#128214;</span></div>
-          <div class="nav-label">WIKI</div>
+        <div class="dash-profile-divider"></div>
+        <div class="dash-profile-stats">
+          <div class="dash-pstat">
+            <span class="dash-pstat-label">CARTES</span>
+            <span class="dash-pstat-value" id="profile-cards">0</span>
+          </div>
+          <div class="dash-pstat">
+            <span class="dash-pstat-label">CREDITS</span>
+            <span class="dash-pstat-value" id="profile-credits">0</span>
+          </div>
+          <div class="dash-pstat">
+            <span class="dash-pstat-label">RANG</span>
+            <span class="dash-pstat-value dash-pstat-rank" id="profile-rank">RECRUE</span>
+          </div>
         </div>
       </div>
 
       <!-- Admin (cache par defaut) -->
-      <div class="menu-admin hidden" id="admin-btn" onclick="window.location.href='/admin'">
+      <div class="dash-admin-btn hidden" id="admin-btn" onclick="window.location.href='/admin'">
         &#128737; ADMIN PANEL
       </div>
+    </aside>
 
-      <!-- Footer -->
-      <div class="menu-footer">
-        <span class="footer-version" id="version-tag">v0.9.0 — PATCH NOTES</span>
-        <span class="footer-status">SYS: <span class="status-online">EN LIGNE</span></span>
-        <span class="footer-logout" id="logout-btn">DECONNEXION</span>
-      </div>
+    <!-- CENTER + RIGHT: Main area -->
+    <div class="dash-main">
 
+      <!-- Hero CTA -->
+      <section class="dash-hero">
+        <div class="dash-hero-bg"></div>
+        <div class="dash-hero-content">
+          <h2 class="dash-hero-title">PRET AU COMBAT ?</h2>
+          <p class="dash-hero-sub">Construisez votre deck et affrontez des adversaires</p>
+          <button class="dash-hero-btn" onclick="window.location.href='/combat'">
+            <span class="dash-hero-btn-icon">&#9876;</span>
+            <span class="dash-hero-btn-text">JOUER</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Cards grid -->
+      <section class="dash-cards-grid">
+
+        <!-- Boutique -->
+        <div class="dash-card dash-card--shop" onclick="window.location.href='/shop'">
+          <div class="dash-card-icon dash-card-icon--shop">&#127978;</div>
+          <div class="dash-card-info">
+            <h3 class="dash-card-title">BOUTIQUE</h3>
+            <p class="dash-card-desc">Boosters et packs disponibles</p>
+          </div>
+          <div class="dash-card-arrow">&#10095;</div>
+        </div>
+
+        <!-- Collection -->
+        <div class="dash-card dash-card--collection" onclick="window.location.href='/collection'">
+          <div class="dash-card-icon dash-card-icon--collection">&#128214;</div>
+          <div class="dash-card-info">
+            <h3 class="dash-card-title">COLLECTION</h3>
+            <p class="dash-card-desc" id="collection-desc">Voir mes cartes</p>
+          </div>
+          <div class="dash-card-arrow">&#10095;</div>
+        </div>
+
+        <!-- Patch Notes -->
+        <div class="dash-card dash-card--patch" id="patchnotes-trigger">
+          <div class="dash-card-icon dash-card-icon--patch">&#128220;</div>
+          <div class="dash-card-info">
+            <h3 class="dash-card-title">PATCH NOTES</h3>
+            <p class="dash-card-desc">v0.9.0 — Deck &amp; Combat</p>
+          </div>
+          <div class="dash-card-arrow">&#10095;</div>
+        </div>
+
+      </section>
     </div>
-  </div>
+  </main>
+
+  <!-- ===== FOOTER ===== -->
+  <footer class="dash-footer">
+    <span class="dash-footer-version">v0.9.0</span>
+    <span class="dash-footer-status">SYS: <span class="status-online">EN LIGNE</span></span>
+    <span class="dash-footer-logout" id="logout-btn">DECONNEXION</span>
+  </footer>
 
   <!-- Modal Patch Notes -->
   <div class="patchnotes-overlay" id="patchnotes-overlay">

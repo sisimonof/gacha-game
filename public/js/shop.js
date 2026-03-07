@@ -1,6 +1,9 @@
 // shop.js — Booster opening with click-to-reveal system
 
-const BOOSTER_IMAGES = { origines: '/img/booster-origines.png' };
+const BOOSTER_IMAGES = {
+  origines: '/img/booster-origines.png',
+  rift: '/img/booster-rift.png'
+};
 
 let currentCredits = 0;
 
@@ -10,6 +13,40 @@ async function loadCredits() {
   const data = await res.json();
   currentCredits = data.credits;
   document.getElementById('credits-count').textContent = data.credits;
+
+  // Daily bonus state
+  if (!data.canClaimDaily) {
+    markDailyClaimed();
+  }
+}
+
+function markDailyClaimed() {
+  const daily = document.getElementById('shop-daily');
+  const btn = document.getElementById('daily-btn');
+  const desc = document.getElementById('daily-desc');
+  if (daily) daily.classList.add('daily-claimed');
+  if (btn) { btn.classList.add('daily-claimed'); btn.textContent = 'RECUPERE'; btn.disabled = true; }
+  if (desc) desc.textContent = 'Reviens demain !';
+}
+
+async function claimDaily() {
+  const btn = document.getElementById('daily-btn');
+  if (btn && btn.disabled) return;
+
+  try {
+    const res = await fetch('/api/daily', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.success) {
+      currentCredits = data.credits;
+      document.getElementById('credits-count').textContent = data.credits;
+      document.getElementById('daily-desc').textContent = 'Recu ! +200 CR';
+      markDailyClaimed();
+      screenFlash();
+    } else {
+      markDailyClaimed();
+    }
+  } catch {}
 }
 
 async function loadBoosters() {

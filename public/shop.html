@@ -17,11 +17,21 @@
       <div class="boosters-shelf" id="boosters-shelf">
         <!-- Rempli par JS -->
       </div>
+
+      <!-- BONUS DU JOUR -->
+      <div class="shop-daily" id="shop-daily">
+        <div class="shop-daily-icon">&#127873;</div>
+        <div class="shop-daily-info">
+          <h3 class="shop-daily-title">BONUS DU JOUR</h3>
+          <p class="shop-daily-desc" id="daily-desc">+200 credits gratuits</p>
+        </div>
+        <button class="shop-daily-btn" id="daily-btn" onclick="claimDaily()">RECUPERER</button>
+      </div>
     </div>
 
     <!-- VUE OUVERTURE -->
     <div class="opening-view hidden" id="opening-view">
-      <!-- Déchirure du booster -->
+      <!-- Dechirure du booster -->
       <div class="tear-container hidden" id="tear-container">
         <div class="tear-half tear-left" id="tear-left"></div>
         <div class="tear-half tear-right" id="tear-right"></div>
@@ -41,10 +51,10 @@
 
   </div>
 
-  <!-- Flash écran -->
+  <!-- Flash ecran -->
   <div class="screen-flash hidden" id="screen-flash"></div>
 
-  <div class="version-tag">v0.8.0</div>
+  <div class="version-tag">v1.0.0</div>
   <script src="/js/card-renderer.js"></script>
   <script src="/js/shop.js"></script>
 </body>

@@ -1,4 +1,4 @@
-// collection.js — Filtres, Tri, Recherche + Drag & Drop Vente
+// collection.js — Dashboard Collection : Filtres, Tri, Recherche + Drag & Drop Vente
 
 let currentCredits = 0;
 let sellPrices = {};
@@ -12,29 +12,44 @@ const filterState = {
   rarity: 'all',
   element: 'all',
   type: 'all',
-  shiny: false,
-  fused: false,
+  view: 'all', // all | shiny | doubles | fused
   sort: 'rarity'
 };
 
 // Ordre de rarete pour le tri
 const RARITY_ORDER = { commune: 0, rare: 1, epique: 2, legendaire: 3 };
 
+// Nombre total de cartes dans le jeu (pour la barre de progression)
+const TOTAL_CARDS_IN_GAME = 200;
+
 // ==========================================
 //  CHARGEMENT INITIAL
 // ==========================================
 
-async function loadCredits() {
-  const res = await fetch('/api/me');
-  if (!res.ok) { window.location.href = '/'; return; }
-  const data = await res.json();
-  currentCredits = data.credits;
-  document.getElementById('credits-count').textContent = currentCredits;
+async function loadUserInfo() {
+  try {
+    const res = await fetch('/api/me');
+    if (!res.ok) { window.location.href = '/'; return; }
+    const data = await res.json();
+    currentCredits = data.credits;
+
+    // Navbar
+    const navCredits = document.getElementById('nav-credits');
+    const navCards = document.getElementById('nav-cards');
+    const navUsername = document.getElementById('nav-username');
+    if (navCredits) navCredits.textContent = data.credits;
+    if (navCards) navCards.textContent = data.cardCount;
+    if (navUsername) navUsername.textContent = data.username;
+  } catch {
+    window.location.href = '/';
+  }
 }
 
 async function loadSellPrices() {
-  const res = await fetch('/api/sell-prices');
-  if (res.ok) sellPrices = await res.json();
+  try {
+    const res = await fetch('/api/sell-prices');
+    if (res.ok) sellPrices = await res.json();
+  } catch {}
 }
 
 // ==========================================
@@ -53,12 +68,44 @@ function updateStats(cards) {
     if (c.is_shiny) shiny++;
   });
 
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-commune').textContent = commune;
-  document.getElementById('stat-rare').textContent = rare;
-  document.getElementById('stat-epique').textContent = epique;
-  document.getElementById('stat-legendaire').textContent = legendaire;
-  document.getElementById('stat-shiny').textContent = shiny;
+  // Sidebar stats
+  const elCommune = document.getElementById('coll-stat-commune');
+  const elRare = document.getElementById('coll-stat-rare');
+  const elEpique = document.getElementById('coll-stat-epique');
+  const elLegendaire = document.getElementById('coll-stat-legendaire');
+  const elShiny = document.getElementById('coll-stat-shiny');
+  if (elCommune) elCommune.textContent = commune;
+  if (elRare) elRare.textContent = rare;
+  if (elEpique) elEpique.textContent = epique;
+  if (elLegendaire) elLegendaire.textContent = legendaire;
+  if (elShiny) elShiny.textContent = shiny;
+
+  // Progress bar
+  const progressText = document.getElementById('coll-progress-text');
+  const progressFill = document.getElementById('coll-progress-fill');
+  if (progressText) progressText.textContent = total;
+  if (progressFill) {
+    const pct = Math.min((total / TOTAL_CARDS_IN_GAME) * 100, 100);
+    progressFill.style.width = pct + '%';
+  }
+
+  // Header count label
+  const countLabel = document.getElementById('coll-count-label');
+  if (countLabel) countLabel.textContent = total + ' carte' + (total !== 1 ? 's' : '');
+
+  // Header rarity pills
+  const pillCommune = document.getElementById('pill-commune');
+  const pillRare = document.getElementById('pill-rare');
+  const pillEpique = document.getElementById('pill-epique');
+  const pillLegendaire = document.getElementById('pill-legendaire');
+  if (pillCommune) pillCommune.textContent = commune;
+  if (pillRare) pillRare.textContent = rare;
+  if (pillEpique) pillEpique.textContent = epique;
+  if (pillLegendaire) pillLegendaire.textContent = legendaire;
+
+  // Navbar card count
+  const navCards = document.getElementById('nav-cards');
+  if (navCards) navCards.textContent = total;
 }
 
 // ==========================================
@@ -80,6 +127,15 @@ function getEffectiveStat(card, stat) {
 function applyFilters() {
   let cards = [...cardsData];
 
+  // Filtre par vue sidebar
+  if (filterState.view === 'shiny') {
+    cards = cards.filter(c => c.is_shiny);
+  } else if (filterState.view === 'doubles') {
+    cards = cards.filter(c => c.count > 1);
+  } else if (filterState.view === 'fused') {
+    cards = cards.filter(c => c.is_fused);
+  }
+
   // Filtre recherche
   if (filterState.search) {
     const q = filterState.search.toLowerCase();
@@ -99,16 +155,6 @@ function applyFilters() {
   // Filtre type
   if (filterState.type !== 'all') {
     cards = cards.filter(c => c.type === filterState.type);
-  }
-
-  // Filtre shiny
-  if (filterState.shiny) {
-    cards = cards.filter(c => c.is_shiny);
-  }
-
-  // Filtre fused
-  if (filterState.fused) {
-    cards = cards.filter(c => c.is_fused);
   }
 
   // Tri
@@ -136,9 +182,12 @@ function applyFilters() {
   filteredCards = cards;
 
   // Mise a jour compteur resultats
-  const countEl = document.getElementById('filter-result-count');
-  if (filterState.search || filterState.rarity !== 'all' || filterState.element !== 'all' ||
-      filterState.type !== 'all' || filterState.shiny || filterState.fused) {
+  const countEl = document.getElementById('coll-result-count');
+  const hasFilters = filterState.search || filterState.rarity !== 'all' ||
+    filterState.element !== 'all' || filterState.type !== 'all' ||
+    filterState.view !== 'all';
+
+  if (hasFilters) {
     countEl.textContent = `${cards.length} carte${cards.length !== 1 ? 's' : ''} trouvee${cards.length !== 1 ? 's' : ''}`;
     countEl.classList.add('visible');
   } else {
@@ -230,25 +279,35 @@ function renderCollection(cards) {
 }
 
 // ==========================================
-//  EVENT LISTENERS FILTRES
+//  EVENT LISTENERS
 // ==========================================
 
 function setupFilterListeners() {
   // Recherche
-  const searchInput = document.getElementById('search-input');
+  const searchInput = document.getElementById('coll-search');
   searchInput.addEventListener('input', () => {
     filterState.search = searchInput.value.trim();
     applyFilters();
   });
 
-  // Boutons de filtre (rarete, element, type)
-  document.querySelectorAll('.filter-btn[data-filter][data-value]').forEach(btn => {
+  // Sidebar nav items (views)
+  document.querySelectorAll('.coll-nav-item[data-view]').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.coll-nav-item').forEach(i => i.classList.remove('coll-nav-item--active'));
+      item.classList.add('coll-nav-item--active');
+      filterState.view = item.dataset.view;
+      applyFilters();
+    });
+  });
+
+  // Sidebar filter buttons (element, type)
+  document.querySelectorAll('.coll-filter-btn[data-filter][data-value]').forEach(btn => {
     btn.addEventListener('click', () => {
       const filterType = btn.dataset.filter;
       const value = btn.dataset.value;
 
       // Desactiver les autres boutons du meme groupe
-      document.querySelectorAll(`.filter-btn[data-filter="${filterType}"]`).forEach(b => {
+      document.querySelectorAll(`.coll-filter-btn[data-filter="${filterType}"]`).forEach(b => {
         b.classList.remove('active');
       });
       btn.classList.add('active');
@@ -258,25 +317,54 @@ function setupFilterListeners() {
     });
   });
 
-  // Toggle shiny
-  document.getElementById('filter-shiny').addEventListener('click', (e) => {
-    const btn = e.currentTarget;
-    filterState.shiny = !filterState.shiny;
-    btn.classList.toggle('active', filterState.shiny);
-    applyFilters();
-  });
-
-  // Toggle fused
-  document.getElementById('filter-fused').addEventListener('click', (e) => {
-    const btn = e.currentTarget;
-    filterState.fused = !filterState.fused;
-    btn.classList.toggle('active', filterState.fused);
-    applyFilters();
+  // Rarity pills (header)
+  document.querySelectorAll('.coll-pill[data-filter="rarity"]').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const value = pill.dataset.value;
+      // Toggle : si deja actif on deselectionne
+      if (filterState.rarity === value) {
+        filterState.rarity = 'all';
+      } else {
+        filterState.rarity = value;
+      }
+      applyFilters();
+    });
   });
 
   // Tri
-  document.getElementById('sort-select').addEventListener('change', (e) => {
+  document.getElementById('coll-sort').addEventListener('change', (e) => {
     filterState.sort = e.target.value;
+    applyFilters();
+  });
+
+  // Reset
+  document.getElementById('coll-reset').addEventListener('click', () => {
+    // Reset tout
+    filterState.search = '';
+    filterState.rarity = 'all';
+    filterState.element = 'all';
+    filterState.type = 'all';
+    filterState.view = 'all';
+    filterState.sort = 'rarity';
+
+    // Reset UI
+    document.getElementById('coll-search').value = '';
+    document.getElementById('coll-sort').value = 'rarity';
+
+    // Reset sidebar nav
+    document.querySelectorAll('.coll-nav-item').forEach(i => i.classList.remove('coll-nav-item--active'));
+    const allNav = document.querySelector('.coll-nav-item[data-view="all"]');
+    if (allNav) allNav.classList.add('coll-nav-item--active');
+
+    // Reset sidebar filter buttons
+    document.querySelectorAll('.coll-filter-btn').forEach(b => {
+      if (b.dataset.value === 'all') {
+        b.classList.add('active');
+      } else {
+        b.classList.remove('active');
+      }
+    });
+
     applyFilters();
   });
 }
@@ -286,14 +374,10 @@ function setupFilterListeners() {
 // ==========================================
 
 function animateCredits(from, to) {
-  const el = document.getElementById('credits-count');
-  const display = document.querySelector('.credits-display');
+  const el = document.getElementById('nav-credits');
+  if (!el) return;
   const duration = 600;
   const start = performance.now();
-
-  display.classList.remove('credits-flash');
-  void display.offsetWidth;
-  display.classList.add('credits-flash');
 
   function step(now) {
     const progress = Math.min((now - start) / duration, 1);
@@ -462,15 +546,19 @@ function screenFlash() {
 // ==========================================
 
 async function loadCollection() {
-  const res = await fetch('/api/collection');
-  if (!res.ok) { window.location.href = '/'; return; }
-  const cards = await res.json();
-  renderCollection(cards);
+  try {
+    const res = await fetch('/api/collection');
+    if (!res.ok) { window.location.href = '/'; return; }
+    const cards = await res.json();
+    renderCollection(cards);
+  } catch {
+    window.location.href = '/';
+  }
 }
 
 async function init() {
   setupFilterListeners();
-  await Promise.all([loadCredits(), loadSellPrices()]);
+  await Promise.all([loadUserInfo(), loadSellPrices()]);
   await loadCollection();
 }
 
