@@ -180,14 +180,14 @@ function getManaForTurn(turn) {
     `);
     const seedCards = [
       // [name, rarity, element, atk, def, hp, mana, ability_name, ability_desc, emoji, passive_desc, crystal_cost]
-      ['Goblin',              'commune',  'terre', 2, 1, 3,  1, 'Appel gobelin',    'Invoque un Goblin 1/1/2',              '🗡️', '+1 ATK si un autre Goblin est sur le terrain', 1.0],
+      ['Goblin',              'commune',  'terre', 1, 1, 2,  1, 'Appel gobelin',    'Ajoute un Goblin 1/1/1 dans votre main','🗡️', '+1 ATK si un autre Goblin est sur le terrain', 1.0],
       ['Tortue des Rivieres', 'commune',  'eau',   1, 4, 5,  4, 'Carapace marine',  '+2 DEF a un allie ce tour',            '🐢', 'Les unites Eau alliees invoquees gagnent +1 PV', 1.0],
-      ['Serpent des Marees',  'rare',     'eau',   2, 1, 3,  2, 'Frappe rapide',    '2 degats directs (attaque immediate)', '🐍', 'Si il inflige des degats, peut renvoyer la cible en main', 1.0],
-      ['Mage de Foudre',     'rare',     'eau',   3, 1, 3,  3, 'Eclair',           '2 degats a une cible (3 si 1ere action)','🌊', 'Premiere action du tour : 3 degats au lieu de 2', 1.0],
+      ['Serpent des Marees',  'rare',     'eau',   2, 1, 2,  2, 'Frappe rapide',    'Peut attaquer immediatement',          '🐍', 'Si inflige des degats, renvoie la cible en main', 1.0],
+      ['Mage de Foudre',     'rare',     'eau',   3, 1, 2,  3, 'Eclair',           'Inflige 2 degats a une cible',         '🌊', '1ere action du tour: 3 degats au lieu de 2', 1.0],
       ['Esprit des Forets',  'rare',     'terre', 1, 3, 4,  3, 'Croissance',       'Invoque une Pousse (0/1/1) qui evolue','🌿', 'Les unites Terre alliees gagnent +1 DEF', 1.5],
-      ['Salamandre Ardente', 'rare',     'feu',   3, 1, 3,  3, 'Flamme adjacente', '1 degat supplementaire a un ennemi',   '🦎', 'Si elle detruit un ennemi, +1 ATK tour suivant', 1.0],
-      ['Dragonnet de Braise','epique',   'feu',   3, 2, 4,  4, 'Souffle de braise','1 degat a tous les ennemis',           '🐉', 'Si une unite meurt ce tour, +1 ATK temporaire', 1.5],
-      ['Golem de Roche',     'epique',   'terre', 2, 5, 7,  5, 'Fortification',    '+3 DEF jusqu a fin du tour',           '🪨', 'Subit 1 degat de moins de toutes les attaques', 1.0],
+      ['Salamandre Ardente', 'rare',     'feu',   3, 1, 3,  3, 'Flamme adjacente', '1 degat a un ennemi adjacent',         '🦎', 'Si detruit un ennemi, +1 ATK prochain tour', 1.0],
+      ['Dragonnet de Braise','epique',   'feu',   3, 2, 3,  4, 'Souffle de braise','1 degat a tous les ennemis',           '🐉', 'Si une unite meurt ce tour, +1 ATK temporaire', 1.5],
+      ['Golem de Roche',     'epique',   'terre', 2, 5, 6,  5, 'Fortification',    '+2 DEF jusqu a fin du tour',           '🪨', 'Subit 1 degat de moins de toutes les attaques', 1.0],
       // Legendaires
       ['Phoenix Ancestral',  'legendaire','feu',  4, 2, 5,  5, 'Renaissance',      'Ressuscite avec 3 PV a la mort (1x)',  '🔥', 'Inflige 1 degat a tous les ennemis en debut de tour', 2.0],
       ['Leviathan Abyssal',  'legendaire','eau',  3, 4, 8,  6, 'Raz-de-maree',     '3 degats a tous les ennemis',          '🌊', 'Les unites ennemies perdent 1 ATK en debut de tour', 2.0],
@@ -815,7 +815,10 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
     case 'direct_damage': {
       const target = pickTarget();
       if (target) {
-        const dmg = scaleDmg(ability.value);
+        // Passif Mage de Foudre : Eclair inflige 3 degats au lieu de 2
+        let dmgVal = ability.value;
+        if (unit.name === 'Mage de Foudre' && abilityName === 'Eclair') dmgVal = 3;
+        const dmg = scaleDmg(dmgVal);
         applyDamage(target, dmg, events, unit);
         events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
       }
@@ -852,8 +855,13 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
           const dmg = scaleDmg(ability.damage);
           applyDamage(target, dmg, events, unit);
         }
-        target.stunned = true;
-        events.push({ type: 'ability_stun', unit: unit.name, target: target.name, ability: abilityName, damage: ability.damage || 0 });
+        // Passif Titan Originel : immunise aux effets de controle
+        if (target.name === 'Titan Originel') {
+          events.push({ type: 'type_passive', desc: `${target.name} est immunise au controle !` });
+        } else {
+          target.stunned = true;
+          events.push({ type: 'ability_stun', unit: unit.name, target: target.name, ability: abilityName, damage: ability.damage || 0 });
+        }
       }
       break;
     }
@@ -1148,6 +1156,23 @@ function aiTurn(battle) {
     });
     events.push({ type: 'type_passive', desc: `Aura divine ennemie : +${divinCountE} PV` });
   }
+  // Passif Phoenix Ancestral ennemi : 1 degat a toutes les unites joueur
+  const phoenixCountEC = battle.enemyTeam.filter(u => u.alive && u.name === 'Phoenix Ancestral').length;
+  if (phoenixCountEC > 0) {
+    battle.playerTeam.filter(u => u.alive).forEach(u => {
+      u.currentHp = Math.max(0, u.currentHp - phoenixCountEC);
+      if (u.currentHp <= 0) checkKO(u, events);
+    });
+    events.push({ type: 'type_passive', desc: `Phoenix Ancestral ennemi : ${phoenixCountEC} degat(s) a vos unites` });
+  }
+  // Passif Leviathan Abyssal ennemi : vos unites perdent 1 ATK
+  const leviathanCountEC = battle.enemyTeam.filter(u => u.alive && u.name === 'Leviathan Abyssal').length;
+  if (leviathanCountEC > 0) {
+    battle.playerTeam.filter(u => u.alive).forEach(u => {
+      u.buffAtk -= leviathanCountEC;
+    });
+    events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : -${leviathanCountEC} ATK a vos unites` });
+  }
 
   for (const enemy of aliveEnemies) {
     if (!enemy.alive || battle.playerTeam.filter(p => p.alive).length === 0) continue;
@@ -1198,6 +1223,18 @@ function aiTurn(battle) {
     // Feroce Bete ennemi
     if (!target.alive && enemy.type === 'bete') {
       enemy.permanentBonusAtk += 1;
+    }
+    // Passif Salamandre Ardente ennemi
+    if (enemy.name === 'Salamandre Ardente' && !target.alive) {
+      enemy.permanentBonusAtk += 1;
+      events.push({ type: 'type_passive', desc: `${enemy.name} s'enflamme ! +1 ATK` });
+    }
+    // Passif Dragonnet de Braise ennemi
+    if (!target.alive) {
+      battle.enemyTeam.filter(u => u.alive && u.name === 'Dragonnet de Braise' && u !== enemy).forEach(u => {
+        u.buffAtk += 1;
+        events.push({ type: 'type_passive', desc: `${u.name} s'embrase ! +1 ATK` });
+      });
     }
 
     if (checkWin(battle)) return events;
@@ -1679,6 +1716,24 @@ function aiDeckTurn(battle) {
       events.push({ type: 'type_passive', desc: `${unit.name} gagne en feroce ! +1 ATK` });
     }
 
+    // Passif Serpent des Marees : renvoie la cible en main si elle survit
+    if (unit.name === 'Serpent des Marees' && target.alive && target.name !== 'Titan Originel') {
+      const targetIdx = battle.playerField.indexOf(target);
+      if (targetIdx !== -1) {
+        battle.playerField[targetIdx] = null;
+        battle.playerHand.push(makeHandCard(target));
+        events.push({ type: 'type_passive', desc: `${unit.name} renvoie ${target.name} en main !` });
+      }
+    }
+
+    // Passif Dragonnet de Braise : +1 ATK temporaire si une unite meurt
+    if (!target.alive) {
+      getFieldAlive(battle.enemyField).filter(u => u.name === 'Dragonnet de Braise').forEach(u => {
+        u.buffAtk += 1;
+        events.push({ type: 'type_passive', desc: `${u.name} s'embrase ! +1 ATK` });
+      });
+    }
+
     cleanDeadFromField(battle.playerField);
     if (checkDeckWin(battle)) return events;
   }
@@ -2050,6 +2105,23 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
     });
     events.push({ type: 'type_passive', desc: `Aura divine : +${divinCountP} PV a l equipe` });
   }
+  // Passif Phoenix Ancestral : 1 degat a tous les ennemis en debut de tour
+  const phoenixCountPC = battle.playerTeam.filter(u => u.alive && u.name === 'Phoenix Ancestral').length;
+  if (phoenixCountPC > 0) {
+    battle.enemyTeam.filter(u => u.alive).forEach(u => {
+      u.currentHp = Math.max(0, u.currentHp - phoenixCountPC);
+      if (u.currentHp <= 0) checkKO(u, events);
+    });
+    events.push({ type: 'type_passive', desc: `Phoenix Ancestral : ${phoenixCountPC} degat(s) a tous les ennemis` });
+  }
+  // Passif Leviathan Abyssal : ennemis perdent 1 ATK
+  const leviathanCountPC = battle.playerTeam.filter(u => u.alive && u.name === 'Leviathan Abyssal').length;
+  if (leviathanCountPC > 0) {
+    battle.enemyTeam.filter(u => u.alive).forEach(u => {
+      u.buffAtk -= leviathanCountPC;
+    });
+    events.push({ type: 'type_passive', desc: `Leviathan Abyssal : -${leviathanCountPC} ATK aux ennemis` });
+  }
   // Tick Poison joueur
   if (attacker.poisoned > 0) {
     attacker.currentHp = Math.max(1, attacker.currentHp - attacker.poisoned);
@@ -2094,6 +2166,18 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
       if (!target.alive && attacker.type === 'bete') {
         attacker.permanentBonusAtk += 1;
         events.push({ type: 'type_passive', desc: `${attacker.name} gagne en feroce ! +1 ATK permanent` });
+      }
+      // Passif Salamandre Ardente : +1 ATK si detruit un ennemi
+      if (attacker.name === 'Salamandre Ardente' && !target.alive) {
+        attacker.permanentBonusAtk += 1;
+        events.push({ type: 'type_passive', desc: `${attacker.name} s'enflamme ! +1 ATK` });
+      }
+      // Passif Dragonnet de Braise : +1 ATK temporaire si une unite meurt
+      if (!target.alive) {
+        battle.playerTeam.filter(u => u.alive && u.name === 'Dragonnet de Braise' && u !== attacker).forEach(u => {
+          u.buffAtk += 1;
+          events.push({ type: 'type_passive', desc: `${u.name} s'embrase ! +1 ATK` });
+        });
       }
     }
   }
@@ -2492,6 +2576,21 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
     events.push({ type: 'type_passive', desc: `${attacker.name} gagne en feroce ! +1 ATK` });
   }
 
+  // Passif Serpent des Marees : renvoie la cible en main si elle survit
+  if (attacker.name === 'Serpent des Marees' && target.alive && target.name !== 'Titan Originel') {
+    battle.enemyField[targetSlot] = null;
+    battle.enemyHand.push(makeHandCard(target));
+    events.push({ type: 'type_passive', desc: `${attacker.name} renvoie ${target.name} en main !` });
+  }
+
+  // Passif Dragonnet de Braise : +1 ATK temporaire si une unite meurt ce tour
+  if (!target.alive) {
+    getFieldAlive(battle.playerField).filter(u => u.name === 'Dragonnet de Braise').forEach(u => {
+      u.buffAtk += 1;
+      events.push({ type: 'type_passive', desc: `${u.name} s'embrase ! +1 ATK` });
+    });
+  }
+
   cleanDeadFromField(battle.enemyField);
   checkDeckWin(battle);
 
@@ -2727,6 +2826,40 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
     events.push({ type: 'enemy_draw' });
   }
 
+  // Enemy turn-start passives
+  // Esprit des Forets ennemi : +1 DEF Terre
+  const espritCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Esprit des Forets').length;
+  if (espritCountE > 0) {
+    getFieldAlive(battle.enemyField).filter(u => u.element === 'terre').forEach(u => {
+      u.buffDef += espritCountE;
+    });
+    events.push({ type: 'type_passive', desc: `Esprit des Forets ennemi : +${espritCountE} DEF aux Terre` });
+  }
+
+  // Phoenix Ancestral ennemi : 1 degat a toutes vos unites
+  const phoenixCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Phoenix Ancestral').length;
+  if (phoenixCountE > 0) {
+    getFieldAlive(battle.playerField).forEach(u => {
+      u.currentHp = Math.max(0, u.currentHp - phoenixCountE);
+      if (u.currentHp <= 0) checkKO(u, events);
+    });
+    cleanDeadFromField(battle.playerField);
+    events.push({ type: 'type_passive', desc: `Phoenix Ancestral ennemi : ${phoenixCountE} degat(s) a vos unites` });
+  }
+
+  // Leviathan Abyssal ennemi : -1 ATK a vos unites
+  const leviathanCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Leviathan Abyssal').length;
+  if (leviathanCountE > 0) {
+    getFieldAlive(battle.playerField).forEach(u => {
+      u.buffAtk -= leviathanCountE;
+    });
+    events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : -${leviathanCountE} ATK a vos unites` });
+  }
+
+  if (checkDeckWin(battle)) {
+    return res.json({ events, ...getDeckBattleSnapshot(battle) });
+  }
+
   // AI plays
   const aiEvents = aiDeckTurn(battle);
   events.push(...aiEvents);
@@ -2796,6 +2929,26 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       u.buffDef += espritCountP;
     });
     events.push({ type: 'type_passive', desc: `Esprit des Forets : +${espritCountP} DEF aux unites Terre` });
+  }
+
+  // Passif Phoenix Ancestral : 1 degat a tous les ennemis en debut de tour
+  const phoenixCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Phoenix Ancestral').length;
+  if (phoenixCountP > 0) {
+    getFieldAlive(battle.enemyField).forEach(u => {
+      u.currentHp = Math.max(0, u.currentHp - phoenixCountP);
+      if (u.currentHp <= 0) checkKO(u, events);
+    });
+    cleanDeadFromField(battle.enemyField);
+    events.push({ type: 'type_passive', desc: `Phoenix Ancestral : ${phoenixCountP} degat(s) a tous les ennemis` });
+  }
+
+  // Passif Leviathan Abyssal : les unites ennemies perdent 1 ATK en debut de tour
+  const leviathanCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Leviathan Abyssal').length;
+  if (leviathanCountP > 0) {
+    getFieldAlive(battle.enemyField).forEach(u => {
+      u.buffAtk -= leviathanCountP;
+    });
+    events.push({ type: 'type_passive', desc: `Leviathan Abyssal : -${leviathanCountP} ATK aux ennemis` });
   }
 
   // Check turn limit
@@ -2889,7 +3042,7 @@ app.post('/api/admin/create-card', requireAdmin, (req, res) => {
 
 // Modify an existing card template
 app.post('/api/admin/modify-card', requireAdmin, (req, res) => {
-  const { cardId, name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image } = req.body;
+  const { cardId, name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image, emoji, passive_desc, crystal_cost } = req.body;
   if (!cardId) return res.status(400).json({ error: 'cardId requis' });
 
   const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
@@ -2899,17 +3052,45 @@ app.post('/api/admin/modify-card', requireAdmin, (req, res) => {
     UPDATE cards SET
       name = ?, rarity = ?, type = ?, element = ?,
       attack = ?, defense = ?, hp = ?, mana_cost = ?,
-      ability_name = ?, ability_desc = ?, image = ?
+      ability_name = ?, ability_desc = ?, image = ?,
+      emoji = ?, passive_desc = ?, crystal_cost = ?
     WHERE id = ?
   `).run(
     name || card.name, rarity || card.rarity, type || card.type, element || card.element,
     attack ?? card.attack, defense ?? card.defense, hp ?? card.hp, mana_cost ?? card.mana_cost,
     ability_name || card.ability_name, ability_desc || card.ability_desc, image ?? card.image,
+    emoji ?? card.emoji, passive_desc ?? card.passive_desc, crystal_cost ?? card.crystal_cost,
     cardId
   );
 
   const updated = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
   res.json({ success: true, card: updated });
+});
+
+// Get boosters config
+app.get('/api/admin/boosters', requireAdmin, (req, res) => {
+  res.json(BOOSTERS.map(b => ({
+    id: b.id, name: b.name, price: b.price,
+    cardsPerPack: b.cardsPerPack, weights: b.weights, shinyRate: b.shinyRate
+  })));
+});
+
+// Update booster config
+app.post('/api/admin/update-booster', requireAdmin, (req, res) => {
+  const { boosterId, weights, shinyRate, price } = req.body;
+  const booster = BOOSTERS.find(b => b.id === boosterId);
+  if (!booster) return res.status(404).json({ error: 'Booster introuvable' });
+
+  if (weights) {
+    if (weights.commune !== undefined) booster.weights.commune = Number(weights.commune);
+    if (weights.rare !== undefined) booster.weights.rare = Number(weights.rare);
+    if (weights.epique !== undefined) booster.weights.epique = Number(weights.epique);
+    if (weights.legendaire !== undefined) booster.weights.legendaire = Number(weights.legendaire);
+  }
+  if (shinyRate !== undefined) booster.shinyRate = Number(shinyRate);
+  if (price !== undefined) booster.price = Number(price);
+
+  res.json({ success: true, booster: { id: booster.id, name: booster.name, price: booster.price, weights: booster.weights, shinyRate: booster.shinyRate } });
 });
 
 // Delete a card template

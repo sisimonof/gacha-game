@@ -109,6 +109,7 @@ function renderCardFront(card) {
       <div class="ability-name">${card.ability_name}</div>
       <div class="ability-desc">${card.ability_desc}</div>
     </div>
+    ${card.passive_desc ? `<div class="card-passive"><span class="passive-label">PASSIF</span> ${card.passive_desc}</div>` : ''}
     <div class="card-type">${card.type}</div>
   `;
 }
@@ -265,6 +266,12 @@ function showCardDetail(card) {
           </div>
           <div class="modal-ability-desc">${card.ability_desc}</div>
         </div>
+
+        ${card.passive_desc ? `
+        <div class="modal-passive">
+          <div class="modal-passive-label">PASSIF</div>
+          <div class="modal-passive-desc">${card.passive_desc}</div>
+        </div>` : ''}
 
         <div class="modal-type">${card.type}</div>
       </div>
