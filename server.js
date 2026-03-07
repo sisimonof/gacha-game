@@ -188,6 +188,10 @@ function getManaForTurn(turn) {
       ['Salamandre Ardente', 'rare',     'feu',   3, 1, 3,  3, 'Flamme adjacente', '1 degat supplementaire a un ennemi',   '🦎', 'Si elle detruit un ennemi, +1 ATK tour suivant', 1.0],
       ['Dragonnet de Braise','epique',   'feu',   3, 2, 4,  4, 'Souffle de braise','1 degat a tous les ennemis',           '🐉', 'Si une unite meurt ce tour, +1 ATK temporaire', 1.5],
       ['Golem de Roche',     'epique',   'terre', 2, 5, 7,  5, 'Fortification',    '+3 DEF jusqu a fin du tour',           '🪨', 'Subit 1 degat de moins de toutes les attaques', 1.0],
+      // Legendaires
+      ['Phoenix Ancestral',  'legendaire','feu',  4, 2, 5,  5, 'Renaissance',      'Ressuscite avec 3 PV a la mort (1x)',  '🔥', 'Inflige 1 degat a tous les ennemis en debut de tour', 2.0],
+      ['Leviathan Abyssal',  'legendaire','eau',  3, 4, 8,  6, 'Raz-de-maree',     '3 degats a tous les ennemis',          '🌊', 'Les unites ennemies perdent 1 ATK en debut de tour', 2.0],
+      ['Titan Originel',     'legendaire','terre',5, 6, 10, 7, 'Seisme',           '2 degats a tous + stun 1 tour',        '⛰️', 'Immunise aux effets de controle (stun, renvoi)', 2.0],
     ];
     const addSeed = db.transaction(() => {
       for (const c of seedCards) {
@@ -196,6 +200,24 @@ function getManaForTurn(turn) {
       console.log(`${seedCards.length} cartes de base ajoutees.`);
     });
     addSeed();
+  }
+}
+
+// --- Migration : ajout legendaires si absentes ---
+{
+  const legCount = db.prepare("SELECT COUNT(*) as c FROM cards WHERE rarity = 'legendaire'").get().c;
+  if (legCount === 0) {
+    const insertLeg = db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+      VALUES (?, ?, 'creature', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const legendaries = [
+      ['Phoenix Ancestral',  'legendaire','feu',  4, 2, 5,  5, 'Renaissance',      'Ressuscite avec 3 PV a la mort (1x)',  '🔥', 'Inflige 1 degat a tous les ennemis en debut de tour', 2.0],
+      ['Leviathan Abyssal',  'legendaire','eau',  3, 4, 8,  6, 'Raz-de-maree',     '3 degats a tous les ennemis',          '🌊', 'Les unites ennemies perdent 1 ATK en debut de tour', 2.0],
+      ['Titan Originel',     'legendaire','terre',5, 6, 10, 7, 'Seisme',           '2 degats a tous + stun 1 tour',        '⛰️', 'Immunise aux effets de controle (stun, renvoi)', 2.0],
+    ];
+    for (const c of legendaries) insertLeg.run(...c);
+    console.log('Migration: 3 cartes legendaires ajoutees.');
   }
 }
 
@@ -263,9 +285,18 @@ function openBooster(boosterId, userId) {
   const shinyRate = booster.shinyRate || 0.02;
 
   for (let i = 0; i < booster.cardsPerPack; i++) {
-    const rarity = rollRarity(booster.weights);
-    const cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(rarity);
-    if (!cards.length) continue;
+    let rarity = rollRarity(booster.weights);
+    let cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(rarity);
+    // Fallback : si aucune carte de cette rarete, descendre d'un cran
+    if (!cards.length) {
+      const fallbackOrder = ['legendaire', 'epique', 'rare', 'commune'];
+      const idx = fallbackOrder.indexOf(rarity);
+      for (let f = idx + 1; f < fallbackOrder.length; f++) {
+        cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(fallbackOrder[f]);
+        if (cards.length) { rarity = fallbackOrder[f]; break; }
+      }
+      if (!cards.length) continue;
+    }
     const card = cards[Math.floor(Math.random() * cards.length)];
     const isShiny = Math.random() < shinyRate ? 1 : 0;
     insertCard.run(userId, card.id, isShiny);
