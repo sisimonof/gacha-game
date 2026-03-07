@@ -90,6 +90,19 @@ db.exec(`
   }
 }
 
+// --- Migration : ajout colonnes avatar et display_name ---
+{
+  const userCols2 = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!userCols2.includes('avatar')) {
+    db.exec("ALTER TABLE users ADD COLUMN avatar TEXT DEFAULT '⚔'");
+    console.log('Migration: avatar ajouté');
+  }
+  if (!userCols2.includes('display_name')) {
+    db.exec("ALTER TABLE users ADD COLUMN display_name TEXT DEFAULT ''");
+    console.log('Migration: display_name ajouté');
+  }
+}
+
 // --- Seed compte admin ---
 {
   const adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
@@ -2081,7 +2094,7 @@ app.post('/api/logout', (req, res) => {
 
 // --- Routes USER ---
 app.get('/api/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, credits, last_daily FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name FROM users WHERE id = ?').get(req.session.userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(req.session.userId).c;
 
   const today = new Date().toISOString().split('T')[0];
@@ -2089,10 +2102,51 @@ app.get('/api/me', requireAuth, (req, res) => {
 
   res.json({
     username: user.username,
+    displayName: user.display_name || user.username,
+    avatar: user.avatar || '⚔',
     credits: user.credits,
     cardCount,
     canClaimDaily
   });
+});
+
+// User settings (avatar + display name)
+const VALID_AVATARS = [
+  '⚔','🗡','🛡','🏹','🔮','💀','🐉','👑','🦅','🐺',
+  '🦁','🔥','❄','⚡','🌙','☀','💎','🎭','👹','🧙',
+  '🤖','👻','🦇','🐍','🦂','🌋','🌊','🌿','⭐','💫',
+  '🏰','🗿','🎲','🃏','🪄','🧿','⛏','🦴','🕷','🎯'
+];
+
+app.post('/api/settings', requireAuth, (req, res) => {
+  const { avatar, displayName } = req.body;
+  const userId = req.session.userId;
+
+  if (avatar !== undefined) {
+    if (!VALID_AVATARS.includes(avatar)) {
+      return res.status(400).json({ error: 'Avatar invalide' });
+    }
+    db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatar, userId);
+  }
+
+  if (displayName !== undefined) {
+    const trimmed = displayName.trim();
+    if (trimmed.length < 3 || trimmed.length > 20) {
+      return res.status(400).json({ error: 'Pseudo: 3-20 caracteres' });
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+      return res.status(400).json({ error: 'Pseudo: lettres, chiffres, _ et - uniquement' });
+    }
+    const existing = db.prepare('SELECT id FROM users WHERE LOWER(display_name) = LOWER(?) AND id != ?').get(trimmed, userId);
+    const existingUsername = db.prepare('SELECT id FROM users WHERE LOWER(username) = LOWER(?) AND id != ?').get(trimmed, userId);
+    if (existing || existingUsername) {
+      return res.status(409).json({ error: 'Ce pseudo est deja pris' });
+    }
+    db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(trimmed, userId);
+  }
+
+  const user = db.prepare('SELECT username, avatar, display_name FROM users WHERE id = ?').get(userId);
+  res.json({ success: true, avatar: user.avatar || '⚔', displayName: user.display_name || user.username });
 });
 
 app.post('/api/daily', requireAuth, (req, res) => {

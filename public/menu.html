@@ -36,8 +36,9 @@
     <!-- LEFT: Player Profile -->
     <aside class="dash-profile">
       <div class="dash-profile-card">
+        <button class="settings-gear" id="settings-trigger" title="Parametres">&#9881;</button>
         <div class="dash-avatar">
-          <span class="dash-avatar-icon">&#9876;</span>
+          <span class="dash-avatar-icon" id="profile-avatar">⚔</span>
         </div>
         <div class="dash-profile-name" id="profile-username">???</div>
         <div class="dash-profile-rank">
@@ -269,6 +270,31 @@
           </ul>
         </div>
 
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Settings -->
+  <div class="settings-overlay" id="settings-overlay">
+    <div class="settings-modal">
+      <button class="settings-close" id="settings-close">&times;</button>
+      <h2 class="settings-title">PARAMETRES</h2>
+      <div class="settings-content">
+        <div class="settings-section">
+          <h3 class="settings-section-title">AVATAR</h3>
+          <div class="settings-current-avatar" id="settings-current-avatar">⚔</div>
+          <div class="settings-avatar-grid" id="avatar-grid"></div>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section">
+          <h3 class="settings-section-title">PSEUDO</h3>
+          <div class="settings-input-group">
+            <input type="text" id="settings-displayname" class="settings-input" placeholder="Nouveau pseudo..." maxlength="20">
+            <span class="settings-input-hint">3-20 caracteres (lettres, chiffres, _, -)</span>
+          </div>
+        </div>
+        <button class="settings-save-btn" id="settings-save">> SAUVEGARDER</button>
+        <p class="settings-msg" id="settings-msg"></p>
       </div>
     </div>
   </div>
