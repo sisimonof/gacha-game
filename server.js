@@ -329,6 +329,28 @@ function getManaForTurn(turn) {
   }
 }
 
+// --- Migration : 5 nouvelles cartes v1.3.0 (Lumiere, Ombre, Feu, Eau) ---
+{
+  const hasPretresse = db.prepare("SELECT id FROM cards WHERE name = 'Pretresse Solaire'").get();
+  if (!hasPretresse) {
+    const insertV3 = db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const v3Cards = [
+      ['Pretresse Solaire',   'rare',       'divin',    'lumiere', 1, 2, 4, 3, 'Lumiere reparatrice', 'Soigne 3 PV a un allie cible',                      '☀️', 'Soigne 1 PV a l allie le plus blesse a chaque fin de tour', 1.5],
+      ['Pyromancien Nomade',  'rare',       'mage',     'feu',     1, 1, 2, 2, 'Combustion',          'Inflige 2 degats a un ennemi, subit 1 degat soi-meme','🔥', 'Si un ennemi meurt par Combustion, l auto-degat est annule', 1.0],
+      ['Hydre des Abysses',   'epique',     'bete',     'eau',     3, 2, 7, 5, 'Regeneration hydre',  'Gagne +1 ATK permanent (cumulable)',                  '🐙', 'Ne peut pas etre tuee en un seul coup (reste a 1 PV minimum)', 1.5],
+      ['Archange Dechu',      'epique',     'divin',    'lumiere', 4, 3, 5, 5, 'Jugement celeste',    'Inflige des degats egaux a la DEF de la cible (ignore la DEF)', '👼', 'A sa mort, soigne tous les allies de 2 PV', 1.5],
+      ['Faucheur d Ames',     'legendaire', 'guerrier', 'ombre',   6, 2, 6, 7, 'Moisson funeste',     'Tue instantanement un ennemi ayant 3 PV ou moins',   '💀', 'Chaque ennemi tue par Moisson funeste lui rend 2 PV et +1 ATK permanent', 2.0],
+    ];
+    db.transaction(() => {
+      for (const c of v3Cards) insertV3.run(...c);
+    })();
+    console.log('Migration: 5 nouvelles cartes v1.3.0 ajoutees (Pretresse, Pyromancien, Hydre, Archange, Faucheur)');
+  }
+}
+
 // --- Tables Decks ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS decks (
@@ -732,6 +754,14 @@ const ABILITY_MAP = {
   'Eruption':           { type: 'aoe_damage_element', value: 2, targetElement: 'eau' }, // Titan de Magma
   'Aura de flamme':     { type: 'none' },              // Phoenix — l'AOE est un passif turn-start
   'Vague ecrasante':    { type: 'bounce_damage',      damage: 2 },  // Leviathan rework
+
+  // ===== NOUVELLES CARTES v1.3.0 =====
+  'Lumiere reparatrice': { type: 'heal_ally',          value: 3 },   // Pretresse Solaire
+  'Combustion':          { type: 'combustion',         damage: 2, selfDamage: 1 },  // Pyromancien Nomade
+  'Regeneration hydre':  { type: 'permanent_atk_buff', value: 1 },   // Hydre des Abysses (+1 ATK permanent cumulable)
+  'Jugement celeste':    { type: 'def_as_damage' },                   // Archange Dechu (degats = DEF cible, ignore DEF)
+  'Moisson funeste':     { type: 'reap',               threshold: 3 }, // Faucheur d Ames (kill si <= 3 PV)
+  'Quitte ou Double':    { type: 'coin_flip' },                        // La Voie Lactee (50/50 kill)
 };
 
 // ============================================
@@ -818,7 +848,14 @@ function applyDamage(target, damage, events, source, battle) {
     remaining -= absorbed;
     events.push({ type: 'shield_absorb', unit: target.name, absorbed });
   }
-  target.currentHp = Math.max(0, target.currentHp - remaining);
+  // Passif Hydre des Abysses : ne peut pas etre tuee en un seul coup (reste a 1 PV)
+  if (target.name === 'Hydre des Abysses' && target.currentHp > 1 && remaining >= target.currentHp) {
+    target.currentHp = 1;
+    events.push({ type: 'type_passive', desc: `${target.name} survit au coup fatal ! (1 PV)` });
+    // On skip le reste de applyDamage (counter, etc.) car les degats sont deja appliques
+  } else {
+    target.currentHp = Math.max(0, target.currentHp - remaining);
+  }
   // Counter : reflete des degats
   if (target.counterDamage > 0 && source && source.alive) {
     source.currentHp = Math.max(0, source.currentHp - target.counterDamage);
@@ -1208,6 +1245,88 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       });
       break;
     }
+    // ===== NOUVELLES ABILITIES v1.3.0 =====
+    case 'combustion': {
+      const target = pickTarget();
+      if (target) {
+        const dmg = scaleDmg(ability.damage);
+        applyDamage(target, dmg, events, unit, battle);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
+        // Passif Pyromancien : si l ennemi meurt, pas d auto-degat
+        if (target.alive || target.currentHp > 0) {
+          unit.currentHp = Math.max(0, unit.currentHp - ability.selfDamage);
+          events.push({ type: 'ability_self_damage', unit: unit.name, ability: abilityName, damage: ability.selfDamage });
+          if (unit.currentHp <= 0) checkKO(unit, events, battle);
+        } else {
+          events.push({ type: 'type_passive', desc: `${unit.name} : ennemi detruit, auto-degat annule !` });
+        }
+      }
+      break;
+    }
+    case 'permanent_atk_buff': {
+      unit.permanentBonusAtk += ability.value;
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${ability.value} ATK permanent (total: +${unit.permanentBonusAtk})` });
+      // Reset usedAbility pour permettre la reutilisation au tour suivant
+      unit.usedAbility = false;
+      break;
+    }
+    case 'def_as_damage': {
+      const target = pickTarget();
+      if (target) {
+        const targetDef = (target.effectiveStats?.defense || target.defense) + (target.buffDef || 0) + (target.permanentBonusDef || 0);
+        const dmg = scaleDmg(Math.max(1, targetDef));
+        // Ignore la DEF pour les degats
+        target.currentHp = Math.max(0, target.currentHp - dmg);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, desc: `Degats = DEF cible (${dmg})` });
+        if (target.currentHp <= 0) checkKO(target, events, battle);
+      }
+      break;
+    }
+    case 'reap': {
+      const target = pickTarget();
+      if (target) {
+        if (target.currentHp <= ability.threshold) {
+          // Execution instantanee
+          target.currentHp = 0;
+          events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: target.currentHp, desc: `Execution ! (cible avait ${target.currentHp} PV)` });
+          checkKO(target, events, battle);
+          // Passif Faucheur : +2 PV et +1 ATK permanent par kill via ability
+          if (!target.alive) {
+            unit.currentHp = Math.min(unit.maxHp, unit.currentHp + 2);
+            unit.permanentBonusAtk += 1;
+            events.push({ type: 'type_passive', desc: `${unit.name} moissonne ! +2 PV, +1 ATK permanent` });
+          }
+        } else {
+          // Cible trop de PV, attaque normale
+          const dmg = calcDamage(unit, target, false);
+          applyDamage(target, dmg, events, unit, battle);
+          events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, desc: `Cible a ${target.currentHp} PV (> ${ability.threshold}), attaque normale` });
+          // Passif Faucheur si kill via attaque normale de l ability
+          if (!target.alive && unit.name === 'Faucheur d Ames') {
+            unit.currentHp = Math.min(unit.maxHp, unit.currentHp + 2);
+            unit.permanentBonusAtk += 1;
+            events.push({ type: 'type_passive', desc: `${unit.name} moissonne ! +2 PV, +1 ATK permanent` });
+          }
+        }
+      }
+      break;
+    }
+    case 'coin_flip': {
+      const target = pickTarget();
+      if (target) {
+        const success = Math.random() < 0.5;
+        if (success) {
+          target.currentHp = 0;
+          events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: 9999, desc: 'Quitte ou Double : SUCCES ! Ennemi elimine !' });
+          checkKO(target, events, battle);
+        } else {
+          unit.currentHp = 0;
+          events.push({ type: 'ability_damage', unit: unit.name, target: unit.name, ability: abilityName, damage: 9999, desc: 'Quitte ou Double : ECHEC ! Votre carte est detruite !' });
+          checkKO(unit, events, battle);
+        }
+      }
+      break;
+    }
     case 'bounce_damage': {
       const target = pickTarget();
       if (target) {
@@ -1347,6 +1466,20 @@ function checkKO(unit, events, battle) {
     } else {
       unit.alive = false;
       events.push({ type: 'ko', unit: unit.name });
+      // Passif Archange Dechu : a sa mort, soigne 2 PV a tous les allies
+      if (unit.name === 'Archange Dechu' && battle) {
+        const allies = unit.side === 'player' ? battle.playerTeam : battle.enemyTeam;
+        // Support deck battles (field-based)
+        const allyList = battle.isDeckBattle
+          ? (unit.side === 'player' ? (battle.playerField || []).filter(u => u && u.alive) : (battle.enemyField || []).filter(u => u && u.alive))
+          : (allies ? allies.filter(u => u.alive) : []);
+        allyList.forEach(a => {
+          a.currentHp = Math.min(a.maxHp, a.currentHp + 2);
+        });
+        if (allyList.length > 0) {
+          events.push({ type: 'type_passive', desc: `${unit.name} tombe ! Soigne 2 PV a tous les allies` });
+        }
+      }
       // Cartes TEMP : tracker pour suppression en fin de combat
       if (battle && unit.is_temp && unit.userCardId) {
         battle.deadTempCards.push(unit.userCardId);
@@ -1392,6 +1525,17 @@ function aiTurn(battle) {
       u.buffAtk += leviathanCountEC;
     });
     events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : +${leviathanCountEC} ATK aux unites Eau` });
+  }
+  // Passif Pretresse Solaire ennemie : soigne 1 PV a l allie le plus blesse
+  const pretresseCountEC = battle.enemyTeam.filter(u => u.alive && u.name === 'Pretresse Solaire').length;
+  if (pretresseCountEC > 0) {
+    for (let i = 0; i < pretresseCountEC; i++) {
+      const wounded = battle.enemyTeam.filter(u => u.alive && u.currentHp < u.maxHp).sort((a, b) => a.currentHp - b.currentHp)[0];
+      if (wounded) {
+        wounded.currentHp = Math.min(wounded.maxHp, wounded.currentHp + 1);
+        events.push({ type: 'type_passive', desc: `Pretresse Solaire ennemie soigne ${wounded.name} de 1 PV` });
+      }
+    }
   }
 
   for (const enemy of aliveEnemies) {
@@ -2436,6 +2580,17 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
     });
     events.push({ type: 'type_passive', desc: `Leviathan Abyssal : +${leviathanCountPC} ATK aux unites Eau` });
   }
+  // Passif Pretresse Solaire : soigne 1 PV a l allie le plus blesse
+  const pretresseCountPC = battle.playerTeam.filter(u => u.alive && u.name === 'Pretresse Solaire').length;
+  if (pretresseCountPC > 0) {
+    for (let i = 0; i < pretresseCountPC; i++) {
+      const wounded = battle.playerTeam.filter(u => u.alive && u.currentHp < u.maxHp).sort((a, b) => a.currentHp - b.currentHp)[0];
+      if (wounded) {
+        wounded.currentHp = Math.min(wounded.maxHp, wounded.currentHp + 1);
+        events.push({ type: 'type_passive', desc: `Pretresse Solaire soigne ${wounded.name} de 1 PV` });
+      }
+    }
+  }
   // Tick Poison joueur
   if (attacker.poisoned > 0) {
     attacker.currentHp = Math.max(1, attacker.currentHp - attacker.poisoned);
@@ -3219,6 +3374,17 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
     });
     events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : +${leviathanCountE} ATK aux unites Eau` });
   }
+  // Passif Pretresse Solaire ennemie : soigne 1 PV a l allie le plus blesse
+  const pretresseCountED = getFieldAlive(battle.enemyField).filter(u => u.name === 'Pretresse Solaire').length;
+  if (pretresseCountED > 0) {
+    for (let i = 0; i < pretresseCountED; i++) {
+      const wounded = getFieldAlive(battle.enemyField).filter(u => u.currentHp < u.maxHp).sort((a, b) => a.currentHp - b.currentHp)[0];
+      if (wounded) {
+        wounded.currentHp = Math.min(wounded.maxHp, wounded.currentHp + 1);
+        events.push({ type: 'type_passive', desc: `Pretresse Solaire ennemie soigne ${wounded.name} de 1 PV` });
+      }
+    }
+  }
 
   if (checkDeckWin(battle)) {
     return res.json({ events, ...getDeckBattleSnapshot(battle) });
@@ -3322,6 +3488,17 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       u.buffAtk += leviathanCountP;
     });
     events.push({ type: 'type_passive', desc: `Leviathan Abyssal : +${leviathanCountP} ATK aux unites Eau` });
+  }
+  // Passif Pretresse Solaire : soigne 1 PV a l allie le plus blesse
+  const pretresseCountPD = getFieldAlive(battle.playerField).filter(u => u.name === 'Pretresse Solaire').length;
+  if (pretresseCountPD > 0) {
+    for (let i = 0; i < pretresseCountPD; i++) {
+      const wounded = getFieldAlive(battle.playerField).filter(u => u.currentHp < u.maxHp).sort((a, b) => a.currentHp - b.currentHp)[0];
+      if (wounded) {
+        wounded.currentHp = Math.min(wounded.maxHp, wounded.currentHp + 1);
+        events.push({ type: 'type_passive', desc: `Pretresse Solaire soigne ${wounded.name} de 1 PV` });
+      }
+    }
   }
 
   // Check turn limit
