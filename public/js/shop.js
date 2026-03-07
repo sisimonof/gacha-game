@@ -5,7 +5,8 @@ const secretSound = new Audio('/audio/secret-reveal.mp3');
 
 const BOOSTER_IMAGES = {
   origines: '/img/booster-origines.png',
-  rift: '/img/booster-rift.jpg'
+  rift: '/img/booster-rift.jpg',
+  avance: '/img/booster-avance.png'
 };
 
 let currentCredits = 0;

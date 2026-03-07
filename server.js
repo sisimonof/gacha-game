@@ -433,6 +433,15 @@ const BOOSTERS = [
     cardsPerPack: 7,
     weights: { commune: 54.85, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05 },
     shinyRate: 0.007
+  },
+  {
+    id: 'avance',
+    name: 'BOOSTER AVANCE',
+    description: '8 cartes — legendaires boostees.',
+    price: 915,
+    cardsPerPack: 8,
+    weights: { commune: 53.75, rare: 38, epique: 6, legendaire: 2.1, chaos: 0.1, secret: 0.05 },
+    shinyRate: 0.01
   }
 ];
 
