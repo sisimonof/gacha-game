@@ -47,7 +47,7 @@
         <h3 class="admin-section-title" style="margin-top:24px;margin-bottom:12px">TOUTES LES CARTES</h3>
         <table class="admin-table" id="cards-table">
           <thead>
-            <tr><th>Emoji</th><th>Nom</th><th>Rarete</th><th>Elem</th><th>ATK</th><th>DEF</th><th>PV</th><th>Mana</th><th>Crystal</th><th>Passif</th><th>Actions</th></tr>
+            <tr><th>Emoji</th><th>Nom</th><th>Rarete</th><th>Type</th><th>Elem</th><th>ATK</th><th>DEF</th><th>PV</th><th>Mana</th><th>Crystal</th><th>Ability</th><th>Passif</th><th>Actions</th></tr>
           </thead>
           <tbody id="cards-body"></tbody>
         </table>
@@ -73,6 +73,7 @@
             <input type="number" id="give-card-id" placeholder="Card ID">
             <label><input type="checkbox" id="give-card-shiny"> Shiny</label>
             <label><input type="checkbox" id="give-card-fused"> Fused</label>
+            <label><input type="checkbox" id="give-card-temp"> <span style="color:#ff3333">TEMP</span></label>
             <button class="submit-btn admin-small-btn" onclick="giveCard()">DONNER</button>
           </div>
 
@@ -106,12 +107,16 @@
               </select>
             </div>
             <div class="admin-form-row">
+              <label>Emoji:</label>
+              <input type="text" id="new-card-emoji" placeholder="🔥" style="width:50px">
               <label>Type:</label>
               <select id="new-card-type">
                 <option value="guerrier">Guerrier</option>
                 <option value="mage">Mage</option>
                 <option value="bete">Bete</option>
                 <option value="divin">Divin</option>
+                <option value="creature">Creature</option>
+                <option value="objet">Objet</option>
               </select>
             </div>
             <div class="admin-form-row">
@@ -122,6 +127,7 @@
                 <option value="terre">Terre</option>
                 <option value="lumiere">Lumiere</option>
                 <option value="ombre">Ombre</option>
+                <option value="neutre">Neutre</option>
               </select>
             </div>
             <div class="admin-form-row">
@@ -129,12 +135,17 @@
               <label>DEF:</label><input type="number" id="new-card-def" value="5">
               <label>PV:</label><input type="number" id="new-card-hp" value="25">
               <label>Mana:</label><input type="number" id="new-card-mana" value="3">
+              <label>Crystal:</label><input type="number" id="new-card-crystal" value="1" step="0.1">
             </div>
             <div class="admin-form-row">
               <label>Ability:</label>
               <input type="text" id="new-card-ability" placeholder="Nom du pouvoir">
               <label>Desc:</label>
               <input type="text" id="new-card-ability-desc" placeholder="Description">
+            </div>
+            <div class="admin-form-row">
+              <label>Passif:</label>
+              <input type="text" id="new-card-passive" placeholder="Description du passif (optionnel)">
             </div>
             <div class="admin-form-row">
               <label>Image (fichier .png):</label>

@@ -22,6 +22,8 @@ async function loadStats() {
     <div class="stat-box"><span class="stat-num">${data.totalUsers}</span><span class="stat-label">Joueurs</span></div>
     <div class="stat-box"><span class="stat-num">${data.totalCardTypes}</span><span class="stat-label">Types de cartes</span></div>
     <div class="stat-box"><span class="stat-num">${data.totalCards}</span><span class="stat-label">Cartes en jeu</span></div>
+    <div class="stat-box"><span class="stat-num" style="color:#ffcc00">${data.totalShinyCards}</span><span class="stat-label">Cartes Shiny</span></div>
+    <div class="stat-box"><span class="stat-num" style="color:#ff3333">${data.totalTempCards}</span><span class="stat-label">Cartes Temp</span></div>
     <div class="stat-box"><span class="stat-num">${data.totalBattles}</span><span class="stat-label">Combats joues</span></div>
     <div class="stat-box"><span class="stat-num">${data.totalPvpTeams}</span><span class="stat-label">Equipes PvP</span></div>
   `;
@@ -134,18 +136,21 @@ async function loadCards() {
 
 function renderCardsTable() {
   const tbody = document.getElementById('cards-body');
-  const elemIcons = { feu: '🔥', eau: '💧', terre: '🌿', lumiere: '✨', ombre: '🌑' };
+  const elemIcons = { feu: '🔥', eau: '💧', terre: '🌿', lumiere: '✨', ombre: '🌑', neutre: '⚪' };
+  const typeColors = { guerrier: '#ff8844', mage: '#8866ff', bete: '#44cc44', divin: '#ffcc00', creature: '#44aaff', objet: '#aaaaaa' };
   tbody.innerHTML = allCards.map(c => `
     <tr id="card-row-${c.id}">
       <td class="admin-emoji-cell">${c.emoji || '?'}</td>
       <td style="color:${RARITY_COLORS[c.rarity]?.color || '#fff'}">${c.name}</td>
       <td>${c.rarity}</td>
+      <td style="color:${typeColors[c.type] || '#fff'}">${c.type}</td>
       <td>${elemIcons[c.element] || '?'} ${c.element}</td>
       <td style="color:#ff4444">${c.attack}</td>
       <td style="color:#4488ff">${c.defense}</td>
       <td style="color:#44dd44">${c.hp}</td>
       <td>${c.mana_cost}</td>
       <td>${c.crystal_cost || 1}</td>
+      <td class="admin-ability-cell" title="${(c.ability_desc || '').replace(/"/g, '&quot;')}">${c.ability_name || '-'}</td>
       <td class="admin-passive-cell">${c.passive_desc || '-'}</td>
       <td>
         <button class="admin-action-btn" onclick="editCard(${c.id})">Editer</button>
@@ -153,11 +158,40 @@ function renderCardsTable() {
       </td>
     </tr>
     <tr class="admin-edit-row hidden" id="edit-row-${c.id}">
-      <td colspan="11">
+      <td colspan="13">
         <div class="admin-edit-form">
           <div class="admin-edit-group">
             <label>Emoji:</label>
             <input type="text" class="admin-input-emoji" id="edit-${c.id}-emoji" value="${c.emoji || ''}">
+            <label>Nom:</label>
+            <input type="text" class="admin-input-text" id="edit-${c.id}-name" value="${c.name}" style="width:140px">
+          </div>
+          <div class="admin-edit-group">
+            <label>Rarete:</label>
+            <select class="admin-input-sm" id="edit-${c.id}-rarity" style="width:110px">
+              <option value="commune" ${c.rarity==='commune'?'selected':''}>Commune</option>
+              <option value="rare" ${c.rarity==='rare'?'selected':''}>Rare</option>
+              <option value="epique" ${c.rarity==='epique'?'selected':''}>Epique</option>
+              <option value="legendaire" ${c.rarity==='legendaire'?'selected':''}>Legendaire</option>
+            </select>
+            <label>Type:</label>
+            <select class="admin-input-sm" id="edit-${c.id}-type" style="width:100px">
+              <option value="guerrier" ${c.type==='guerrier'?'selected':''}>Guerrier</option>
+              <option value="mage" ${c.type==='mage'?'selected':''}>Mage</option>
+              <option value="bete" ${c.type==='bete'?'selected':''}>Bete</option>
+              <option value="divin" ${c.type==='divin'?'selected':''}>Divin</option>
+              <option value="creature" ${c.type==='creature'?'selected':''}>Creature</option>
+              <option value="objet" ${c.type==='objet'?'selected':''}>Objet</option>
+            </select>
+            <label>Elem:</label>
+            <select class="admin-input-sm" id="edit-${c.id}-element" style="width:90px">
+              <option value="feu" ${c.element==='feu'?'selected':''}>Feu</option>
+              <option value="eau" ${c.element==='eau'?'selected':''}>Eau</option>
+              <option value="terre" ${c.element==='terre'?'selected':''}>Terre</option>
+              <option value="lumiere" ${c.element==='lumiere'?'selected':''}>Lumiere</option>
+              <option value="ombre" ${c.element==='ombre'?'selected':''}>Ombre</option>
+              <option value="neutre" ${c.element==='neutre'?'selected':''}>Neutre</option>
+            </select>
           </div>
           <div class="admin-edit-group">
             <label>ATK:</label>
@@ -166,12 +200,16 @@ function renderCardsTable() {
             <input type="number" class="admin-input-sm" id="edit-${c.id}-def" value="${c.defense}">
             <label>PV:</label>
             <input type="number" class="admin-input-sm" id="edit-${c.id}-hp" value="${c.hp}">
-          </div>
-          <div class="admin-edit-group">
             <label>Mana:</label>
             <input type="number" class="admin-input-sm" id="edit-${c.id}-mana" value="${c.mana_cost}">
             <label>Crystal:</label>
-            <input type="number" class="admin-input-sm" id="edit-${c.id}-crystal" value="${c.crystal_cost || 1}" step="0.5">
+            <input type="number" class="admin-input-sm" id="edit-${c.id}-crystal" value="${c.crystal_cost || 1}" step="0.1">
+          </div>
+          <div class="admin-edit-group admin-edit-wide">
+            <label>Ability:</label>
+            <input type="text" class="admin-input-text" id="edit-${c.id}-ability" value="${(c.ability_name || '').replace(/"/g, '&quot;')}" style="width:140px">
+            <label>Desc:</label>
+            <input type="text" class="admin-input-text" id="edit-${c.id}-abilitydesc" value="${(c.ability_desc || '').replace(/"/g, '&quot;')}">
           </div>
           <div class="admin-edit-group admin-edit-wide">
             <label>Passif:</label>
@@ -202,11 +240,17 @@ async function saveCard(cardId) {
   const body = {
     cardId,
     emoji: get('emoji'),
+    name: get('name'),
+    rarity: get('rarity'),
+    type: get('type'),
+    element: get('element'),
     attack: parseInt(get('atk')),
     defense: parseInt(get('def')),
     hp: parseInt(get('hp')),
     mana_cost: parseInt(get('mana')),
     crystal_cost: parseFloat(get('crystal')),
+    ability_name: get('ability'),
+    ability_desc: get('abilitydesc'),
     passive_desc: get('passive')
   };
 
@@ -265,16 +309,17 @@ async function giveCard() {
   const cardId = document.getElementById('give-card-id').value;
   const isShiny = document.getElementById('give-card-shiny').checked;
   const isFused = document.getElementById('give-card-fused').checked;
+  const isTemp = document.getElementById('give-card-temp').checked;
   if (!userId || !cardId) { showFeedback('Remplissez tous les champs', true); return; }
 
   const res = await fetch('/api/admin/give-card', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ userId: parseInt(userId), cardId: parseInt(cardId), isShiny, isFused })
+    body: JSON.stringify({ userId: parseInt(userId), cardId: parseInt(cardId), isShiny, isFused, isTemp })
   });
   const data = await res.json();
   if (res.ok) {
-    showFeedback(`Carte "${data.card}" donnee a ${data.username}${isShiny ? ' (SHINY)' : ''}${isFused ? ' (FUSED)' : ''}`);
+    showFeedback(`Carte "${data.card}" donnee a ${data.username}${isShiny ? ' (SHINY)' : ''}${isFused ? ' (FUSED)' : ''}${isTemp ? ' (TEMP)' : ''}`);
     loadUsers();
   } else {
     showFeedback(data.error, true);
@@ -306,12 +351,15 @@ async function createCard() {
     rarity: document.getElementById('new-card-rarity').value,
     type: document.getElementById('new-card-type').value,
     element: document.getElementById('new-card-element').value,
+    emoji: document.getElementById('new-card-emoji').value || '',
     attack: parseInt(document.getElementById('new-card-atk').value),
     defense: parseInt(document.getElementById('new-card-def').value),
     hp: parseInt(document.getElementById('new-card-hp').value),
     mana_cost: parseInt(document.getElementById('new-card-mana').value),
+    crystal_cost: parseFloat(document.getElementById('new-card-crystal').value) || 1,
     ability_name: document.getElementById('new-card-ability').value || 'Aucun',
     ability_desc: document.getElementById('new-card-ability-desc').value || '-',
+    passive_desc: document.getElementById('new-card-passive').value || '',
     image: document.getElementById('new-card-image').value || '',
   };
 

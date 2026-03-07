@@ -3275,7 +3275,9 @@ app.get('/api/admin/stats', requireAdmin, (req, res) => {
   const totalCardTypes = db.prepare('SELECT COUNT(*) as c FROM cards').get().c;
   const totalBattles = db.prepare('SELECT COUNT(*) as c FROM battle_log').get().c;
   const totalPvpTeams = db.prepare('SELECT COUNT(*) as c FROM pvp_teams').get().c;
-  res.json({ totalUsers, totalCards, totalCardTypes, totalBattles, totalPvpTeams });
+  const totalTempCards = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE is_temp = 1').get().c;
+  const totalShinyCards = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE is_shiny = 1').get().c;
+  res.json({ totalUsers, totalCards, totalCardTypes, totalBattles, totalPvpTeams, totalTempCards, totalShinyCards });
 });
 
 // List all users
@@ -3301,14 +3303,14 @@ app.post('/api/admin/give-credits', requireAdmin, (req, res) => {
 
 // Give a card to a user
 app.post('/api/admin/give-card', requireAdmin, (req, res) => {
-  const { userId, cardId, isShiny, isFused } = req.body;
+  const { userId, cardId, isShiny, isFused, isTemp } = req.body;
   if (!userId || !cardId) return res.status(400).json({ error: 'userId et cardId requis' });
   const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
   const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
   if (!card) return res.status(404).json({ error: 'Carte introuvable' });
-  db.prepare('INSERT INTO user_cards (user_id, card_id, is_shiny, is_fused) VALUES (?, ?, ?, ?)')
-    .run(userId, cardId, isShiny ? 1 : 0, isFused ? 1 : 0);
+  db.prepare('INSERT INTO user_cards (user_id, card_id, is_shiny, is_fused, is_temp) VALUES (?, ?, ?, ?, ?)')
+    .run(userId, cardId, isShiny ? 1 : 0, isFused ? 1 : 0, isTemp ? 1 : 0);
   res.json({ success: true, username: user.username, card: card.name });
 });
 
@@ -3320,16 +3322,16 @@ app.get('/api/admin/cards', requireAdmin, (req, res) => {
 
 // Create a new card template
 app.post('/api/admin/create-card', requireAdmin, (req, res) => {
-  const { name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image } = req.body;
+  const { name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image, emoji, crystal_cost, passive_desc } = req.body;
   if (!name || !rarity || !type || !element) return res.status(400).json({ error: 'Champs obligatoires manquants' });
 
   const existing = db.prepare('SELECT id FROM cards WHERE name = ?').get(name);
   if (existing) return res.status(409).json({ error: 'Une carte avec ce nom existe deja' });
 
   const result = db.prepare(`
-    INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(name, rarity, type, element, attack || 1, defense || 1, hp || 10, mana_cost || 1, ability_name || 'Aucun', ability_desc || '-', image || '');
+    INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image, emoji, crystal_cost, passive_desc)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(name, rarity, type, element, attack || 1, defense || 1, hp || 10, mana_cost || 1, ability_name || 'Aucun', ability_desc || '-', image || '', emoji || '', crystal_cost || 1, passive_desc || '');
 
   const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(result.lastInsertRowid);
   res.json({ success: true, card });
