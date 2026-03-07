@@ -164,9 +164,10 @@ function showCardsReveal(cards) {
     el.dataset.index = idx;
 
     const shinyClass = card.is_shiny ? 'reveal-card-shiny' : '';
+    const tempClass = card.is_temp ? 'reveal-card-temp' : '';
 
     el.innerHTML = `
-      <div class="card-inner ${shinyClass}">
+      <div class="card-inner ${shinyClass} ${tempClass}">
         <div class="card-back">
           <div class="card-back-pattern"></div>
           <span>?</span>
@@ -208,6 +209,11 @@ function showCardsReveal(cards) {
 
     // Apres le flip (0.7s), appliquer les effets rarete
     setTimeout(() => {
+      if (card.is_temp) {
+        el.classList.add('temp-reveal');
+        title.textContent = '⚠ TEMPORAIRE';
+        title.style.color = '#ff3333';
+      }
       if (card.is_shiny) {
         el.classList.add('shiny-reveal');
         title.textContent = '✦ SHINY !';

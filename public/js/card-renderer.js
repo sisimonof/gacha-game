@@ -73,7 +73,8 @@ function renderStatBars(card) {
 }
 
 // === HOLO OVERLAY ===
-function renderHolo(rarity, isShiny) {
+function renderHolo(rarity, isShiny, isTemp) {
+  if (isTemp) return '<div class="card-holo holo-temp"></div>';
   if (isShiny) return '<div class="card-holo holo-shiny"></div>';
   if (rarity === 'legendaire') return '<div class="card-holo holo-legendary"></div>';
   if (rarity === 'epique') return '<div class="card-holo holo-epic"></div>';
@@ -83,6 +84,7 @@ function renderHolo(rarity, isShiny) {
 // === BADGES SHINY / FUSED ===
 function renderBadges(card) {
   let html = '';
+  if (card.is_temp) html += '<div class="card-badge badge-temp">TEMP</div>';
   if (card.is_shiny) html += '<div class="card-badge badge-shiny">SHINY</div>';
   if (card.is_fused) html += '<div class="card-badge badge-fused">FUSION+</div>';
   return html;
@@ -96,7 +98,7 @@ function renderCardFront(card) {
   const elemName = ELEMENT_NAMES[card.element] || card.element;
 
   return `
-    ${renderHolo(card.rarity, card.is_shiny)}
+    ${renderHolo(card.rarity, card.is_shiny, card.is_temp)}
     ${renderBadges(card)}
     <div class="card-rarity" style="background:${r.color}">${r.label}</div>
     ${renderCardVisual(card)}
@@ -126,9 +128,10 @@ function renderBattleCard(unit) {
 
   const shinyClass = unit.is_shiny ? 'battle-card-shiny' : '';
   const fusedClass = unit.is_fused ? 'battle-card-fused' : '';
+  const tempClass = unit.is_temp ? 'battle-card-temp' : '';
 
   return `
-    <div class="battle-card ${shinyClass} ${fusedClass} ${!unit.alive ? 'battle-card-ko' : ''}" style="border-color:${r.color}">
+    <div class="battle-card ${shinyClass} ${fusedClass} ${tempClass} ${!unit.alive ? 'battle-card-ko' : ''}" style="border-color:${r.color}">
       ${unit.is_shiny ? '<div class="card-holo holo-shiny battle-holo"></div>' : ''}
       <div class="battle-card-img">
         <img src="/img/cards/${unit.image}" alt="${unit.name}" onerror="this.style.display='none'">
@@ -222,6 +225,7 @@ function showCardDetail(card) {
     ? `<img src="${imgPath}" alt="${card.name}" onerror="this.parentElement.innerHTML='<div class=\\'card-visual-fallback elem-${card.element}\\'>${elemIcon}</div>'">`
     : `<div class="card-visual-fallback elem-${card.element}" style="font-size:80px">${elemIcon}</div>`;
 
+  const tempBadge = card.is_temp ? '<span class="modal-badge modal-badge-temp">TEMP</span>' : '';
   const shinyBadge = card.is_shiny ? '<span class="modal-badge modal-badge-shiny">SHINY</span>' : '';
   const fusedBadge = card.is_fused ? '<span class="modal-badge modal-badge-fused">FUSION+</span>' : '';
 
@@ -234,7 +238,7 @@ function showCardDetail(card) {
         ${artHTML}
       </div>
       <div class="modal-card-info">
-        ${shinyBadge}${fusedBadge}
+        ${tempBadge}${shinyBadge}${fusedBadge}
         <div class="modal-card-rarity" style="background:${r.color}">${r.label}</div>
         <div class="modal-card-name" style="color:${r.color}">${card.name}</div>
         <div class="modal-card-element">

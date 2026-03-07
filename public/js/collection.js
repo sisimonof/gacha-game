@@ -231,15 +231,16 @@ function renderFilteredCards(cards) {
     const price = getCardPrice(card);
     const shinyClass = card.is_shiny ? 'collection-card-shiny' : '';
     const fusedClass = card.is_fused ? 'collection-card-fused' : '';
+    const tempClass = card.is_temp ? 'collection-card-temp' : '';
 
     return `
-      <div class="collection-card rarity-${card.rarity} ${shinyClass} ${fusedClass} card-appear"
+      <div class="collection-card rarity-${card.rarity} ${shinyClass} ${fusedClass} ${tempClass} card-appear"
            draggable="true"
            data-card-idx="${idx}"
            data-user-card-id="${card.user_card_id}"
            data-card-id="${card.id}"
            style="border-color:${r.color}; box-shadow:0 0 12px ${r.glow}; animation-delay:${Math.min(idx * 30, 600)}ms">
-        ${renderHolo(card.rarity, card.is_shiny)}
+        ${renderHolo(card.rarity, card.is_shiny, card.is_temp)}
         ${renderBadges(card)}
         <div class="card-count">x${card.count}</div>
         <div class="card-rarity" style="background:${r.color}">${r.label}</div>
@@ -506,7 +507,7 @@ function playSellAnimation(card) {
 
   container.innerHTML = `
     <div class="collection-card rarity-${card.rarity}" style="border-color:${r.color}; box-shadow:0 0 12px ${r.glow}; min-height:300px;">
-      ${renderHolo(card.rarity, card.is_shiny)}
+      ${renderHolo(card.rarity, card.is_shiny, card.is_temp)}
       ${renderBadges(card)}
       <div class="card-rarity" style="background:${r.color}">${r.label}</div>
       ${renderCardVisual(card)}

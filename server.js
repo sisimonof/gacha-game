@@ -221,6 +221,77 @@ function getManaForTurn(turn) {
   }
 }
 
+// --- Migration : is_temp sur user_cards ---
+{
+  const ucCols = db.prepare("PRAGMA table_info(user_cards)").all().map(c => c.name);
+  if (!ucCols.includes('is_temp')) {
+    db.exec("ALTER TABLE user_cards ADD COLUMN is_temp INTEGER DEFAULT 0");
+    console.log('Migration: is_temp ajoute');
+  }
+}
+
+// --- Migration : 10 nouvelles cartes + 4 crystaux ---
+{
+  const hasCrabe = db.prepare("SELECT id FROM cards WHERE name = 'Crabe de Maree'").get();
+  if (!hasCrabe) {
+    const insertNew = db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    const newCards = [
+      ['Crabe de Maree',        'commune', 'creature', 'eau',    1, 3, 3, 2, 'Carapace reactive',  '+1 DEF quand attaque',                    '🦀', '', 1.0],
+      ['Soldat de Terre',       'commune', 'creature', 'terre',  2, 2, 3, 2, 'Garde de terre',     '+1 DEF',                                  '🪖', '', 1.0],
+      ['Poisson Combattant',    'commune', 'creature', 'eau',    1, 1, 2, 1, 'Aucun',              '-',                                       '🐟', 'Peut attaquer immediatement si cible a 2 PV ou moins', 1.0],
+      ['Archer des Collines',   'commune', 'creature', 'terre',  2, 1, 2, 2, 'Tir percant furtif', 'Cible n importe quel ennemi (1 degat)',    '🏹', '', 1.0],
+      ['Guerrier des Falaises', 'rare',    'creature', 'terre',  3, 2, 3, 3, 'Ralliement',         '+1 ATK par unite Terre alliee',            '⛰️', '', 1.0],
+      ['Requin des Profondeurs','rare',    'creature', 'eau',    4, 1, 3, 4, 'Morsure sauvage',    '+1 degat aux cibles blessees',             '🦈', 'Apres avoir detruit une unite, peut attaquer une 2e fois ce tour', 1.0],
+      ['Sapeur de Terre',       'commune', 'creature', 'terre',  2, 1, 3, 2, 'Aucun',              '-',                                       '⛏️', 'En arrivant, gagne +1 ATK jusqu a fin du tour', 1.0],
+      ['Eclaireur des Dunes',   'commune', 'creature', 'terre',  0, 1, 4, 1, 'Soins naturels',     'Soigne 1 PV a un allie (2 si Terre)',      '🏜️', 'Si seule sur le terrain, +2 DEF', 1.0],
+      ['Gardien du Recif',      'commune', 'creature', 'eau',    1, 2, 4, 2, 'Protection marine',  '+1 DEF a un allie Eau',                    '🪸', '', 1.0],
+      ['Titan de Magma',        'epique',  'creature', 'feu',    5, 3, 6, 4, 'Eruption',           '2 degats a tous les ennemis Eau',          '🌋', 'Les ennemis qui attaquent cette unite subissent 1 degat', 1.2],
+    ];
+    const crystalCards = [
+      ['Crystal Commun',     'commune',    'objet', 'neutre', 0, 0, 0, 1, 'Crystal commun',     'Ajoute 0.4 crystal',  '💎', '', 0],
+      ['Crystal Rare',       'rare',       'objet', 'neutre', 0, 0, 0, 1, 'Crystal rare',       'Ajoute 0.8 crystal',  '💎', '', 0],
+      ['Crystal Epique',     'epique',     'objet', 'neutre', 0, 0, 0, 1, 'Crystal epique',     'Ajoute 1.2 crystal',  '💎', '', 0],
+      ['Crystal Legendaire', 'legendaire', 'objet', 'neutre', 0, 0, 0, 1, 'Crystal legendaire', 'Ajoute 1.8 crystal',  '💎', '', 0],
+    ];
+    db.transaction(() => {
+      for (const c of newCards) insertNew.run(...c);
+      for (const c of crystalCards) insertNew.run(...c);
+    })();
+    console.log('Migration: 10 nouvelles cartes + 4 crystaux ajoutes');
+  }
+}
+
+// --- Migration : Rework Phoenix Ancestral (swap pouvoir/passif) ---
+{
+  const phoenix = db.prepare("SELECT id, ability_name FROM cards WHERE name = 'Phoenix Ancestral'").get();
+  if (phoenix && phoenix.ability_name === 'Renaissance') {
+    db.prepare(`UPDATE cards SET
+      ability_name = 'Aura de flamme',
+      ability_desc = 'Inflige 1 degat a tous les ennemis',
+      passive_desc = 'Ressuscite avec 3 PV a la mort (1x)'
+    WHERE name = 'Phoenix Ancestral'`).run();
+    console.log('Migration: Phoenix Ancestral reworke');
+  }
+}
+
+// --- Migration : Rework Leviathan Abyssal (legendaire → epique) ---
+{
+  const levi = db.prepare("SELECT id, rarity FROM cards WHERE name = 'Leviathan Abyssal'").get();
+  if (levi && levi.rarity === 'legendaire') {
+    db.prepare(`UPDATE cards SET
+      rarity = 'epique', attack = 4, defense = 4, hp = 7, mana_cost = 5,
+      ability_name = 'Vague ecrasante',
+      ability_desc = 'Renvoie un ennemi en main + 2 degats',
+      passive_desc = 'Les unites Eau alliees gagnent +1 ATK',
+      crystal_cost = 1.4
+    WHERE name = 'Leviathan Abyssal'`).run();
+    console.log('Migration: Leviathan Abyssal reworke en epique');
+  }
+}
+
 // --- Tables Decks ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS decks (
@@ -281,7 +352,7 @@ function openBooster(boosterId, userId) {
   if (!booster) return null;
 
   const drawnCards = [];
-  const insertCard = db.prepare('INSERT INTO user_cards (user_id, card_id, is_shiny) VALUES (?, ?, ?)');
+  const insertCard = db.prepare('INSERT INTO user_cards (user_id, card_id, is_shiny, is_temp) VALUES (?, ?, ?, ?)');
   const shinyRate = booster.shinyRate || 0.02;
 
   for (let i = 0; i < booster.cardsPerPack; i++) {
@@ -299,8 +370,10 @@ function openBooster(boosterId, userId) {
     }
     const card = cards[Math.floor(Math.random() * cards.length)];
     const isShiny = Math.random() < shinyRate ? 1 : 0;
-    insertCard.run(userId, card.id, isShiny);
-    drawnCards.push({ ...card, is_shiny: isShiny });
+    // Crystal items sont toujours TEMP, sinon 8% de chance
+    const isTemp = card.name.startsWith('Crystal ') ? 1 : (Math.random() < 0.08 ? 1 : 0);
+    insertCard.run(userId, card.id, isShiny, isTemp);
+    drawnCards.push({ ...card, is_shiny: isShiny, is_temp: isTemp });
   }
 
   return drawnCards;
@@ -609,6 +682,19 @@ const ABILITY_MAP = {
   'Flamme adjacente':   { type: 'direct_damage',     value: 1 },   // Salamandre Ardente
   'Souffle de braise':  { type: 'aoe_damage',        value: 1 },   // Dragonnet de Braise
   'Fortification':      { type: 'buff_def',          value: 3 },   // Golem de Roche
+
+  // ===== NOUVELLES CARTES (v3) =====
+  'Carapace reactive':  { type: 'buff_def',           value: 1 },   // Crabe de Maree (+reactif dans applyDamage)
+  'Garde de terre':     { type: 'buff_def',           value: 1 },   // Soldat de Terre
+  'Aucun':              { type: 'none' },                            // Pas de pouvoir
+  'Tir percant furtif': { type: 'direct_damage',      value: 1 },   // Archer des Collines
+  'Ralliement':         { type: 'buff_atk_per_element', element: 'terre', value: 1 }, // Guerrier des Falaises
+  'Morsure sauvage':    { type: 'damage_wounded',     value: 1 },   // Requin des Profondeurs
+  'Soins naturels':     { type: 'heal_ally_conditional', baseHeal: 1, bonusHeal: 1, bonusElement: 'terre' }, // Eclaireur
+  'Protection marine':  { type: 'buff_def_element',   value: 1, element: 'eau' },  // Gardien du Recif
+  'Eruption':           { type: 'aoe_damage_element', value: 2, targetElement: 'eau' }, // Titan de Magma
+  'Aura de flamme':     { type: 'none' },              // Phoenix — l'AOE est un passif turn-start
+  'Vague ecrasante':    { type: 'bounce_damage',      damage: 2 },  // Leviathan rework
 };
 
 // ============================================
@@ -630,6 +716,11 @@ const ITEM_EFFECTS = {
   'Cri de guerre':   { target: 'team',        type: 'buff_team_atk',      value: 2 },
   'Miracle':         { target: 'ally',        type: 'heal',               value: 12 },
   'Destruction':     { target: 'all_enemies', type: 'aoe_damage',         value: 4 },
+  // Crystaux
+  'Crystal commun':     { target: 'self', type: 'add_crystal', value: 0.4 },
+  'Crystal rare':       { target: 'self', type: 'add_crystal', value: 0.8 },
+  'Crystal epique':     { target: 'self', type: 'add_crystal', value: 1.2 },
+  'Crystal legendaire': { target: 'self', type: 'add_crystal', value: 1.8 },
 };
 
 function getEffectiveStats(card) {
@@ -672,11 +763,16 @@ function calcDamage(attacker, defender, ignoreDef, attackerField) {
   // Passif Golem de Roche : -1 degat subi
   if (defender.name === 'Golem de Roche') dmg = Math.max(1, dmg - 1);
 
+  // Passif Requin : woundedBonus (+1 degat aux unites blessees)
+  if (attacker.woundedBonus && attacker.woundedBonus > 0 && defender.currentHp < defender.maxHp) {
+    dmg += attacker.woundedBonus;
+  }
+
   return dmg;
 }
 
 // Helper pour appliquer des degats avec shield, counter, grace
-function applyDamage(target, damage, events, source) {
+function applyDamage(target, damage, events, source, battle) {
   let remaining = damage;
   // Shield absorbe en premier
   if (target.shield > 0) {
@@ -690,9 +786,22 @@ function applyDamage(target, damage, events, source) {
   if (target.counterDamage > 0 && source && source.alive) {
     source.currentHp = Math.max(0, source.currentHp - target.counterDamage);
     events.push({ type: 'counter_damage', unit: target.name, target: source.name, damage: target.counterDamage });
-    if (source.currentHp <= 0) checkKO(source, events);
+    if (source.currentHp <= 0) checkKO(source, events, battle);
   }
-  if (target.currentHp <= 0) checkKO(target, events);
+  // Passif Crabe de Maree : +1 DEF quand attaque
+  if (target.alive && target.currentHp > 0 && target.name === 'Crabe de Maree') {
+    target.buffDef += 1;
+    events.push({ type: 'type_passive', desc: `${target.name} renforce sa carapace ! +1 DEF` });
+  }
+
+  // Passif Titan de Magma : 1 degat aux attaquants
+  if (target.alive && target.currentHp > 0 && target.name === 'Titan de Magma' && source && source.alive) {
+    source.currentHp = Math.max(0, source.currentHp - 1);
+    events.push({ type: 'type_passive', desc: `${target.name} brule ${source.name} ! 1 degat` });
+    if (source.currentHp <= 0) checkKO(source, events, battle);
+  }
+
+  if (target.currentHp <= 0) checkKO(target, events, battle);
 }
 
 // --- Battle state management ---
@@ -734,6 +843,7 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
       hp: card.hp,
       is_fused: card.is_fused || 0,
       is_shiny: card.is_shiny || 0,
+      is_temp: card.is_temp || 0,
       ability_name: card.ability_name,
       ability_desc: card.ability_desc,
       effectiveStats: es,
@@ -744,7 +854,7 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
       buffDef: 0,
       stunned: false,
       usedAbility: false,
-      canRevive: ABILITY_MAP[card.ability_name]?.type === 'revive',
+      canRevive: ABILITY_MAP[card.ability_name]?.type === 'revive' || card.name === 'Phoenix Ancestral',
       // Nouveaux champs
       shield: 0,
       poisoned: 0,
@@ -755,6 +865,7 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
       lowHpDefTriggered: false,
       graceUsed: false,
       lifestealPercent: 0,
+      woundedBonus: 0,
     };
   };
 
@@ -782,6 +893,7 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
     log: [],
     result: null,
     lastAction: Date.now(),
+    deadTempCards: [],
   };
 
   activeBattles.set(battleId, state);
@@ -819,7 +931,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
         let dmgVal = ability.value;
         if (unit.name === 'Mage de Foudre' && abilityName === 'Eclair') dmgVal = 3;
         const dmg = scaleDmg(dmgVal);
-        applyDamage(target, dmg, events, unit);
+        applyDamage(target, dmg, events, unit, battle);
         events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
       }
       break;
@@ -831,7 +943,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       const target = pickTarget();
       if (target) {
         const dmg = scaleDmg(ability.damage);
-        applyDamage(target, dmg, events, unit);
+        applyDamage(target, dmg, events, unit, battle);
         unit.currentHp = Math.min(unit.maxHp, unit.currentHp + ability.heal);
         events.push({ type: 'ability_drain', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, heal: ability.heal });
       }
@@ -840,7 +952,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
     case 'aoe_damage': {
       const dmg = scaleDmg(ability.value);
       allEnemies.filter(e => e.alive).forEach(enemy => {
-        applyDamage(enemy, dmg, events, unit);
+        applyDamage(enemy, dmg, events, unit, battle);
         events.push({ type: 'ability_aoe', unit: unit.name, target: enemy.name, ability: abilityName, damage: dmg });
       });
       break;
@@ -853,7 +965,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       if (target) {
         if (ability.damage > 0) {
           const dmg = scaleDmg(ability.damage);
-          applyDamage(target, dmg, events, unit);
+          applyDamage(target, dmg, events, unit, battle);
         }
         // Passif Titan Originel : immunise aux effets de controle
         if (target.name === 'Titan Originel') {
@@ -878,7 +990,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
         const target = pickTarget();
         if (target) {
           const dmg = scaleDmg(ability.value);
-          applyDamage(target, dmg, events, unit);
+          applyDamage(target, dmg, events, unit, battle);
           events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
         }
       }
@@ -890,7 +1002,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
         if (aliveEnemies.length === 0) break;
         const target = aliveEnemies[Math.floor(Math.random() * aliveEnemies.length)];
         const dmg = scaleDmg(ability.damage);
-        applyDamage(target, dmg, events, unit);
+        applyDamage(target, dmg, events, unit, battle);
         events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
       }
       break;
@@ -945,7 +1057,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       if (target) {
         const isLow = (target.currentHp / target.maxHp) <= ability.threshold;
         const dmg = scaleDmg(isLow ? ability.executeDamage : ability.damage);
-        applyDamage(target, dmg, events, unit);
+        applyDamage(target, dmg, events, unit, battle);
         events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, executed: isLow });
       }
       break;
@@ -959,7 +1071,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       if (target) {
         const dmg = scaleDmg(ability.targetDamage);
         unit.currentHp = Math.max(1, unit.currentHp - ability.selfDamage);
-        applyDamage(target, dmg, events, unit);
+        applyDamage(target, dmg, events, unit, battle);
         events.push({ type: 'ability_sacrifice', unit: unit.name, target: target.name, ability: abilityName, selfDamage: ability.selfDamage, targetDamage: dmg });
       }
       break;
@@ -976,7 +1088,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       const ally = weakestAlly();
       if (target) {
         const dmg = scaleDmg(ability.damage);
-        applyDamage(target, dmg, events, unit);
+        applyDamage(target, dmg, events, unit, battle);
         events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
       }
       if (ally) {
@@ -1008,14 +1120,74 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       dmg = scaleDmg(dmg);
       if (ability.aoe) {
         allEnemies.filter(e => e.alive).forEach(enemy => {
-          applyDamage(enemy, dmg, events, unit);
+          applyDamage(enemy, dmg, events, unit, battle);
           events.push({ type: 'ability_aoe', unit: unit.name, target: enemy.name, ability: abilityName, damage: dmg });
         });
       } else {
         const target = pickTarget();
         if (target) {
-          applyDamage(target, dmg, events, unit);
+          applyDamage(target, dmg, events, unit, battle);
           events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
+        }
+      }
+      break;
+    }
+    // ===== NOUVELLES ABILITIES (v3) =====
+    case 'none':
+      break;
+    case 'buff_atk_per_element': {
+      const count = allAllies.filter(a => a.alive && a.element === ability.element).length;
+      unit.buffAtk += count * ability.value;
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${count * ability.value} ATK (${count} allies ${ability.element})` });
+      break;
+    }
+    case 'damage_wounded': {
+      unit.woundedBonus = ability.value;
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${ability.value} degat aux cibles blessees` });
+      break;
+    }
+    case 'heal_ally_conditional': {
+      const ally = weakestAlly();
+      if (ally) {
+        const heal = (ally.element === ability.bonusElement) ? (ability.baseHeal + ability.bonusHeal) : ability.baseHeal;
+        ally.currentHp = Math.min(ally.maxHp, ally.currentHp + heal);
+        events.push({ type: 'ability_heal', unit: unit.name, target: ally.name, ability: abilityName, heal });
+      }
+      break;
+    }
+    case 'buff_def_element': {
+      const ally = allAllies.filter(a => a.alive && a.element === ability.element && a !== unit)[0];
+      if (ally) {
+        ally.buffDef += ability.value;
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${ability.value} DEF a ${ally.name}` });
+      }
+      break;
+    }
+    case 'aoe_damage_element': {
+      const dmg = scaleDmg(ability.value);
+      allEnemies.filter(e => e.alive && e.element === ability.targetElement).forEach(enemy => {
+        applyDamage(enemy, dmg, events, unit, battle);
+        events.push({ type: 'ability_aoe', unit: unit.name, target: enemy.name, ability: abilityName, damage: dmg });
+      });
+      break;
+    }
+    case 'bounce_damage': {
+      const target = pickTarget();
+      if (target) {
+        const dmg = scaleDmg(ability.damage);
+        applyDamage(target, dmg, events, unit, battle);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
+        if (target.alive && target.name !== 'Titan Originel' && battle && battle.isDeckBattle) {
+          const field = target.side === 'player' ? battle.playerField : battle.enemyField;
+          const hand = target.side === 'player' ? battle.playerHand : battle.enemyHand;
+          if (field && hand) {
+            const idx = field.indexOf(target);
+            if (idx !== -1) {
+              field[idx] = null;
+              hand.push(makeHandCard(target));
+              events.push({ type: 'type_passive', desc: `${unit.name} renvoie ${target.name} en main !` });
+            }
+          }
         }
       }
       break;
@@ -1027,7 +1199,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
             const t = pickTarget();
             if (t) {
               const d = scaleDmg(fx.value);
-              applyDamage(t, d, events, unit);
+              applyDamage(t, d, events, unit, battle);
               events.push({ type: 'ability_damage', unit: unit.name, target: t.name, ability: abilityName, damage: d });
             }
             break;
@@ -1035,7 +1207,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
           case 'aoe_damage': {
             const d = scaleDmg(fx.value);
             allEnemies.filter(e => e.alive).forEach(e => {
-              applyDamage(e, d, events, unit);
+              applyDamage(e, d, events, unit, battle);
               events.push({ type: 'ability_aoe', unit: unit.name, target: e.name, ability: abilityName, damage: d });
             });
             break;
@@ -1109,7 +1281,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
   return events;
 }
 
-function checkKO(unit, events) {
+function checkKO(unit, events, battle) {
   if (unit.currentHp <= 0) {
     // Passif Divin : Grace (15% de survivre a 1 PV, une seule fois)
     if (unit.type === 'divin' && !unit.graceUsed && Math.random() < 0.15) {
@@ -1119,12 +1291,18 @@ function checkKO(unit, events) {
       return;
     }
     if (unit.canRevive) {
-      const ability = ABILITY_MAP[unit.ability_name];
-      let reviveHp = ability.hp || ability.value;
-      // For combo abilities, find the revive effect's value
-      if (!reviveHp && ability.type === 'combo' && ability.effects) {
-        const reviveEffect = ability.effects.find(fx => fx.effect === 'revive');
-        if (reviveEffect) reviveHp = reviveEffect.value;
+      // Phoenix Ancestral : revive avec 3 PV (passif)
+      let reviveHp;
+      if (unit.name === 'Phoenix Ancestral') {
+        reviveHp = 3;
+      } else {
+        const ability = ABILITY_MAP[unit.ability_name];
+        reviveHp = ability.hp || ability.value;
+        // For combo abilities, find the revive effect's value
+        if (!reviveHp && ability.type === 'combo' && ability.effects) {
+          const reviveEffect = ability.effects.find(fx => fx.effect === 'revive');
+          if (reviveEffect) reviveHp = reviveEffect.value;
+        }
       }
       unit.currentHp = reviveHp || 15;
       unit.canRevive = false;
@@ -1132,6 +1310,11 @@ function checkKO(unit, events) {
     } else {
       unit.alive = false;
       events.push({ type: 'ko', unit: unit.name });
+      // Cartes TEMP : tracker pour suppression en fin de combat
+      if (battle && unit.is_temp && unit.userCardId) {
+        battle.deadTempCards.push(unit.userCardId);
+        events.push({ type: 'temp_death', unit: unit.name });
+      }
     }
   }
 }
@@ -1161,17 +1344,17 @@ function aiTurn(battle) {
   if (phoenixCountEC > 0) {
     battle.playerTeam.filter(u => u.alive).forEach(u => {
       u.currentHp = Math.max(0, u.currentHp - phoenixCountEC);
-      if (u.currentHp <= 0) checkKO(u, events);
+      if (u.currentHp <= 0) checkKO(u, events, battle);
     });
     events.push({ type: 'type_passive', desc: `Phoenix Ancestral ennemi : ${phoenixCountEC} degat(s) a vos unites` });
   }
-  // Passif Leviathan Abyssal ennemi : vos unites perdent 1 ATK
+  // Passif Leviathan Abyssal ennemi : +1 ATK aux allies Eau
   const leviathanCountEC = battle.enemyTeam.filter(u => u.alive && u.name === 'Leviathan Abyssal').length;
   if (leviathanCountEC > 0) {
-    battle.playerTeam.filter(u => u.alive).forEach(u => {
-      u.buffAtk -= leviathanCountEC;
+    battle.enemyTeam.filter(u => u.alive && u.element === 'eau').forEach(u => {
+      u.buffAtk += leviathanCountEC;
     });
-    events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : -${leviathanCountEC} ATK a vos unites` });
+    events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : +${leviathanCountEC} ATK aux unites Eau` });
   }
 
   for (const enemy of aliveEnemies) {
@@ -1182,7 +1365,7 @@ function aiTurn(battle) {
       enemy.currentHp = Math.max(1, enemy.currentHp - enemy.poisoned);
       events.push({ type: 'poison_tick', unit: enemy.name, damage: enemy.poisoned });
       enemy.poisoned = 0;
-      if (enemy.currentHp <= 0) { checkKO(enemy, events); continue; }
+      if (enemy.currentHp <= 0) { checkKO(enemy, events, battle); continue; }
     }
 
     // Fortification Guerrier ennemi
@@ -1212,7 +1395,7 @@ function aiTurn(battle) {
 
     const ignoreDef = ABILITY_MAP[enemy.ability_name]?.type === 'ignore_def';
     const dmg = calcDamage(enemy, target, ignoreDef);
-    applyDamage(target, dmg, events, enemy);
+    applyDamage(target, dmg, events, enemy, battle);
     events.push({ type: 'attack', attacker: enemy.name, attackerIndex: enemy.index, target: target.name, targetIndex: target.index, damage: dmg, side: 'enemy' });
 
     // Lifesteal ennemi
@@ -1276,6 +1459,7 @@ function makeHandCard(card) {
     mana_cost: card.mana_cost,
     is_fused: card.is_fused || 0,
     is_shiny: card.is_shiny || 0,
+    is_temp: card.is_temp || 0,
     ability_name: card.ability_name,
     ability_desc: card.ability_desc,
     passive_desc: card.passive_desc || '',
@@ -1305,6 +1489,7 @@ function makeDeckFieldUnit(handCard, side) {
     mana_cost: handCard.mana_cost,
     is_fused: handCard.is_fused,
     is_shiny: handCard.is_shiny,
+    is_temp: handCard.is_temp || 0,
     ability_name: handCard.ability_name,
     ability_desc: handCard.ability_desc,
     passive_desc: handCard.passive_desc || '',
@@ -1319,7 +1504,7 @@ function makeDeckFieldUnit(handCard, side) {
     stunned: false,
     usedAbility: false,
     hasAttacked: false,
-    canRevive: ABILITY_MAP[handCard.ability_name]?.type === 'revive',
+    canRevive: ABILITY_MAP[handCard.ability_name]?.type === 'revive' || handCard.name === 'Phoenix Ancestral',
     shield: 0,
     poisoned: 0,
     marked: 0,
@@ -1329,6 +1514,7 @@ function makeDeckFieldUnit(handCard, side) {
     lowHpDefTriggered: false,
     graceUsed: false,
     lifestealPercent: 0,
+    woundedBonus: 0,
   };
 }
 
@@ -1372,6 +1558,7 @@ function createDeckBattleState(playerCards, enemyCards, battleType) {
     log: [],
     result: null,
     lastAction: Date.now(),
+    deadTempCards: [],
   };
 
   activeBattles.set(battleId, state);
@@ -1444,7 +1631,7 @@ function checkDeckWin(battle) {
   return null;
 }
 
-function resolveItemEffect(item, target, allAllies, allEnemies, events) {
+function resolveItemEffect(item, target, allAllies, allEnemies, events, battle) {
   const effect = ITEM_EFFECTS[item.ability_name];
   if (!effect) return;
 
@@ -1457,7 +1644,7 @@ function resolveItemEffect(item, target, allAllies, allEnemies, events) {
       break;
     case 'damage':
       if (target && target.alive) {
-        applyDamage(target, effect.value, events, null);
+        applyDamage(target, effect.value, events, null, battle);
         events.push({ type: 'item_damage', item: item.name, target: target.name, emoji: item.emoji, damage: effect.value });
       }
       break;
@@ -1465,7 +1652,7 @@ function resolveItemEffect(item, target, allAllies, allEnemies, events) {
       if (target && target.alive) {
         // Bypass shield for ignore def items
         target.currentHp = Math.max(0, target.currentHp - effect.value);
-        if (target.currentHp <= 0) checkKO(target, events);
+        if (target.currentHp <= 0) checkKO(target, events, battle);
         events.push({ type: 'item_damage', item: item.name, target: target.name, emoji: item.emoji, damage: effect.value, ignoreDef: true });
       }
       break;
@@ -1514,10 +1701,14 @@ function resolveItemEffect(item, target, allAllies, allEnemies, events) {
     case 'aoe_damage':
       allEnemies.forEach(u => {
         if (u && u.alive) {
-          applyDamage(u, effect.value, events, null);
+          applyDamage(u, effect.value, events, null, battle);
           events.push({ type: 'item_aoe', item: item.name, target: u.name, emoji: item.emoji, damage: effect.value });
         }
       });
+      break;
+    case 'add_crystal':
+      // Crystal items add crystal to player — handled in use-item route
+      events.push({ type: 'item_buff', item: item.name, emoji: item.emoji, desc: `+${effect.value} crystal` });
       break;
   }
 }
@@ -1542,6 +1733,15 @@ function aiDeckTurn(battle) {
     });
     events.push({ type: 'type_passive', desc: `Esprit des Forets ennemi : +${espritCountE} DEF Terre` });
   }
+
+  // Passif Eclaireur des Dunes ennemi : +2 DEF si seule
+  const eclaireurAliveE = getFieldAlive(battle.enemyField);
+  eclaireurAliveE.filter(u => u.name === 'Eclaireur des Dunes').forEach(u => {
+    if (eclaireurAliveE.length === 1) {
+      u.buffDef += 2;
+      events.push({ type: 'type_passive', desc: `${u.name} ennemi est seule ! +2 DEF` });
+    }
+  });
 
   // 1. Deploy: play most expensive affordable creature to empty slots
   let keepDeploying = true;
@@ -1580,6 +1780,21 @@ function aiDeckTurn(battle) {
           unit.maxHp += tortueCount;
           unit.currentHp += tortueCount;
           events.push({ type: 'type_passive', desc: `Tortue : +${tortueCount} PV a ${unit.name}` });
+        }
+      }
+
+      // Passif Sapeur de Terre : +1 ATK au deploy
+      if (unit.name === 'Sapeur de Terre') {
+        unit.buffAtk += 1;
+        events.push({ type: 'type_passive', desc: `${unit.name} se prepare ! +1 ATK ce tour` });
+      }
+
+      // Passif Poisson Combattant : pas de summoning sickness si un ennemi a 2 PV ou moins
+      if (unit.name === 'Poisson Combattant') {
+        const weakTarget = getFieldAlive(battle.playerField).find(u => u.currentHp <= 2);
+        if (weakTarget) {
+          unit.justDeployed = false;
+          events.push({ type: 'type_passive', desc: `${unit.name} sent une proie faible ! Peut attaquer immediatement` });
         }
       }
 
@@ -1635,9 +1850,16 @@ function aiDeckTurn(battle) {
       if (enemyAlive.length === 0) continue;
     } else if (effect.target === 'all_enemies') {
       if (playerAlive.length === 0) continue;
+    } else if (effect.target === 'self') {
+      // Crystal items — no target needed, always playable
     }
 
-    resolveItemEffect(item, target, enemyAlive, playerAlive, events);
+    resolveItemEffect(item, target, enemyAlive, playerAlive, events, battle);
+
+    // Crystal items : ajouter crystal a l'ennemi
+    if (effect.type === 'add_crystal') {
+      battle.enemyCrystal = Math.min(battle.enemyMaxCrystal, (battle.enemyCrystal || 0) + effect.value);
+    }
 
     const idx = battle.enemyHand.indexOf(item);
     if (idx >= 0) battle.enemyHand.splice(idx, 1);
@@ -1694,7 +1916,7 @@ function aiDeckTurn(battle) {
     const dmg = calcDamage(unit, target, ignoreDef, battle.enemyField);
     unit.permanentBonusAtk -= packBonus;
 
-    applyDamage(target, dmg, events, unit);
+    applyDamage(target, dmg, events, unit, battle);
     const targetSlot = battle.playerField.indexOf(target);
     events.push({ type: 'attack', attacker: unit.name, attackerSlot: i, target: target.name, targetSlot, damage: dmg, side: 'enemy' });
 
@@ -1732,6 +1954,20 @@ function aiDeckTurn(battle) {
         u.buffAtk += 1;
         events.push({ type: 'type_passive', desc: `${u.name} s'embrase ! +1 ATK` });
       });
+    }
+
+    // Passif Requin des Profondeurs ennemi : attaque bonus apres un kill
+    if (!target.alive && unit.name === 'Requin des Profondeurs' && unit.alive) {
+      const newPlayerAlive = getFieldAlive(battle.playerField);
+      if (newPlayerAlive.length > 0 && battle.enemyEnergy >= 1) {
+        const newTarget = newPlayerAlive.reduce((a, b) => a.currentHp < b.currentHp ? a : b);
+        const bonusDmg = calcDamage(unit, newTarget, false, battle.enemyField);
+        applyDamage(newTarget, bonusDmg, events, unit, battle);
+        const newTargetSlot = battle.playerField.indexOf(newTarget);
+        events.push({ type: 'type_passive', desc: `${unit.name} sent le sang ! Attaque bonus` });
+        events.push({ type: 'attack', attacker: unit.name, attackerSlot: i, target: newTarget.name, targetSlot: newTargetSlot, damage: bonusDmg, side: 'enemy' });
+        battle.enemyEnergy -= 1;
+      }
     }
 
     cleanDeadFromField(battle.playerField);
@@ -1889,11 +2125,11 @@ app.post('/api/boosters/:id/open', requireAuth, (req, res) => {
 // --- Routes COLLECTION (updated with shiny/fused grouping) ---
 app.get('/api/collection', requireAuth, (req, res) => {
   const cards = db.prepare(`
-    SELECT c.*, uc.is_shiny, uc.is_fused, COUNT(*) as count, MIN(uc.id) as user_card_id
+    SELECT c.*, uc.is_shiny, uc.is_fused, uc.is_temp, COUNT(*) as count, MIN(uc.id) as user_card_id
     FROM user_cards uc
     JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ?
-    GROUP BY c.id, uc.is_shiny, uc.is_fused
+    GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp
     ORDER BY
       CASE c.rarity WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
@@ -1933,11 +2169,11 @@ app.post('/api/collection/sell', requireAuth, (req, res) => {
 
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
   const collection = db.prepare(`
-    SELECT c.*, uc.is_shiny, uc.is_fused, COUNT(*) as count, MIN(uc.id) as user_card_id
+    SELECT c.*, uc.is_shiny, uc.is_fused, uc.is_temp, COUNT(*) as count, MIN(uc.id) as user_card_id
     FROM user_cards uc
     JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ?
-    GROUP BY c.id, uc.is_shiny, uc.is_fused
+    GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp
     ORDER BY
       CASE c.rarity WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
@@ -2056,7 +2292,7 @@ app.post('/api/campaign/start', requireAuth, (req, res) => {
   const playerCards = [];
   for (const ucId of team) {
     const uc = db.prepare(`
-      SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+      SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
       FROM user_cards uc JOIN cards c ON uc.card_id = c.id
       WHERE uc.id = ? AND uc.user_id = ?
     `).get(ucId, req.session.userId);
@@ -2110,17 +2346,17 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
   if (phoenixCountPC > 0) {
     battle.enemyTeam.filter(u => u.alive).forEach(u => {
       u.currentHp = Math.max(0, u.currentHp - phoenixCountPC);
-      if (u.currentHp <= 0) checkKO(u, events);
+      if (u.currentHp <= 0) checkKO(u, events, battle);
     });
     events.push({ type: 'type_passive', desc: `Phoenix Ancestral : ${phoenixCountPC} degat(s) a tous les ennemis` });
   }
-  // Passif Leviathan Abyssal : ennemis perdent 1 ATK
+  // Passif Leviathan Abyssal : +1 ATK aux allies Eau
   const leviathanCountPC = battle.playerTeam.filter(u => u.alive && u.name === 'Leviathan Abyssal').length;
   if (leviathanCountPC > 0) {
-    battle.enemyTeam.filter(u => u.alive).forEach(u => {
-      u.buffAtk -= leviathanCountPC;
+    battle.playerTeam.filter(u => u.alive && u.element === 'eau').forEach(u => {
+      u.buffAtk += leviathanCountPC;
     });
-    events.push({ type: 'type_passive', desc: `Leviathan Abyssal : -${leviathanCountPC} ATK aux ennemis` });
+    events.push({ type: 'type_passive', desc: `Leviathan Abyssal : +${leviathanCountPC} ATK aux unites Eau` });
   }
   // Tick Poison joueur
   if (attacker.poisoned > 0) {
@@ -2154,7 +2390,7 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
     if (target.alive) {
       const ignoreDef = ABILITY_MAP[attacker.ability_name]?.type === 'ignore_def';
       const dmg = calcDamage(attacker, target, ignoreDef);
-      applyDamage(target, dmg, events, attacker);
+      applyDamage(target, dmg, events, attacker, battle);
       events.push({ type: 'attack', attacker: attacker.name, attackerIndex, target: target.name, targetIndex, damage: dmg, side: 'player' });
       // Lifesteal
       if (attacker.lifestealPercent > 0) {
@@ -2270,6 +2506,17 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
 
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
 
+  // Supprimer les cartes TEMP mortes en combat
+  if (battle.deadTempCards && battle.deadTempCards.length > 0) {
+    const deleteTemp = db.prepare('DELETE FROM user_cards WHERE id = ?');
+    const deleteTempTransaction = db.transaction(() => {
+      for (const ucId of battle.deadTempCards) {
+        deleteTemp.run(ucId);
+      }
+    });
+    deleteTempTransaction();
+  }
+
   activeBattles.delete(battleId);
 
   res.json({
@@ -2278,6 +2525,7 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
     reward,
     credits: newCredits,
     droppedCard,
+    deadTempCards: battle.deadTempCards || [],
   });
 });
 
@@ -2313,7 +2561,7 @@ app.get('/api/pvp/team', requireAuth, (req, res) => {
   for (const colName of ['card1_id', 'card2_id', 'card3_id']) {
     if (team[colName]) {
       const uc = db.prepare(`
-        SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+        SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
         FROM user_cards uc JOIN cards c ON uc.card_id = c.id
         WHERE uc.id = ?
       `).get(team[colName]);
@@ -2338,7 +2586,7 @@ app.post('/api/pvp/find-opponent', requireAuth, (req, res) => {
   for (const colName of ['card1_id', 'card2_id', 'card3_id']) {
     if (opponent[colName]) {
       const uc = db.prepare(`
-        SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+        SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
         FROM user_cards uc JOIN cards c ON uc.card_id = c.id
         WHERE uc.id = ?
       `).get(opponent[colName]);
@@ -2363,7 +2611,7 @@ app.post('/api/pvp/start', requireAuth, (req, res) => {
   const playerCards = [];
   for (const ucId of team) {
     const uc = db.prepare(`
-      SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+      SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
       FROM user_cards uc JOIN cards c ON uc.card_id = c.id
       WHERE uc.id = ? AND uc.user_id = ?
     `).get(ucId, req.session.userId);
@@ -2379,7 +2627,7 @@ app.post('/api/pvp/start', requireAuth, (req, res) => {
   for (const colName of ['card1_id', 'card2_id', 'card3_id']) {
     if (oppTeam[colName]) {
       const uc = db.prepare(`
-        SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+        SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
         FROM user_cards uc JOIN cards c ON uc.card_id = c.id
         WHERE uc.id = ?
       `).get(oppTeam[colName]);
@@ -2417,7 +2665,7 @@ app.post('/api/battle/start-deck', requireAuth, (req, res) => {
     if (!deck) return res.status(404).json({ error: 'Deck introuvable' });
 
     const cards = db.prepare(`
-      SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+      SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
       FROM deck_cards dc
       JOIN user_cards uc ON dc.user_card_id = uc.id
       JOIN cards c ON uc.card_id = c.id
@@ -2442,7 +2690,7 @@ app.post('/api/battle/start-deck', requireAuth, (req, res) => {
 
   if (pvpDeck) {
     const oppCards = db.prepare(`
-      SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+      SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
       FROM deck_cards dc
       JOIN user_cards uc ON dc.user_card_id = uc.id
       JOIN cards c ON uc.card_id = c.id
@@ -2509,6 +2757,21 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
     }
   }
 
+  // Passif Sapeur de Terre : +1 ATK au deploy
+  if (unit.name === 'Sapeur de Terre') {
+    unit.buffAtk += 1;
+    events.push({ type: 'type_passive', desc: `${unit.name} se prepare ! +1 ATK ce tour` });
+  }
+
+  // Passif Poisson Combattant : pas de summoning sickness si un ennemi a 2 PV ou moins
+  if (unit.name === 'Poisson Combattant') {
+    const weakEnemy = getFieldAlive(battle.enemyField).find(u => u.currentHp <= 2);
+    if (weakEnemy) {
+      unit.justDeployed = false;
+      events.push({ type: 'type_passive', desc: `${unit.name} sent une proie faible ! Peut attaquer immediatement` });
+    }
+  }
+
   res.json({ events, ...getDeckBattleSnapshot(battle) });
 });
 
@@ -2553,7 +2816,7 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
   const dmg = calcDamage(attacker, target, ignoreDef, battle.playerField);
   attacker.permanentBonusAtk -= packBonus;
 
-  applyDamage(target, dmg, events, attacker);
+  applyDamage(target, dmg, events, attacker, battle);
   events.push({ type: 'attack', attacker: attacker.name, attackerSlot: fieldSlot, target: target.name, targetSlot, damage: dmg, side: 'player' });
 
   // Passif Salamandre : +1 ATK tour suivant si elle detruit un ennemi
@@ -2589,6 +2852,15 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
       u.buffAtk += 1;
       events.push({ type: 'type_passive', desc: `${u.name} s'embrase ! +1 ATK` });
     });
+  }
+
+  // Passif Requin des Profondeurs : peut attaquer une 2e fois apres un kill
+  if (!target.alive && attacker.name === 'Requin des Profondeurs' && attacker.alive) {
+    const idx = battle.attackedThisTurn.indexOf(fieldSlot);
+    if (idx !== -1) {
+      battle.attackedThisTurn.splice(idx, 1);
+      events.push({ type: 'type_passive', desc: `${attacker.name} sent le sang ! Peut attaquer a nouveau` });
+    }
   }
 
   cleanDeadFromField(battle.enemyField);
@@ -2671,7 +2943,12 @@ app.post('/api/battle/use-item', requireAuth, (req, res) => {
   }
 
   const events = [];
-  resolveItemEffect(item, target, playerAlive, enemyAlive, events);
+  resolveItemEffect(item, target, playerAlive, enemyAlive, events, battle);
+
+  // Crystal items : ajouter crystal au joueur
+  if (effect.type === 'add_crystal') {
+    battle.playerCrystal = Math.min(battle.playerMaxCrystal, (battle.playerCrystal || 0) + effect.value);
+  }
 
   battle.playerHand.splice(handIndex, 1);
   battle.playerEnergy -= item.mana_cost;
@@ -2790,7 +3067,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       unit.currentHp = Math.max(1, unit.currentHp - unit.poisoned);
       events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisoned });
       unit.poisoned = 0;
-      if (unit.currentHp <= 0) checkKO(unit, events);
+      if (unit.currentHp <= 0) checkKO(unit, events, battle);
     }
   }
   cleanDeadFromField(battle.playerField);
@@ -2836,24 +3113,33 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
     events.push({ type: 'type_passive', desc: `Esprit des Forets ennemi : +${espritCountE} DEF aux Terre` });
   }
 
+  // Passif Eclaireur des Dunes ennemi : +2 DEF si seule
+  const enemyAliveUnitsET = getFieldAlive(battle.enemyField);
+  enemyAliveUnitsET.filter(u => u.name === 'Eclaireur des Dunes').forEach(u => {
+    if (enemyAliveUnitsET.length === 1) {
+      u.buffDef += 2;
+      events.push({ type: 'type_passive', desc: `${u.name} ennemi est seule ! +2 DEF` });
+    }
+  });
+
   // Phoenix Ancestral ennemi : 1 degat a toutes vos unites
   const phoenixCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Phoenix Ancestral').length;
   if (phoenixCountE > 0) {
     getFieldAlive(battle.playerField).forEach(u => {
       u.currentHp = Math.max(0, u.currentHp - phoenixCountE);
-      if (u.currentHp <= 0) checkKO(u, events);
+      if (u.currentHp <= 0) checkKO(u, events, battle);
     });
     cleanDeadFromField(battle.playerField);
     events.push({ type: 'type_passive', desc: `Phoenix Ancestral ennemi : ${phoenixCountE} degat(s) a vos unites` });
   }
 
-  // Leviathan Abyssal ennemi : -1 ATK a vos unites
+  // Leviathan Abyssal ennemi : +1 ATK aux allies Eau ennemis
   const leviathanCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Leviathan Abyssal').length;
   if (leviathanCountE > 0) {
-    getFieldAlive(battle.playerField).forEach(u => {
-      u.buffAtk -= leviathanCountE;
+    getFieldAlive(battle.enemyField).filter(u => u.element === 'eau').forEach(u => {
+      u.buffAtk += leviathanCountE;
     });
-    events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : -${leviathanCountE} ATK a vos unites` });
+    events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : +${leviathanCountE} ATK aux unites Eau` });
   }
 
   if (checkDeckWin(battle)) {
@@ -2874,7 +3160,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       unit.currentHp = Math.max(1, unit.currentHp - unit.poisoned);
       events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisoned });
       unit.poisoned = 0;
-      if (unit.currentHp <= 0) checkKO(unit, events);
+      if (unit.currentHp <= 0) checkKO(unit, events, battle);
     }
   }
   cleanDeadFromField(battle.enemyField);
@@ -2931,24 +3217,33 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
     events.push({ type: 'type_passive', desc: `Esprit des Forets : +${espritCountP} DEF aux unites Terre` });
   }
 
+  // Passif Eclaireur des Dunes : +2 DEF si seule sur le terrain
+  const playerAliveUnits = getFieldAlive(battle.playerField);
+  playerAliveUnits.filter(u => u.name === 'Eclaireur des Dunes').forEach(u => {
+    if (playerAliveUnits.length === 1) {
+      u.buffDef += 2;
+      events.push({ type: 'type_passive', desc: `${u.name} est seule ! +2 DEF` });
+    }
+  });
+
   // Passif Phoenix Ancestral : 1 degat a tous les ennemis en debut de tour
   const phoenixCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Phoenix Ancestral').length;
   if (phoenixCountP > 0) {
     getFieldAlive(battle.enemyField).forEach(u => {
       u.currentHp = Math.max(0, u.currentHp - phoenixCountP);
-      if (u.currentHp <= 0) checkKO(u, events);
+      if (u.currentHp <= 0) checkKO(u, events, battle);
     });
     cleanDeadFromField(battle.enemyField);
     events.push({ type: 'type_passive', desc: `Phoenix Ancestral : ${phoenixCountP} degat(s) a tous les ennemis` });
   }
 
-  // Passif Leviathan Abyssal : les unites ennemies perdent 1 ATK en debut de tour
+  // Passif Leviathan Abyssal : +1 ATK aux allies Eau en debut de tour
   const leviathanCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Leviathan Abyssal').length;
   if (leviathanCountP > 0) {
-    getFieldAlive(battle.enemyField).forEach(u => {
-      u.buffAtk -= leviathanCountP;
+    getFieldAlive(battle.playerField).filter(u => u.element === 'eau').forEach(u => {
+      u.buffAtk += leviathanCountP;
     });
-    events.push({ type: 'type_passive', desc: `Leviathan Abyssal : -${leviathanCountP} ATK aux ennemis` });
+    events.push({ type: 'type_passive', desc: `Leviathan Abyssal : +${leviathanCountP} ATK aux unites Eau` });
   }
 
   // Check turn limit
@@ -3275,7 +3570,7 @@ app.post('/api/decks/:id/set-pvp', requireAuth, (req, res) => {
 // --- User cards list (for team selection) ---
 app.get('/api/my-cards', requireAuth, (req, res) => {
   const cards = db.prepare(`
-    SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+    SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
     FROM user_cards uc
     JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ?
