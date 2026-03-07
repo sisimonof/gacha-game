@@ -2,7 +2,7 @@
 
 const BOOSTER_IMAGES = {
   origines: '/img/booster-origines.png',
-  rift: '/img/booster-rift.png'
+  rift: '/img/booster-rift.svg'
 };
 
 let currentCredits = 0;
@@ -160,7 +160,7 @@ function showCardsReveal(cards) {
   sorted.forEach((card, idx) => {
     const r = RARITY_COLORS[card.rarity];
     const el = document.createElement('div');
-    el.className = 'reveal-card waiting';
+    el.className = 'reveal-card waiting card-slam';
     el.dataset.index = idx;
 
     const shinyClass = card.is_shiny ? 'reveal-card-shiny' : '';
