@@ -4368,22 +4368,31 @@ body.battle-page {
 
 /* ===== MAIN DU JOUEUR ===== */
 .bt-hand-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 16px;
-  border-top: 1px solid #1a3a1a;
-  background: rgba(0, 8, 0, 0.6);
-  min-height: 50px;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0;
+  padding: 0 16px;
+  padding-right: 140px;
+  z-index: 100;
+  pointer-events: none;
+  overflow: visible;
+  background: none;
+  border-top: none;
 }
 
 .bt-hand {
   flex: 1;
   display: flex;
-  gap: 8px;
+  gap: 0;
   justify-content: center;
-  flex-wrap: wrap;
-  min-height: 40px;
+  min-height: 0;
+  pointer-events: none;
+  overflow: visible;
 }
 
 .bt-hand-empty {
@@ -4395,6 +4404,11 @@ body.battle-page {
 }
 
 .bt-end-turn {
+  position: fixed;
+  bottom: 12px;
+  right: 16px;
+  z-index: 101;
+  pointer-events: auto;
   font-family: 'Press Start 2P', monospace;
   font-size: 10px;
   background: linear-gradient(135deg, #004d15, #003300);
@@ -4405,7 +4419,6 @@ body.battle-page {
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .bt-end-turn:hover {
@@ -4418,30 +4431,41 @@ body.battle-page {
   cursor: not-allowed;
 }
 
-/* ===== CARTES EN MAIN ===== */
+/* ===== CARTES EN MAIN (flottantes) ===== */
 .bt-card {
   width: 115px;
   padding: 8px 6px;
-  background: rgba(0, 8, 0, 0.92);
+  background: rgba(0, 8, 0, 0.95);
   border: 2px solid;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
   text-align: center;
   position: relative;
+  pointer-events: auto;
+  transform: translateY(75px);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.3s ease;
+  margin-left: -12px;
+  margin-right: -12px;
+  z-index: 1;
 }
 
+.bt-card:first-child { margin-left: 0; }
+.bt-card:last-child { margin-right: 0; }
+
 .bt-card:hover {
-  transform: translateY(-8px) scale(1.03);
-  z-index: 5;
-  box-shadow: 0 0 10px rgba(0, 255, 65, 0.15);
+  transform: translateY(-10px) scale(1.08);
+  z-index: 50;
+  box-shadow: 0 -8px 25px rgba(0, 255, 65, 0.25),
+              0 0 15px rgba(0, 255, 65, 0.1);
 }
 
 .bt-card--selected {
-  transform: translateY(-12px) scale(1.05);
+  transform: translateY(-15px) scale(1.1);
   outline: 3px solid #ffcc00;
   outline-offset: 2px;
-  box-shadow: 0 0 14px rgba(255, 204, 0, 0.35);
+  box-shadow: 0 -10px 30px rgba(255, 204, 0, 0.3);
+  z-index: 51;
 }
 
 .bt-card--expensive {
@@ -4450,7 +4474,36 @@ body.battle-page {
 }
 
 .bt-card--objet {
-  background: rgba(10, 0, 20, 0.92);
+  background: rgba(10, 0, 20, 0.95);
+}
+
+.bt-card--dragging {
+  opacity: 0.4;
+  transform: translateY(75px) scale(0.95) !important;
+  box-shadow: none !important;
+}
+
+/* ===== DROP ZONES ===== */
+.bt-slot--drop-target {
+  border-color: rgba(0, 255, 65, 0.5) !important;
+  border-style: dashed !important;
+  background: rgba(0, 255, 65, 0.06);
+  box-shadow: inset 0 0 20px rgba(0, 255, 65, 0.1);
+  transition: all 0.2s;
+}
+
+.bt-slot--drop-hover {
+  border-color: #00ff41 !important;
+  border-style: solid !important;
+  border-width: 3px !important;
+  background: rgba(0, 255, 65, 0.12);
+  box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.2),
+              0 0 20px rgba(0, 255, 65, 0.15);
+}
+
+.bt-slot--drop-invalid {
+  border-color: rgba(255, 68, 68, 0.3) !important;
+  background: rgba(255, 0, 0, 0.04);
 }
 
 .bt-card-element {
@@ -4768,14 +4821,15 @@ body.battle-page {
   .bt-unit-name { font-size: 7px; }
   .bt-unit-stats { font-size: 15px; gap: 8px; }
   .bt-unit-ability .bt-ability-desc { display: none; }
-  .bt-card { width: 90px; padding: 5px; }
+  .bt-card { width: 90px; padding: 5px; transform: translateY(60px); margin-left: -8px; margin-right: -8px; }
+  .bt-card:hover { transform: translateY(-8px) scale(1.06); }
   .bt-card-emoji { font-size: 26px; }
   .bt-card-name { font-size: 5px; }
   .bt-card-ability { display: none; }
   .bt-topbar { flex-wrap: wrap; height: auto; padding: 4px 8px; gap: 4px; }
   .bt-turn { font-size: 10px; }
   .bt-topbar-center { position: static; transform: none; }
-  .bt-end-turn { font-size: 8px; padding: 6px 10px; }
+  .bt-end-turn { bottom: 8px; right: 8px; font-size: 8px; padding: 6px 10px; }
   .bt-field { gap: 8px; }
   .bt-actions { width: 180px; min-width: 180px; }
 }
@@ -5265,4 +5319,196 @@ body.battle-page {
   .wiki-table td { padding: 4px 6px; }
   .wiki-formula { font-size: 16px; }
   .wiki-element-row { font-size: 8px; }
+}
+
+/* ========================
+   PVP STYLES
+   ======================== */
+
+/* PVP Searching overlay */
+.pvp-searching-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+}
+.pvp-searching-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+.pvp-searching-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(0, 255, 65, 0.2);
+  border-top: 4px solid #00ff41;
+  border-radius: 50%;
+  animation: pvp-spin 1s linear infinite;
+}
+@keyframes pvp-spin {
+  to { transform: rotate(360deg); }
+}
+.pvp-searching-title {
+  font-family: 'Courier New', monospace;
+  font-size: 20px;
+  color: #00ff41;
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+.pvp-searching-text {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: #aaa;
+}
+.pvp-searching-timer {
+  font-family: 'Courier New', monospace;
+  font-size: 24px;
+  color: #00ff41;
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+}
+
+/* PVP Turn banner */
+.pvp-turn-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Courier New', monospace;
+  font-size: 28px;
+  font-weight: bold;
+  color: #00ff41;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px rgba(0, 255, 65, 0.6), 0 0 40px rgba(0, 255, 65, 0.3);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 16px 40px;
+  border: 2px solid #00ff41;
+  z-index: 150;
+  animation: pvp-banner-in 0.3s ease-out, pvp-banner-out 0.5s ease-in 1.5s forwards;
+  pointer-events: none;
+}
+@keyframes pvp-banner-in {
+  from { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+@keyframes pvp-banner-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* PVP Surrender button */
+.bt-surrender {
+  position: fixed;
+  top: 44px;
+  left: 12px;
+  z-index: 100;
+  font-family: 'Courier New', monospace;
+  font-size: 10px;
+  padding: 6px 12px;
+  background: rgba(20, 0, 0, 0.8);
+  color: #cc4444;
+  border: 1px solid #cc4444;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.2s;
+}
+.bt-surrender:hover {
+  background: rgba(204, 68, 68, 0.2);
+  box-shadow: 0 0 12px rgba(204, 68, 68, 0.4);
+  color: #ff6666;
+}
+
+/* PVP disabled state (opponent's turn) */
+.pvp-disabled {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: grayscale(0.3);
+}
+.bt-end-turn.pvp-disabled {
+  opacity: 0.4;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Combat hub mode buttons */
+.combat-hub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.combat-grid {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.combat-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 32px;
+  background: rgba(0, 10, 20, 0.8);
+  border: 2px solid #333;
+  color: #ccc;
+  cursor: pointer;
+  transition: all 0.3s;
+  min-width: 160px;
+  font-family: 'Courier New', monospace;
+}
+.combat-mode-btn:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.2);
+}
+.combat-mode-icon {
+  font-size: 36px;
+}
+.combat-mode-label {
+  font-size: 16px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.combat-mode-desc {
+  font-size: 9px;
+  color: #888;
+  text-align: center;
+}
+.combat-mode-ia {
+  border-color: #00ff41;
+}
+.combat-mode-ia:hover {
+  box-shadow: 0 0 30px rgba(0, 255, 65, 0.3);
+  background: rgba(0, 20, 5, 0.8);
+}
+.combat-mode-pvp {
+  border-color: #ff4444;
+}
+.combat-mode-pvp:hover {
+  box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
+  background: rgba(20, 0, 0, 0.8);
+}
+.combat-starter-btn {
+  border-color: #888;
+  min-width: auto;
+  padding: 12px 20px;
+}
+.combat-starter-btn:hover {
+  border-color: #00ff41;
+}
+.deck-pvp-tag {
+  font-size: 8px;
+  color: #ff4444;
+  border: 1px solid #ff4444;
+  padding: 1px 4px;
+  border-radius: 3px;
+  margin-left: 6px;
 }

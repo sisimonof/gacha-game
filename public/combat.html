@@ -16,26 +16,25 @@
       <h1 class="menu-title" data-text="COMBAT">COMBAT</h1>
 
       <div class="combat-grid">
-        <!-- DECKS -->
-        <button class="combat-mode-btn" onclick="window.location.href='/decks'">
-          <span class="combat-mode-icon">🃏</span>
-          <span class="combat-mode-label">MES DECKS</span>
-          <span class="combat-mode-desc">Creez et gerez vos decks de 20 cartes</span>
+        <!-- IA -->
+        <button class="combat-mode-btn combat-mode-ia" onclick="showDeckSelect('ia')">
+          <span class="combat-mode-icon">🤖</span>
+          <span class="combat-mode-label">IA</span>
+          <span class="combat-mode-desc">Affrontez l'intelligence artificielle</span>
         </button>
 
-        <!-- PVP avec decks -->
-        <button class="combat-mode-btn combat-mode-pvp" onclick="showDeckSelect()">
+        <!-- PVP temps reel -->
+        <button class="combat-mode-btn combat-mode-pvp" onclick="showDeckSelect('pvp')">
           <span class="combat-mode-icon">⚔️</span>
           <span class="combat-mode-label">PVP</span>
-          <span class="combat-mode-desc">Affrontez un adversaire avec votre deck</span>
+          <span class="combat-mode-desc">Affrontez un joueur en temps reel</span>
         </button>
+      </div>
 
-        <!-- WIKI -->
-        <button class="combat-mode-btn combat-mode-wiki" onclick="window.location.href='/wiki'">
-          <span class="combat-mode-icon">📖</span>
-          <span class="combat-mode-label">WIKI</span>
-          <span class="combat-mode-desc">Guide complet des mecaniques de combat</span>
-        </button>
+      <!-- Liens secondaires -->
+      <div style="display:flex; gap:12px; justify-content:center; margin-top:16px;">
+        <button class="deck-select-cancel" onclick="window.location.href='/decks'" style="font-size:8px;">🃏 MES DECKS</button>
+        <button class="deck-select-cancel" onclick="window.location.href='/wiki'" style="font-size:8px;">📖 WIKI</button>
       </div>
 
       <!-- Deck selection overlay -->
@@ -44,7 +43,7 @@
           <h2 class="deck-select-title">CHOISIR UN DECK</h2>
           <div class="deck-select-list" id="deck-select-list"></div>
           <div class="deck-select-or">— OU —</div>
-          <button class="combat-mode-btn combat-starter-btn" onclick="startBattleStarter()">
+          <button class="combat-mode-btn combat-starter-btn" onclick="startBattle('starter')">
             <span class="combat-mode-icon">🎮</span>
             <span class="combat-mode-label">DECK STARTER</span>
             <span class="combat-mode-desc">Deck de test gratuit (cartes faibles)</span>
@@ -53,13 +52,26 @@
         </div>
       </div>
 
-      <!-- Loading -->
+      <!-- Loading IA -->
       <div class="combat-loading hidden" id="combat-loading">
-        <div class="loading-text">Recherche d'adversaire...</div>
+        <div class="loading-text">Lancement du combat...</div>
       </div>
+
+      <!-- PVP Searching overlay -->
+      <div class="pvp-searching-overlay hidden" id="pvp-searching">
+        <div class="pvp-searching-content">
+          <div class="pvp-searching-spinner"></div>
+          <div class="pvp-searching-title">RECHERCHE PVP</div>
+          <div class="pvp-searching-text">En attente d'un adversaire...</div>
+          <div class="pvp-searching-timer" id="pvp-timer">0:00</div>
+          <button class="deck-select-cancel" onclick="cancelPvpSearch()">ANNULER</button>
+        </div>
+      </div>
+
     </div>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/card-renderer.js"></script>
   <script src="/js/combat.js"></script>
 </body>

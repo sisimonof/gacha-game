@@ -4,6 +4,11 @@ let battleData = null;
 let opponentName = '???';
 let isAnimating = false;
 
+// PVP mode
+let isPvpMode = false;
+let pvpSocket = null;
+let isMyTurn = true;
+
 // Action mode: null, 'select_deploy_slot', 'select_attack_target', 'select_ability_target', 'select_item_target'
 let actionMode = null;
 let selectedHandIndex = null;
@@ -11,6 +16,7 @@ let selectedFieldSlot = null;
 let selectedItemIndex = null;
 let actionPanelSlot = null;
 let slotClickedThisFrame = false;
+let draggedHandIndex = null;
 
 function init() {
   const stored = sessionStorage.getItem('deckBattleData');
@@ -23,7 +29,140 @@ function init() {
 
   battleData = JSON.parse(stored);
   document.getElementById('opponent-name').textContent = `VS ${opponentName}`;
+
+  // Detect PVP mode
+  const battleMode = sessionStorage.getItem('battleMode');
+  if (battleMode === 'pvp') {
+    isPvpMode = true;
+    isMyTurn = battleData.myTurn !== false;
+    initPvpSocket();
+    document.getElementById('surrender-btn').classList.remove('hidden');
+  }
+
   renderAll();
+  initDragDrop();
+  setTurnEnabled(isMyTurn);
+}
+
+// ========================
+// PVP SOCKET
+// ========================
+
+function initPvpSocket() {
+  pvpSocket = io();
+
+  pvpSocket.on('pvp:reconnect', (data) => {
+    // Server auto-reconnects on connect — update state
+    updateBattleData(data);
+    isMyTurn = data.myTurn;
+    setTurnEnabled(isMyTurn);
+    if (data.opponentName) {
+      opponentName = data.opponentName;
+      document.getElementById('opponent-name').textContent = `VS ${opponentName}`;
+    }
+  });
+
+  pvpSocket.on('pvp:update', async (data) => {
+    if (data.events && data.events.length > 0) {
+      isAnimating = true;
+      await animateEvents(data.events);
+      isAnimating = false;
+    }
+    updateBattleData(data);
+  });
+
+  pvpSocket.on('pvp:your-turn', () => {
+    // Signal only — data already received via pvp:update
+    isMyTurn = true;
+    setTurnEnabled(true);
+    showTurnBanner('VOTRE TOUR');
+  });
+
+  pvpSocket.on('pvp:battle-end', (data) => {
+    // Result and reward — events already received via pvp:update
+    battleData.result = data.result;
+    battleData.pvpReward = data.reward;
+    isMyTurn = false;
+    setTurnEnabled(false);
+    renderAll();
+    setTimeout(() => showPvpResult(data.result, data.reward), 600);
+  });
+
+  pvpSocket.on('pvp:opponent-disconnected', () => {
+    showTurnBanner('ADVERSAIRE DECONNECTE...');
+  });
+
+  pvpSocket.on('pvp:opponent-reconnected', () => {
+    showTurnBanner(isMyTurn ? 'VOTRE TOUR' : 'TOUR ADVERSE');
+  });
+
+  pvpSocket.on('pvp:error', (data) => {
+    isAnimating = false;
+    showInstruction(data.message || 'Erreur PVP');
+  });
+}
+
+function setTurnEnabled(enabled) {
+  if (!isPvpMode) return; // In IA mode, always enabled
+
+  const handBar = document.getElementById('player-hand');
+  const endBtn = document.getElementById('end-turn-btn');
+  const playerField = document.getElementById('player-field');
+
+  if (enabled) {
+    handBar.classList.remove('pvp-disabled');
+    playerField.classList.remove('pvp-disabled');
+    endBtn.disabled = false;
+    endBtn.classList.remove('pvp-disabled');
+  } else {
+    handBar.classList.add('pvp-disabled');
+    playerField.classList.add('pvp-disabled');
+    endBtn.disabled = true;
+    endBtn.classList.add('pvp-disabled');
+    // Cancel any ongoing action
+    cancelAction();
+  }
+}
+
+function showTurnBanner(text) {
+  const banner = document.getElementById('pvp-turn-banner');
+  if (!banner) return;
+  banner.textContent = text;
+  banner.classList.remove('hidden');
+  setTimeout(() => banner.classList.add('hidden'), 2000);
+}
+
+function showPvpResult(result, reward) {
+  const overlay = document.getElementById('battle-result');
+  const box = document.getElementById('battle-result-box');
+  const title = document.getElementById('result-title');
+  const rewards = document.getElementById('result-rewards');
+
+  overlay.classList.remove('hidden');
+
+  if (result === 'victory') {
+    title.textContent = 'VICTOIRE !';
+    title.style.color = '#22cc44';
+    box.classList.add('result-victory');
+    rewards.innerHTML = `+${reward} CR`;
+    screenFlash();
+  } else if (result === 'draw') {
+    title.textContent = 'EGALITE';
+    title.style.color = '#ccaa22';
+    rewards.innerHTML = `+${reward} CR`;
+  } else {
+    title.textContent = 'DEFAITE...';
+    title.style.color = '#cc2222';
+    box.classList.add('result-defeat');
+    rewards.innerHTML = reward > 0 ? `+${reward} CR` : '';
+  }
+}
+
+function surrender() {
+  if (!isPvpMode || !pvpSocket) return;
+  if (confirm('Voulez-vous vraiment abandonner ?')) {
+    pvpSocket.emit('pvp:surrender', { battleId: battleData.battleId });
+  }
 }
 
 // ========================
@@ -135,6 +274,9 @@ function renderFieldSlot(unit, slotIndex, side) {
   if (unit.stunned) statusIcons += '<span class="bt-status-icon bt-status-stun">💫</span>';
   if (unit.shield > 0) statusIcons += `<span class="bt-status-icon bt-status-shield">🛡${unit.shield}</span>`;
   if (unit.marked > 0) statusIcons += '<span class="bt-status-icon bt-status-mark">🎯</span>';
+  if (unit.reactiveArmor > 0) statusIcons += '<span class="bt-status-icon bt-status-reactive">🦀</span>';
+  if (unit.poisonDotTurns > 0) statusIcons += `<span class="bt-status-icon bt-status-poison">☠${unit.poisonDotTurns}</span>`;
+  if (unit.ralliement) statusIcons += '<span class="bt-status-icon bt-status-rally">⚔</span>';
 
   const attackedClass = side === 'player' && battleData.attackedThisTurn?.includes(slotIndex) ? 'bt-attacked' : '';
   const sicknessClass = unit.justDeployed ? 'bt-sickness' : '';
@@ -218,10 +360,13 @@ function renderHand() {
     const elemIcon = ELEMENT_ICONS[card.element] || '';
     const elemColor = ELEMENT_COLORS[card.element] || '#00ff41';
 
+    const isDraggable = !isObj && canAfford;
+
     return `
       <div class="bt-card ${isObj ? 'bt-card--objet' : ''} ${canAfford ? '' : 'bt-card--expensive'} ${isSelected ? 'bt-card--selected' : ''}"
            style="border-color: ${r.color}"
            onclick="clickHandCard(${i})"
+           ${isDraggable ? `draggable="true" ondragstart="onCardDragStart(event, ${i})" ondragend="onCardDragEnd(event)"` : ''}
            title="${card.name}${isObj ? ' (Objet: ' + card.ability_desc + ')' : ''}">
         <div class="bt-card-type-badge">${card.type || ''}</div>
         <div class="bt-card-cost">⚡${card.mana_cost}</div>
@@ -242,32 +387,7 @@ function renderHand() {
 }
 
 function renderInstruction() {
-  const el = document.getElementById('battle-instruction');
-  if (battleData.result || actionMode === null) {
-    el.textContent = '';
-    return;
-  }
-
-  switch (actionMode) {
-    case 'select_deploy_slot':
-      el.textContent = '▼ Cliquez un slot vide pour deployer';
-      break;
-    case 'select_attack_target':
-      el.textContent = '⚔️ Cliquez une cible ennemie';
-      break;
-    case 'select_ability_target':
-      el.textContent = '✦ Cliquez une cible pour le pouvoir';
-      break;
-    case 'select_item_target':
-      const item = battleData.playerHand[selectedItemIndex];
-      const effect = getItemTarget(item);
-      if (effect === 'ally') el.textContent = '🧪 Cliquez un allie';
-      else if (effect === 'enemy') el.textContent = '🧪 Cliquez un ennemi';
-      else el.textContent = '🧪 Effet applique a tous';
-      break;
-    default:
-      el.textContent = '';
-  }
+  // Instruction supprimee
 }
 
 function getItemTarget(item) {
@@ -377,6 +497,7 @@ function actionAbility(e) {
 
 function clickHandCard(index) {
   if (isAnimating || battleData.result) return;
+  if (isPvpMode && !isMyTurn) return;
 
   const card = battleData.playerHand[index];
   if (!card) return;
@@ -403,8 +524,102 @@ function clickHandCard(index) {
   renderAll();
 }
 
+// ========================
+// DRAG & DROP
+// ========================
+
+function onCardDragStart(event, handIndex) {
+  if (isAnimating || battleData.result || (isPvpMode && !isMyTurn)) {
+    event.preventDefault();
+    return;
+  }
+
+  draggedHandIndex = handIndex;
+  event.dataTransfer.setData('text/plain', handIndex.toString());
+  event.dataTransfer.effectAllowed = 'move';
+
+  // Add dragging class after a frame (drag ghost is captured before this)
+  requestAnimationFrame(() => {
+    event.target.classList.add('bt-card--dragging');
+  });
+
+  // Highlight valid drop zones
+  highlightDropZones(true);
+
+  // Cancel any click-based selection
+  cancelAction();
+}
+
+function onCardDragEnd(event) {
+  event.target.classList.remove('bt-card--dragging');
+  draggedHandIndex = null;
+  highlightDropZones(false);
+}
+
+function highlightDropZones(show) {
+  const playerSlots = document.querySelectorAll('#player-field .bt-slot');
+  playerSlots.forEach((slot, i) => {
+    if (show) {
+      const fieldUnit = battleData.playerField[i];
+      const isEmpty = !fieldUnit || !fieldUnit.alive;
+      slot.classList.toggle('bt-slot--drop-target', isEmpty);
+      slot.classList.toggle('bt-slot--drop-invalid', !isEmpty);
+    } else {
+      slot.classList.remove('bt-slot--drop-target', 'bt-slot--drop-invalid', 'bt-slot--drop-hover');
+    }
+  });
+}
+
+function initDragDrop() {
+  const playerSlots = document.querySelectorAll('#player-field .bt-slot');
+
+  playerSlots.forEach((slot, i) => {
+    slot.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      const fieldUnit = battleData.playerField[i];
+      const isEmpty = !fieldUnit || !fieldUnit.alive;
+      e.dataTransfer.dropEffect = (isEmpty && draggedHandIndex !== null) ? 'move' : 'none';
+    });
+
+    slot.addEventListener('dragenter', (e) => {
+      e.preventDefault();
+      const fieldUnit = battleData.playerField[i];
+      const isEmpty = !fieldUnit || !fieldUnit.alive;
+      if (isEmpty) {
+        slot.classList.add('bt-slot--drop-hover');
+      }
+    });
+
+    slot.addEventListener('dragleave', () => {
+      slot.classList.remove('bt-slot--drop-hover');
+    });
+
+    slot.addEventListener('drop', (e) => {
+      e.preventDefault();
+      slot.classList.remove('bt-slot--drop-hover');
+      highlightDropZones(false);
+
+      if (draggedHandIndex === null) return;
+
+      const fieldUnit = battleData.playerField[i];
+      const isEmpty = !fieldUnit || !fieldUnit.alive;
+
+      if (!isEmpty) {
+        showInstruction('Slot occupe !');
+        draggedHandIndex = null;
+        return;
+      }
+
+      const handIndex = draggedHandIndex;
+      draggedHandIndex = null;
+      deployCard(handIndex, i);
+    });
+  });
+}
+
 function clickFieldSlot(side, slotIndex) {
   if (isAnimating || battleData.result) return;
+  if (isPvpMode && !isMyTurn) return;
   slotClickedThisFrame = true;
 
   // Deploy mode: click empty player slot
@@ -501,6 +716,7 @@ function clickFieldSlot(side, slotIndex) {
 
 function clickEnemyAvatar() {
   if (isAnimating || battleData.result) return;
+  if (isPvpMode && !isMyTurn) return;
 
   // Can only attack avatar when in attack mode
   if (actionMode === 'select_attack_target') {
@@ -527,6 +743,13 @@ function clickEnemyAvatar() {
 
 async function attackAvatar(fieldSlot) {
   if (isAnimating) return;
+
+  if (isPvpMode) {
+    pvpSocket.emit('pvp:attack-avatar', { battleId: battleData.battleId, fieldSlot });
+    cancelAction();
+    return;
+  }
+
   isAnimating = true;
 
   try {
@@ -548,6 +771,13 @@ async function attackAvatar(fieldSlot) {
 
 async function useAbilityOnAvatar(fieldSlot) {
   if (isAnimating) return;
+
+  if (isPvpMode) {
+    pvpSocket.emit('pvp:use-ability-avatar', { battleId: battleData.battleId, fieldSlot });
+    cancelAction();
+    return;
+  }
+
   isAnimating = true;
 
   try {
@@ -568,13 +798,7 @@ async function useAbilityOnAvatar(fieldSlot) {
 }
 
 function showInstruction(text) {
-  const el = document.getElementById('battle-instruction');
-  el.textContent = text;
-  el.classList.add('instruction-flash');
-  setTimeout(() => {
-    el.classList.remove('instruction-flash');
-    if (!actionMode) el.textContent = '';
-  }, 2000);
+  // Instruction supprimee
 }
 
 // ========================
@@ -583,6 +807,13 @@ function showInstruction(text) {
 
 async function deployCard(handIndex, fieldSlot) {
   if (isAnimating) return;
+
+  if (isPvpMode) {
+    pvpSocket.emit('pvp:deploy', { battleId: battleData.battleId, handIndex, fieldSlot });
+    cancelAction();
+    return;
+  }
+
   isAnimating = true;
 
   try {
@@ -604,6 +835,13 @@ async function deployCard(handIndex, fieldSlot) {
 
 async function attackCard(fieldSlot, targetSlot) {
   if (isAnimating) return;
+
+  if (isPvpMode) {
+    pvpSocket.emit('pvp:attack-card', { battleId: battleData.battleId, fieldSlot, targetSlot });
+    cancelAction();
+    return;
+  }
+
   isAnimating = true;
 
   try {
@@ -625,6 +863,13 @@ async function attackCard(fieldSlot, targetSlot) {
 
 async function useAbility(fieldSlot, targetSlot) {
   if (isAnimating) return;
+
+  if (isPvpMode) {
+    pvpSocket.emit('pvp:use-ability', { battleId: battleData.battleId, fieldSlot, targetSlot });
+    cancelAction();
+    return;
+  }
+
   isAnimating = true;
 
   try {
@@ -646,6 +891,13 @@ async function useAbility(fieldSlot, targetSlot) {
 
 async function useItem(handIndex, targetSlot, targetSide) {
   if (isAnimating) return;
+
+  if (isPvpMode) {
+    pvpSocket.emit('pvp:use-item', { battleId: battleData.battleId, handIndex, targetSlot, targetSide });
+    cancelAction();
+    return;
+  }
+
   isAnimating = true;
 
   try {
@@ -667,6 +919,16 @@ async function useItem(handIndex, targetSlot, targetSide) {
 
 async function endTurn() {
   if (isAnimating || battleData.result) return;
+  if (isPvpMode && !isMyTurn) return;
+
+  if (isPvpMode) {
+    isMyTurn = false;
+    setTurnEnabled(false);
+    cancelAction();
+    pvpSocket.emit('pvp:end-turn', { battleId: battleData.battleId });
+    return;
+  }
+
   isAnimating = true;
 
   document.getElementById('end-turn-btn').disabled = true;
@@ -721,7 +983,6 @@ function updateBattleData(data) {
 // ========================
 
 async function animateEvents(events) {
-  const log = document.getElementById('battle-log');
 
   for (const event of events) {
     let text = '';
@@ -979,15 +1240,15 @@ async function animateEvents(events) {
         cssClass = 'log-passive';
         break;
       }
+      case 'surrender': {
+        text = `🏳 Abandon !`;
+        cssClass = 'log-ko';
+        animDuration = 500;
+        break;
+      }
     }
 
-    if (text) {
-      const entry = document.createElement('div');
-      entry.className = `battle-log-entry ${cssClass}`;
-      entry.textContent = text;
-      log.appendChild(entry);
-      log.scrollTop = log.scrollHeight;
-    }
+    // Log supprime
 
     await sleep(animDuration);
   }
@@ -1190,6 +1451,9 @@ document.getElementById('player-field').addEventListener('contextmenu', (e) => {
 // ========================
 
 async function showResult() {
+  // PVP result is handled by showPvpResult via socket event
+  if (isPvpMode) return;
+
   try {
     const res = await fetch('/api/battle/end', {
       method: 'POST',
@@ -1230,14 +1494,25 @@ async function showResult() {
 }
 
 function leaveBattle() {
+  if (pvpSocket) {
+    pvpSocket.disconnect();
+    pvpSocket = null;
+  }
   sessionStorage.removeItem('deckBattleData');
   sessionStorage.removeItem('opponentName');
+  sessionStorage.removeItem('battleMode');
   window.location.href = '/combat';
 }
 
 // ESC to cancel action
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') cancelAction();
+  if (e.key === 'Escape') {
+    cancelAction();
+    if (draggedHandIndex !== null) {
+      draggedHandIndex = null;
+      highlightDropZones(false);
+    }
+  }
 });
 
 // Click outside panel to close

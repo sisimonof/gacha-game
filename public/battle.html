@@ -90,11 +90,6 @@
     <button class="bt-end-turn" id="end-turn-btn" onclick="endTurn()">FIN DU TOUR ⏩</button>
   </div>
 
-  <!-- ===== INSTRUCTION ===== -->
-  <div class="bt-instruction" id="battle-instruction"></div>
-
-  <!-- ===== LOG DE COMBAT ===== -->
-  <div class="bt-log" id="battle-log"></div>
 
   <!-- ===== OVERLAYS ===== -->
   <div class="battle-result-overlay hidden" id="battle-result">
@@ -108,6 +103,13 @@
   <div class="battle-anim-overlay" id="battle-anim-overlay"></div>
   <div class="screen-flash hidden" id="screen-flash"></div>
 
+  <!-- PVP: Indicateur de tour -->
+  <div class="pvp-turn-banner hidden" id="pvp-turn-banner"></div>
+
+  <!-- PVP: Bouton abandonner -->
+  <button class="bt-surrender hidden" id="surrender-btn" onclick="surrender()">🏳 ABANDON</button>
+
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/card-renderer.js"></script>
   <script src="/js/battle.js"></script>
 </body>

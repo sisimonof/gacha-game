@@ -1,4 +1,6 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const Database = require('better-sqlite3');
@@ -6,6 +8,7 @@ const path = require('path');
 const fs = require('fs');
 
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 3000;
 
 // --- Prix de vente par rareté ---
@@ -206,11 +209,11 @@ function getManaForTurn(turn) {
     const seedCards = [
       // [name, rarity, element, atk, def, hp, mana, ability_name, ability_desc, emoji, passive_desc, crystal_cost]
       ['Goblin',              'commune',  'terre', 1, 1, 2,  1, 'Appel gobelin',    'Ajoute un Goblin 1/1/1 dans votre main','🗡️', '+1 ATK si un autre Goblin est sur le terrain', 1.0],
-      ['Tortue des Rivieres', 'commune',  'eau',   1, 4, 5,  4, 'Carapace marine',  '+2 DEF a un allie ce tour',            '🐢', 'Les unites Eau alliees invoquees gagnent +1 PV', 1.0],
-      ['Serpent des Marees',  'rare',     'eau',   2, 1, 2,  2, 'Frappe rapide',    'Peut attaquer immediatement',          '🐍', 'Si inflige des degats, renvoie la cible en main', 1.0],
-      ['Mage de Foudre',     'rare',     'eau',   3, 1, 2,  3, 'Eclair',           'Inflige 2 degats a une cible',         '🌊', '1ere action du tour: 3 degats au lieu de 2', 1.0],
+      ['Tortue des Rivieres', 'commune',  'eau',   1, 4, 5,  4, 'Carapace marine',  '+2 DEF a un allie jusqu au prochain tour', '🐢', 'Les unites Eau alliees invoquees gagnent +1 PV', 1.0],
+      ['Serpent des Marees',  'rare',     'eau',   2, 1, 2,  2, 'Frappe empoisonnee','Empoisonne : 1 degat/tour pendant 4 tours', '🐍', '', 1.0],
+      ['Mage de Foudre',     'rare',     'eau',   3, 1, 2,  3, 'Eclair',           '2 degats a une cible (ignore la DEF)', '🌊', '1ere action du tour: 3 degats au lieu de 2', 1.0],
       ['Esprit des Forets',  'rare',     'terre', 1, 3, 4,  3, 'Croissance',       'Invoque une Pousse (0/1/1) qui evolue','🌿', 'Les unites Terre alliees gagnent +1 DEF', 1.5],
-      ['Salamandre Ardente', 'rare',     'feu',   3, 1, 3,  3, 'Flamme adjacente', '1 degat a un ennemi adjacent',         '🦎', 'Si detruit un ennemi, +1 ATK prochain tour', 1.0],
+      ['Salamandre Ardente', 'rare',     'feu',   3, 1, 3,  3, 'Flamme adjacente', '1 degat a la cible et aux adjacents. Si tue : +1 ATK tour suivant', '🦎', '', 1.0],
       ['Dragonnet de Braise','epique',   'feu',   3, 2, 3,  4, 'Souffle de braise','1 degat a tous les ennemis',           '🐉', 'Si une unite meurt ce tour, +1 ATK temporaire', 1.5],
       ['Golem de Roche',     'epique',   'terre', 2, 5, 6,  5, 'Fortification',    '+2 DEF jusqu a fin du tour',           '🪨', 'Subit 1 degat de moins de toutes les attaques', 1.0],
       // Legendaires
@@ -264,13 +267,13 @@ function getManaForTurn(turn) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     const newCards = [
-      ['Crabe de Maree',        'commune', 'creature', 'eau',    1, 3, 3, 2, 'Carapace reactive',  '+1 DEF quand attaque',                    '🦀', '', 1.0],
+      ['Crabe de Maree',        'commune', 'creature', 'eau',    1, 3, 3, 2, 'Carapace reactive',  'Statut: +1 DEF permanent quand attaquee', '🦀', '', 1.0],
       ['Soldat de Terre',       'commune', 'creature', 'terre',  2, 2, 3, 2, 'Garde de terre',     '+1 DEF',                                  '🪖', '', 1.0],
-      ['Poisson Combattant',    'commune', 'creature', 'eau',    1, 1, 2, 1, 'Aucun',              '-',                                       '🐟', 'Peut attaquer immediatement si cible a 2 PV ou moins', 1.0],
-      ['Archer des Collines',   'commune', 'creature', 'terre',  2, 1, 2, 2, 'Tir percant furtif', 'Cible n importe quel ennemi (1 degat)',    '🏹', '', 1.0],
+      ['Poisson Combattant',    'commune', 'creature', 'eau',    1, 1, 2, 1, 'Aucun',              '-',                                       '🐟', 'Peut attaquer immediatement apres invocation', 1.0],
+      ['Archer des Collines',   'commune', 'creature', 'terre',  2, 1, 2, 2, 'Tir traitre',        'x2 degats aux cibles endormies',          '🏹', '', 1.0],
       ['Guerrier des Falaises', 'rare',    'creature', 'terre',  3, 2, 3, 3, 'Ralliement',         '+1 ATK par unite Terre alliee',            '⛰️', '', 1.0],
       ['Requin des Profondeurs','rare',    'creature', 'eau',    4, 1, 3, 4, 'Morsure sauvage',    '+1 degat aux cibles blessees',             '🦈', 'Apres avoir detruit une unite, peut attaquer une 2e fois ce tour', 1.0],
-      ['Sapeur de Terre',       'commune', 'creature', 'terre',  2, 1, 3, 2, 'Aucun',              '-',                                       '⛏️', 'En arrivant, gagne +1 ATK jusqu a fin du tour', 1.0],
+      ['Sapeur de Terre',       'commune', 'creature', 'terre',  2, 1, 3, 2, 'Aucun',              '-',                                       '⛏️', 'En arrivant, gagne +1 ATK jusqu a fin du tour suivant', 1.0],
       ['Eclaireur des Dunes',   'commune', 'creature', 'terre',  0, 1, 4, 1, 'Soins naturels',     'Soigne 1 PV a un allie (2 si Terre)',      '🏜️', 'Si seule sur le terrain, +2 DEF', 1.0],
       ['Gardien du Recif',      'commune', 'creature', 'eau',    1, 2, 4, 2, 'Protection marine',  '+1 DEF a un allie Eau',                    '🪸', '', 1.0],
       ['Titan de Magma',        'epique',  'creature', 'feu',    5, 3, 6, 4, 'Eruption',           '2 degats a tous les ennemis Eau',          '🌋', 'Les ennemis qui attaquent cette unite subissent 1 degat', 1.2],
@@ -341,7 +344,7 @@ function getManaForTurn(turn) {
       ['Pretresse Solaire',   'rare',       'divin',    'lumiere', 1, 2, 4, 3, 'Lumiere reparatrice', 'Soigne 3 PV a un allie cible',                      '☀️', 'Soigne 1 PV a l allie le plus blesse a chaque fin de tour', 1.5],
       ['Pyromancien Nomade',  'rare',       'mage',     'feu',     1, 1, 2, 2, 'Combustion',          'Inflige 2 degats a un ennemi, subit 1 degat soi-meme','🔥', 'Si un ennemi meurt par Combustion, l auto-degat est annule', 1.0],
       ['Hydre des Abysses',   'epique',     'bete',     'eau',     3, 2, 7, 5, 'Regeneration hydre',  'Gagne +1 ATK permanent (cumulable)',                  '🐙', 'Ne peut pas etre tuee en un seul coup (reste a 1 PV minimum)', 1.5],
-      ['Archange Dechu',      'epique',     'divin',    'lumiere', 4, 3, 5, 5, 'Jugement celeste',    'Inflige des degats egaux a la DEF de la cible (ignore la DEF)', '👼', 'A sa mort, soigne tous les allies de 2 PV', 1.5],
+      ['Archange Dechu',      'legendaire', 'divin',    'lumiere', 4, 3, 5, 5, 'Jugement celeste',    'Inflige des degats egaux a la DEF de la cible (ignore la DEF)', '👼', 'A sa mort, soigne tous les allies de 2 PV', 1.5],
       ['Faucheur d Ames',     'legendaire', 'guerrier', 'ombre',   6, 2, 6, 7, 'Moisson funeste',     'Tue instantanement un ennemi ayant 3 PV ou moins',   '💀', 'Chaque ennemi tue par Moisson funeste lui rend 2 PV et +1 ATK permanent', 2.0],
     ];
     db.transaction(() => {
@@ -349,6 +352,21 @@ function getManaForTurn(turn) {
     })();
     console.log('Migration: 5 nouvelles cartes v1.3.0 ajoutees (Pretresse, Pyromancien, Hydre, Archange, Faucheur)');
   }
+}
+
+// --- Migration : MAJ descriptions Tortue & Crabe ---
+{
+  db.prepare("UPDATE cards SET ability_desc = '+2 DEF a un allie jusqu au prochain tour' WHERE name = 'Tortue des Rivieres'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Statut: +1 DEF permanent quand attaquee' WHERE name = 'Crabe de Maree'").run();
+  // v1.4.0 : MAJ descriptions et abilities
+  db.prepare("UPDATE cards SET passive_desc = 'Peut attaquer immediatement apres invocation' WHERE name = 'Poisson Combattant'").run();
+  db.prepare("UPDATE cards SET ability_name = 'Tir traitre', ability_desc = 'x2 degats aux cibles endormies' WHERE name = 'Archer des Collines'").run();
+  db.prepare("UPDATE cards SET passive_desc = 'En arrivant, gagne +1 ATK jusqu a fin du tour suivant' WHERE name = 'Sapeur de Terre'").run();
+  db.prepare("UPDATE cards SET ability_desc = '2 degats a une cible (ignore la DEF)' WHERE name = 'Mage de Foudre'").run();
+  db.prepare("UPDATE cards SET ability_name = 'Frappe empoisonnee', ability_desc = 'Empoisonne : 1 degat/tour pendant 4 tours', passive_desc = '' WHERE name = 'Serpent des Marees'").run();
+  db.prepare("UPDATE cards SET ability_desc = '1 degat a la cible et aux adjacents. Si tue : +1 ATK tour suivant', passive_desc = '' WHERE name = 'Salamandre Ardente'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Statut: +1 ATK par unite Terre alliee' WHERE name = 'Guerrier des Falaises'").run();
+  db.prepare("UPDATE cards SET rarity = 'legendaire' WHERE name = 'Archange Dechu'").run();
 }
 
 // --- Tables Decks ---
@@ -734,20 +752,20 @@ const ABILITY_MAP = {
 
   // ===== NOUVELLES CARTES (v2) =====
   'Appel gobelin':      { type: 'buff_team_atk',     value: 1 },   // Goblin — simplifie (devrait invoquer token)
-  'Carapace marine':    { type: 'buff_def',          value: 2 },   // Tortue des Rivieres
-  'Frappe rapide':      { type: 'direct_damage',     value: 2 },   // Serpent des Marees
-  'Eclair':             { type: 'direct_damage',     value: 2 },   // Mage de Foudre (3 si 1ere action — TODO)
+  'Carapace marine':    { type: 'buff_def_lasting',   value: 2 },   // Tortue des Rivieres (+2 DEF allie, dure jusqu'au prochain tour)
+  'Frappe empoisonnee': { type: 'poison_dot',         damage: 1, turns: 4 },  // Serpent des Marees (1 degat/tour, 4 tours)
+  'Eclair':             { type: 'direct_damage_ignore_def', value: 2 },   // Mage de Foudre (ignore DEF, 3 si 1ere action)
   'Croissance':         { type: 'buff_team_def',     value: 1 },   // Esprit des Forets — simplifie (devrait invoquer Pousse)
-  'Flamme adjacente':   { type: 'direct_damage',     value: 1 },   // Salamandre Ardente
+  'Flamme adjacente':   { type: 'adjacent_damage',   value: 1 },   // Salamandre Ardente (cible + adjacents)
   'Souffle de braise':  { type: 'aoe_damage',        value: 1 },   // Dragonnet de Braise
   'Fortification':      { type: 'buff_def',          value: 3 },   // Golem de Roche
 
   // ===== NOUVELLES CARTES (v3) =====
-  'Carapace reactive':  { type: 'buff_def',           value: 1 },   // Crabe de Maree (+reactif dans applyDamage)
+  'Carapace reactive':  { type: 'reactive_armor',      value: 1 },   // Crabe de Maree (statut: +1 DEF quand attaquee)
   'Garde de terre':     { type: 'buff_def',           value: 1 },   // Soldat de Terre
   'Aucun':              { type: 'none' },                            // Pas de pouvoir
-  'Tir percant furtif': { type: 'direct_damage',      value: 1 },   // Archer des Collines
-  'Ralliement':         { type: 'buff_atk_per_element', element: 'terre', value: 1 }, // Guerrier des Falaises
+  'Tir traitre':        { type: 'betrayal_shot',       value: 1 },   // Archer des Collines (x2 si cible endormie)
+  'Ralliement':         { type: 'ralliement_status',   element: 'terre', value: 1 }, // Guerrier des Falaises (statut: +1 ATK/Terre allie)
   'Morsure sauvage':    { type: 'damage_wounded',     value: 1 },   // Requin des Profondeurs
   'Soins naturels':     { type: 'heal_ally_conditional', baseHeal: 1, bonusHeal: 1, bonusElement: 'terre' }, // Eclaireur
   'Protection marine':  { type: 'buff_def_element',   value: 1, element: 'eau' },  // Gardien du Recif
@@ -862,10 +880,10 @@ function applyDamage(target, damage, events, source, battle) {
     events.push({ type: 'counter_damage', unit: target.name, target: source.name, damage: target.counterDamage });
     if (source.currentHp <= 0) checkKO(source, events, battle);
   }
-  // Passif Crabe de Maree : +1 DEF quand attaque
-  if (target.alive && target.currentHp > 0 && target.name === 'Crabe de Maree') {
-    target.buffDef += 1;
-    events.push({ type: 'type_passive', desc: `${target.name} renforce sa carapace ! +1 DEF` });
+  // Statut Carapace reactive : +1 DEF permanent quand attaquee
+  if (target.alive && target.currentHp > 0 && (target.reactiveArmor || 0) > 0) {
+    target.permanentBonusDef = (target.permanentBonusDef || 0) + target.reactiveArmor;
+    events.push({ type: 'type_passive', desc: `${target.name} renforce sa carapace ! +${target.reactiveArmor} DEF permanent` });
   }
 
   // Passif Titan de Magma : 1 degat aux attaquants
@@ -940,6 +958,13 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
       graceUsed: false,
       lifestealPercent: 0,
       woundedBonus: 0,
+      reactiveArmor: 0,
+      lastingDefBuff: 0,
+      lastingAtkBuff: 0,
+      lastingAtkTurns: 0,
+      poisonDot: 0,
+      poisonDotTurns: 0,
+      ralliement: false,
     };
   };
 
@@ -1001,13 +1026,88 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
     case 'direct_damage': {
       const target = pickTarget();
       if (target) {
-        // Passif Mage de Foudre : Eclair inflige 3 degats au lieu de 2
         let dmgVal = ability.value;
-        if (unit.name === 'Mage de Foudre' && abilityName === 'Eclair') dmgVal = 3;
         const dmg = scaleDmg(dmgVal);
         applyDamage(target, dmg, events, unit, battle);
         events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
       }
+      break;
+    }
+    case 'direct_damage_ignore_def': {
+      // Eclair du Mage de Foudre : degats directs ignorant la DEF
+      const target = pickTarget();
+      if (target) {
+        let dmgVal = ability.value;
+        // Passif Mage de Foudre : 3 degats au lieu de 2 (1ere action)
+        if (unit.name === 'Mage de Foudre' && abilityName === 'Eclair') dmgVal = 3;
+        const dmg = scaleDmg(dmgVal);
+        target.currentHp = Math.max(0, target.currentHp - dmg);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, desc: `${dmg} degats (ignore DEF)` });
+        if (target.currentHp <= 0) checkKO(target, events, battle);
+      }
+      break;
+    }
+    case 'betrayal_shot': {
+      // Archer des Collines : x2 degats si cible endormie (justDeployed)
+      const target = pickTarget();
+      if (target) {
+        let dmgVal = ability.value;
+        if (target.justDeployed) dmgVal *= 2;
+        const dmg = scaleDmg(dmgVal);
+        applyDamage(target, dmg, events, unit, battle);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, desc: target.justDeployed ? `x2 sur cible endormie !` : '' });
+      }
+      break;
+    }
+    case 'poison_dot': {
+      // Serpent des Marees : empoisonne la cible (1 degat/tour pendant N tours)
+      const target = pickTarget();
+      if (target) {
+        target.poisonDot = (target.poisonDot || 0) + ability.damage;
+        target.poisonDotTurns = Math.max(target.poisonDotTurns || 0, ability.turns);
+        events.push({ type: 'ability_poison', unit: unit.name, target: target.name, ability: abilityName, desc: `Empoisonne ! ${ability.damage} degat/tour pendant ${ability.turns} tours` });
+      }
+      break;
+    }
+    case 'adjacent_damage': {
+      // Salamandre Ardente : degats a la cible + ennemis adjacents
+      const target = pickTarget();
+      let killedAny = false;
+      if (target && battle && battle.isDeckBattle) {
+        const enemyField = unit.side === 'player' ? battle.enemyField : battle.playerField;
+        const targetIdx = enemyField.indexOf(target);
+        const dmg = scaleDmg(ability.value);
+        const hitTargets = [];
+        for (let i = Math.max(0, targetIdx - 1); i <= Math.min(2, targetIdx + 1); i++) {
+          const t = enemyField[i];
+          if (t && t.alive) {
+            applyDamage(t, dmg, events, unit, battle);
+            hitTargets.push(t.name);
+            if (!t.alive) killedAny = true;
+          }
+        }
+        events.push({ type: 'ability_aoe', unit: unit.name, ability: abilityName, damage: dmg, desc: `Flamme sur ${hitTargets.join(', ')}` });
+      } else if (target) {
+        const dmg = scaleDmg(ability.value);
+        applyDamage(target, dmg, events, unit, battle);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg });
+        if (!target.alive) killedAny = true;
+      }
+      // Si tue un ennemi : +1 ATK tour suivant
+      if (killedAny && unit.name === 'Salamandre Ardente') {
+        unit.permanentBonusAtk = (unit.permanentBonusAtk || 0) + 1;
+        unit.lastingAtkBuff = (unit.lastingAtkBuff || 0) + 1;
+        unit.lastingAtkTurns = 2;
+        events.push({ type: 'type_passive', desc: `${unit.name} s'enflamme ! +1 ATK (tour suivant)` });
+      }
+      break;
+    }
+    case 'ralliement_status': {
+      // Guerrier des Falaises : statut Ralliement (+1 ATK par Terre allie)
+      unit.ralliement = true;
+      const earthAllies = allAllies.filter(a => a.alive && a.element === ability.element && a !== unit).length;
+      unit.buffAtk += earthAllies * ability.value;
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Ralliement ! +${earthAllies} ATK (${earthAllies} Terre allies)` });
       break;
     }
     case 'ignore_def':
@@ -1327,6 +1427,20 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       }
       break;
     }
+    case 'buff_def_lasting': {
+      // Tortue des Rivieres : +DEF a un allie, dure jusqu'au prochain tour
+      const ally = allAllies.filter(a => a.alive && a !== unit)[0] || unit;
+      ally.permanentBonusDef = (ally.permanentBonusDef || 0) + ability.value;
+      ally.lastingDefBuff = (ally.lastingDefBuff || 0) + ability.value;
+      events.push({ type: 'ability', unit: unit.name, target: ally.name, ability: abilityName, desc: `+${ability.value} DEF a ${ally.name} (jusqu'au prochain tour)` });
+      break;
+    }
+    case 'reactive_armor': {
+      // Crabe de Maree : statut reactif — +1 DEF quand attaquee
+      unit.reactiveArmor = (unit.reactiveArmor || 0) + ability.value;
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${unit.name} active sa Carapace reactive !` });
+      break;
+    }
     case 'bounce_damage': {
       const target = pickTarget();
       if (target) {
@@ -1548,6 +1662,14 @@ function aiTurn(battle) {
       enemy.poisoned = 0;
       if (enemy.currentHp <= 0) { checkKO(enemy, events, battle); continue; }
     }
+    // Tick poison DOT ennemi
+    if (enemy.poisonDotTurns > 0 && enemy.poisonDot > 0) {
+      enemy.currentHp = Math.max(1, enemy.currentHp - enemy.poisonDot);
+      events.push({ type: 'poison_tick', unit: enemy.name, damage: enemy.poisonDot, desc: `Poison (${enemy.poisonDotTurns} tours restants)` });
+      enemy.poisonDotTurns--;
+      if (enemy.poisonDotTurns <= 0) enemy.poisonDot = 0;
+      if (enemy.currentHp <= 0) { checkKO(enemy, events, battle); continue; }
+    }
 
     // Fortification Guerrier ennemi
     if (enemy.type === 'guerrier' && !enemy.lowHpDefTriggered && enemy.currentHp / enemy.maxHp < 0.3) {
@@ -1590,8 +1712,10 @@ function aiTurn(battle) {
     }
     // Passif Salamandre Ardente ennemi
     if (enemy.name === 'Salamandre Ardente' && !target.alive) {
-      enemy.permanentBonusAtk += 1;
-      events.push({ type: 'type_passive', desc: `${enemy.name} s'enflamme ! +1 ATK` });
+      enemy.permanentBonusAtk = (enemy.permanentBonusAtk || 0) + 1;
+      enemy.lastingAtkBuff = (enemy.lastingAtkBuff || 0) + 1;
+      enemy.lastingAtkTurns = 2;
+      events.push({ type: 'type_passive', desc: `${enemy.name} s'enflamme ! +1 ATK (tour suivant)` });
     }
     // Passif Dragonnet de Braise ennemi
     if (!target.alive) {
@@ -1696,6 +1820,13 @@ function makeDeckFieldUnit(handCard, side) {
     graceUsed: false,
     lifestealPercent: 0,
     woundedBonus: 0,
+    reactiveArmor: 0,
+    lastingDefBuff: 0,
+    lastingAtkBuff: 0,
+    lastingAtkTurns: 0,
+    poisonDot: 0,
+    poisonDotTurns: 0,
+    ralliement: false,
   };
 }
 
@@ -1964,19 +2095,18 @@ function aiDeckTurn(battle) {
         }
       }
 
-      // Passif Sapeur de Terre : +1 ATK au deploy
+      // Passif Sapeur de Terre : +1 ATK jusqu'a fin du tour suivant
       if (unit.name === 'Sapeur de Terre') {
-        unit.buffAtk += 1;
-        events.push({ type: 'type_passive', desc: `${unit.name} se prepare ! +1 ATK ce tour` });
+        unit.permanentBonusAtk = (unit.permanentBonusAtk || 0) + 1;
+        unit.lastingAtkBuff = (unit.lastingAtkBuff || 0) + 1;
+        unit.lastingAtkTurns = 2;
+        events.push({ type: 'type_passive', desc: `${unit.name} se prepare ! +1 ATK (2 tours)` });
       }
 
-      // Passif Poisson Combattant : pas de summoning sickness si un ennemi a 2 PV ou moins
+      // Passif Poisson Combattant : pas de summoning sickness
       if (unit.name === 'Poisson Combattant') {
-        const weakTarget = getFieldAlive(battle.playerField).find(u => u.currentHp <= 2);
-        if (weakTarget) {
-          unit.justDeployed = false;
-          events.push({ type: 'type_passive', desc: `${unit.name} sent une proie faible ! Peut attaquer immediatement` });
-        }
+        unit.justDeployed = false;
+        events.push({ type: 'type_passive', desc: `${unit.name} pret au combat ! Peut attaquer immediatement` });
       }
 
       keepDeploying = true;
@@ -2110,23 +2240,15 @@ function aiDeckTurn(battle) {
     }
     // Passif Salamandre : +1 ATK si elle detruit un ennemi
     if (unit.name === 'Salamandre Ardente' && !target.alive) {
-      unit.permanentBonusAtk += 1;
-      events.push({ type: 'type_passive', desc: `${unit.name} s'enflamme ! +1 ATK` });
+      unit.permanentBonusAtk = (unit.permanentBonusAtk || 0) + 1;
+      unit.lastingAtkBuff = (unit.lastingAtkBuff || 0) + 1;
+      unit.lastingAtkTurns = 2;
+      events.push({ type: 'type_passive', desc: `${unit.name} s'enflamme ! +1 ATK (tour suivant)` });
     }
     // Feroce Bete
     if (!target.alive && unit.type === 'bete') {
       unit.permanentBonusAtk += 1;
       events.push({ type: 'type_passive', desc: `${unit.name} gagne en feroce ! +1 ATK` });
-    }
-
-    // Passif Serpent des Marees : renvoie la cible en main si elle survit
-    if (unit.name === 'Serpent des Marees' && target.alive && target.name !== 'Titan Originel') {
-      const targetIdx = battle.playerField.indexOf(target);
-      if (targetIdx !== -1) {
-        battle.playerField[targetIdx] = null;
-        battle.playerHand.push(makeHandCard(target));
-        events.push({ type: 'type_passive', desc: `${unit.name} renvoie ${target.name} en main !` });
-      }
     }
 
     // Passif Dragonnet de Braise : +1 ATK temporaire si une unite meurt
@@ -2201,12 +2323,13 @@ function generateEnemies(node) {
 // --- Middleware ---
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
-app.use(session({
+const sessionMiddleware = session({
   secret: 'gacha-secret-key-change-me',
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 24 * 60 * 60 * 1000 }
-}));
+});
+app.use(sessionMiddleware);
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) {
@@ -2597,6 +2720,13 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
     events.push({ type: 'poison_tick', unit: attacker.name, damage: attacker.poisoned });
     attacker.poisoned = 0;
   }
+  // Tick poison DOT joueur
+  if (attacker.poisonDotTurns > 0 && attacker.poisonDot > 0) {
+    attacker.currentHp = Math.max(1, attacker.currentHp - attacker.poisonDot);
+    events.push({ type: 'poison_tick', unit: attacker.name, damage: attacker.poisonDot, desc: `Poison (${attacker.poisonDotTurns} tours restants)` });
+    attacker.poisonDotTurns--;
+    if (attacker.poisonDotTurns <= 0) attacker.poisonDot = 0;
+  }
   // Fortification Guerrier
   if (attacker.type === 'guerrier' && !attacker.lowHpDefTriggered && attacker.currentHp / attacker.maxHp < 0.3) {
     attacker.permanentBonusDef += 2;
@@ -2638,8 +2768,10 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
       }
       // Passif Salamandre Ardente : +1 ATK si detruit un ennemi
       if (attacker.name === 'Salamandre Ardente' && !target.alive) {
-        attacker.permanentBonusAtk += 1;
-        events.push({ type: 'type_passive', desc: `${attacker.name} s'enflamme ! +1 ATK` });
+        attacker.permanentBonusAtk = (attacker.permanentBonusAtk || 0) + 1;
+        attacker.lastingAtkBuff = (attacker.lastingAtkBuff || 0) + 1;
+        attacker.lastingAtkTurns = 2;
+        events.push({ type: 'type_passive', desc: `${attacker.name} s'enflamme ! +1 ATK (tour suivant)` });
       }
       // Passif Dragonnet de Braise : +1 ATK temporaire si une unite meurt
       if (!target.alive) {
@@ -2667,6 +2799,25 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
     u.buffAtk = 0; u.buffDef = 0;
     u.marked = 0; u.counterDamage = 0;
     u.lifestealPercent = 0;
+    // Retirer buff Carapace marine (dure 1 tour)
+    if (u.lastingDefBuff > 0) {
+      u.permanentBonusDef = Math.max(0, (u.permanentBonusDef || 0) - u.lastingDefBuff);
+      u.lastingDefBuff = 0;
+    }
+    // Retirer buff Sapeur de Terre (dure N tours)
+    if (u.lastingAtkBuff > 0 && u.lastingAtkTurns !== undefined) {
+      u.lastingAtkTurns--;
+      if (u.lastingAtkTurns <= 0) {
+        u.permanentBonusAtk = Math.max(0, (u.permanentBonusAtk || 0) - u.lastingAtkBuff);
+        u.lastingAtkBuff = 0;
+      }
+    }
+    // Ralliement : recalculer +ATK par Terre allie
+    if (u.ralliement && u.alive) {
+      const allies = u.side === 'player' ? battle.playerTeam : battle.enemyTeam;
+      const earthCount = allies.filter(a => a.alive && a.element === 'terre' && a !== u).length;
+      u.buffAtk += earthCount;
+    }
   };
   battle.playerTeam.forEach(resetTurnBuffs);
   battle.enemyTeam.forEach(resetTurnBuffs);
@@ -2990,19 +3141,18 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
     }
   }
 
-  // Passif Sapeur de Terre : +1 ATK au deploy
+  // Passif Sapeur de Terre : +1 ATK jusqu'a fin du tour suivant
   if (unit.name === 'Sapeur de Terre') {
-    unit.buffAtk += 1;
-    events.push({ type: 'type_passive', desc: `${unit.name} se prepare ! +1 ATK ce tour` });
+    unit.permanentBonusAtk = (unit.permanentBonusAtk || 0) + 1;
+    unit.lastingAtkBuff = (unit.lastingAtkBuff || 0) + 1;
+    unit.lastingAtkTurns = 2;
+    events.push({ type: 'type_passive', desc: `${unit.name} se prepare ! +1 ATK (2 tours)` });
   }
 
-  // Passif Poisson Combattant : pas de summoning sickness si un ennemi a 2 PV ou moins
+  // Passif Poisson Combattant : pas de summoning sickness
   if (unit.name === 'Poisson Combattant') {
-    const weakEnemy = getFieldAlive(battle.enemyField).find(u => u.currentHp <= 2);
-    if (weakEnemy) {
-      unit.justDeployed = false;
-      events.push({ type: 'type_passive', desc: `${unit.name} sent une proie faible ! Peut attaquer immediatement` });
-    }
+    unit.justDeployed = false;
+    events.push({ type: 'type_passive', desc: `${unit.name} pret au combat ! Peut attaquer immediatement` });
   }
 
   res.json({ events, ...getDeckBattleSnapshot(battle) });
@@ -3054,8 +3204,10 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
 
   // Passif Salamandre : +1 ATK tour suivant si elle detruit un ennemi
   if (attacker.name === 'Salamandre Ardente' && !target.alive) {
-    attacker.permanentBonusAtk += 1;
-    events.push({ type: 'type_passive', desc: `${attacker.name} s'enflamme ! +1 ATK` });
+    attacker.permanentBonusAtk = (attacker.permanentBonusAtk || 0) + 1;
+    attacker.lastingAtkBuff = (attacker.lastingAtkBuff || 0) + 1;
+    attacker.lastingAtkTurns = 2;
+    events.push({ type: 'type_passive', desc: `${attacker.name} s'enflamme ! +1 ATK (tour suivant)` });
   }
 
   battle.attackedThisTurn.push(fieldSlot);
@@ -3070,13 +3222,6 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
   if (!target.alive && attacker.type === 'bete') {
     attacker.permanentBonusAtk += 1;
     events.push({ type: 'type_passive', desc: `${attacker.name} gagne en feroce ! +1 ATK` });
-  }
-
-  // Passif Serpent des Marees : renvoie la cible en main si elle survit
-  if (attacker.name === 'Serpent des Marees' && target.alive && target.name !== 'Titan Originel') {
-    battle.enemyField[targetSlot] = null;
-    battle.enemyHand.push(makeHandCard(target));
-    events.push({ type: 'type_passive', desc: `${attacker.name} renvoie ${target.name} en main !` });
   }
 
   // Passif Dragonnet de Braise : +1 ATK temporaire si une unite meurt ce tour
@@ -3302,6 +3447,13 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       unit.poisoned = 0;
       if (unit.currentHp <= 0) checkKO(unit, events, battle);
     }
+    if (unit.alive && unit.poisonDotTurns > 0 && unit.poisonDot > 0) {
+      unit.currentHp = Math.max(1, unit.currentHp - unit.poisonDot);
+      events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisonDot, desc: `Poison (${unit.poisonDotTurns} tours restants)` });
+      unit.poisonDotTurns--;
+      if (unit.poisonDotTurns <= 0) unit.poisonDot = 0;
+      if (unit.currentHp <= 0) checkKO(unit, events, battle);
+    }
   }
   cleanDeadFromField(battle.playerField);
 
@@ -3310,6 +3462,21 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
     unit.buffAtk = 0; unit.buffDef = 0;
     unit.marked = 0; unit.counterDamage = 0;
     unit.lifestealPercent = 0; unit.hasAttacked = false;
+    if (unit.lastingDefBuff > 0) {
+      unit.permanentBonusDef = Math.max(0, (unit.permanentBonusDef || 0) - unit.lastingDefBuff);
+      unit.lastingDefBuff = 0;
+    }
+    if (unit.lastingAtkBuff > 0 && unit.lastingAtkTurns !== undefined) {
+      unit.lastingAtkTurns--;
+      if (unit.lastingAtkTurns <= 0) {
+        unit.permanentBonusAtk = Math.max(0, (unit.permanentBonusAtk || 0) - unit.lastingAtkBuff);
+        unit.lastingAtkBuff = 0;
+      }
+    }
+    if (unit.ralliement && unit.alive) {
+      const earthCount = getFieldAlive(battle.playerField).filter(a => a.alive && a.element === 'terre' && a !== unit).length;
+      unit.buffAtk += earthCount;
+    }
   }
 
   if (checkDeckWin(battle)) {
@@ -3406,6 +3573,13 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       unit.poisoned = 0;
       if (unit.currentHp <= 0) checkKO(unit, events, battle);
     }
+    if (unit.alive && unit.poisonDotTurns > 0 && unit.poisonDot > 0) {
+      unit.currentHp = Math.max(1, unit.currentHp - unit.poisonDot);
+      events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisonDot, desc: `Poison (${unit.poisonDotTurns} tours restants)` });
+      unit.poisonDotTurns--;
+      if (unit.poisonDotTurns <= 0) unit.poisonDot = 0;
+      if (unit.currentHp <= 0) checkKO(unit, events, battle);
+    }
   }
   cleanDeadFromField(battle.enemyField);
 
@@ -3414,6 +3588,21 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
     unit.buffAtk = 0; unit.buffDef = 0;
     unit.marked = 0; unit.counterDamage = 0;
     unit.lifestealPercent = 0;
+    if (unit.lastingDefBuff > 0) {
+      unit.permanentBonusDef = Math.max(0, (unit.permanentBonusDef || 0) - unit.lastingDefBuff);
+      unit.lastingDefBuff = 0;
+    }
+    if (unit.lastingAtkBuff > 0 && unit.lastingAtkTurns !== undefined) {
+      unit.lastingAtkTurns--;
+      if (unit.lastingAtkTurns <= 0) {
+        unit.permanentBonusAtk = Math.max(0, (unit.permanentBonusAtk || 0) - unit.lastingAtkBuff);
+        unit.lastingAtkBuff = 0;
+      }
+    }
+    if (unit.ralliement && unit.alive) {
+      const earthCount = getFieldAlive(battle.enemyField).filter(a => a.alive && a.element === 'terre' && a !== unit).length;
+      unit.buffAtk += earthCount;
+    }
   }
 
   if (checkDeckWin(battle)) {
@@ -3692,20 +3881,20 @@ const STARTER_DECK = [
   { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
   { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
   // 3x Tortue des Rivieres (4 mana, eau)
-  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie ce tour',crystal_cost:1 },
-  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie ce tour',crystal_cost:1 },
-  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie ce tour',crystal_cost:1 },
+  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1 },
+  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1 },
+  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1 },
   // 3x Serpent des Marees (2 mana, eau)
-  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe rapide',ability_desc:'2 degats directs',crystal_cost:1 },
-  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe rapide',ability_desc:'2 degats directs',crystal_cost:1 },
-  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe rapide',ability_desc:'2 degats directs',crystal_cost:1 },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1 },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1 },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1 },
   // 3x Mage de Foudre (3 mana, eau)
-  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats a une cible',crystal_cost:1 },
-  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats a une cible',crystal_cost:1 },
-  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats a une cible',crystal_cost:1 },
+  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1 },
+  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1 },
+  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1 },
   // 2x Salamandre Ardente (3 mana, feu)
-  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat a un ennemi',crystal_cost:1 },
-  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat a un ennemi',crystal_cost:1 },
+  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat cible + adjacents',crystal_cost:1 },
+  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat cible + adjacents',crystal_cost:1 },
   // 2x Esprit des Forets (3 mana, terre)
   { name:'Esprit des Forets',emoji:'🌿',rarity:'rare',type:'creature',element:'terre',attack:1,defense:3,hp:4,mana_cost:3,ability_name:'Croissance',ability_desc:'+1 DEF equipe',crystal_cost:1.5 },
   { name:'Esprit des Forets',emoji:'🌿',rarity:'rare',type:'creature',element:'terre',attack:1,defense:3,hp:4,mana_cost:3,ability_name:'Croissance',ability_desc:'+1 DEF equipe',crystal_cost:1.5 },
@@ -3979,6 +4168,669 @@ app.post('/api/admin/restore', requireAdmin, (req, res) => {
   }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+// ============================================
+// PVP TEMPS REEL — Socket.io
+// ============================================
+
+const io = new Server(server);
+io.engine.use(sessionMiddleware);
+
+const pvpQueue = [];
+const pvpBattles = new Map();
+const userSocketMap = new Map();
+let pvpBattleIdCounter = 1;
+
+// --- Helpers PVP ---
+
+function getPvpSides(battle, side) {
+  const me = battle[side];
+  const oppSide = side === 'p1' ? 'p2' : 'p1';
+  const opp = battle[oppSide];
+  return { me, opp, oppSide };
+}
+
+function getPvpSnapshot(battle, side) {
+  const me = battle[side];
+  const oppSide = side === 'p1' ? 'p2' : 'p1';
+  const opp = battle[oppSide];
+  return {
+    battleId: battle.battleId,
+    turn: battle.turn,
+    phase: battle.currentTurn === side ? 'player_turn' : 'enemy_turn',
+    result: convertPvpResult(battle.result, side),
+    playerHand: me.hand,
+    playerField: me.field,
+    playerEnergy: me.energy,
+    playerMaxEnergy: me.maxEnergy,
+    playerCrystal: Math.round((me.crystal || 0) * 100) / 100,
+    playerMaxCrystal: me.maxCrystal || 2,
+    playerDeckCount: me.deck.length,
+    playerHp: me.hp,
+    playerMaxHp: me.maxHp,
+    enemyField: opp.field,
+    enemyHandCount: opp.hand.length,
+    enemyEnergy: opp.energy,
+    enemyMaxEnergy: opp.maxEnergy,
+    enemyCrystal: Math.round((opp.crystal || 0) * 100) / 100,
+    enemyMaxCrystal: opp.maxCrystal || 2,
+    enemyDeckCount: opp.deck.length,
+    enemyHp: opp.hp,
+    enemyMaxHp: opp.maxHp,
+    attackedThisTurn: me.attackedThisTurn || [],
+    isPvp: true,
+  };
+}
+
+function convertPvpResult(result, side) {
+  if (!result) return null;
+  if (result.winner === 'draw') return 'draw';
+  if (result.winner === side) return 'victory';
+  return 'defeat';
+}
+
+function checkPvpWin(battle) {
+  if (battle.p2.hp <= 0) { battle.result = { winner: 'p1' }; return true; }
+  if (battle.p1.hp <= 0) { battle.result = { winner: 'p2' }; return true; }
+  if (battle.turn > battle.maxTurns) {
+    if (battle.p1.hp > battle.p2.hp) battle.result = { winner: 'p1' };
+    else if (battle.p2.hp > battle.p1.hp) battle.result = { winner: 'p2' };
+    else battle.result = { winner: 'draw' };
+    return true;
+  }
+  return false;
+}
+
+function emitPvpUpdate(battle, actingSide, events) {
+  const oppSide = actingSide === 'p1' ? 'p2' : 'p1';
+  const actingSocket = userSocketMap.get(battle[actingSide].userId);
+  const oppSocket = userSocketMap.get(battle[oppSide].userId);
+
+  if (actingSocket && actingSocket.connected) {
+    actingSocket.emit('pvp:update', { events, ...getPvpSnapshot(battle, actingSide) });
+  }
+  const flipped = flipEventSides(events);
+  if (oppSocket && oppSocket.connected) {
+    oppSocket.emit('pvp:update', { events: flipped, ...getPvpSnapshot(battle, oppSide) });
+  }
+}
+
+function flipEventSides(events) {
+  return events.map(e => {
+    const f = { ...e };
+    if (f.type === 'deploy') f.type = 'enemy_deploy';
+    else if (f.type === 'enemy_deploy') f.type = 'deploy';
+    if (f.type === 'player_draw') { f.type = 'enemy_draw'; delete f.card; }
+    else if (f.type === 'enemy_draw') f.type = 'player_draw';
+    if (f.side === 'player') f.side = 'enemy';
+    else if (f.side === 'enemy') f.side = 'player';
+    return f;
+  });
+}
+
+function finalizePvpBattle(battle) {
+  for (const side of ['p1', 'p2']) {
+    const player = battle[side];
+    const oppSide = side === 'p1' ? 'p2' : 'p1';
+    let reward = 0, result;
+
+    if (!battle.result) { result = 'draw'; reward = 50; }
+    else if (battle.result.winner === 'draw') { result = 'draw'; reward = 50; }
+    else if (battle.result.winner === side) { result = 'victory'; reward = 200; }
+    else { result = 'defeat'; reward = 25; }
+
+    try {
+      db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(reward, player.userId);
+      db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)')
+        .run(player.userId, 'pvp_realtime', battle[oppSide].username, result, reward);
+    } catch(e) { console.error('[PVP] DB error:', e.message); }
+
+    const sock = userSocketMap.get(player.userId);
+    if (sock && sock.connected) {
+      sock.emit('pvp:battle-end', { result, reward });
+      sock.pvpBattleId = null;
+      sock.pvpSide = null;
+    }
+  }
+  setTimeout(() => pvpBattles.delete(battle.battleId), 60000);
+}
+
+function applyPvpDeployPassives(unit, myField, events) {
+  if (unit.element === 'eau') {
+    const tortueCount = getFieldAlive(myField).filter(u => u.name === 'Tortue des Rivieres' && u !== unit).length;
+    if (tortueCount > 0) {
+      unit.maxHp += tortueCount;
+      unit.currentHp += tortueCount;
+      events.push({ type: 'type_passive', desc: `Tortue des Rivieres : +${tortueCount} PV max a ${unit.name}` });
+    }
+  }
+  if (unit.name === 'Sapeur de Terre') {
+    unit.permanentBonusAtk = (unit.permanentBonusAtk || 0) + 1;
+    unit.lastingAtkBuff = (unit.lastingAtkBuff || 0) + 1;
+    unit.lastingAtkTurns = 2;
+    events.push({ type: 'type_passive', desc: `${unit.name} se prepare ! +1 ATK (2 tours)` });
+  }
+  if (unit.name === 'Poisson Combattant') {
+    unit.justDeployed = false;
+    events.push({ type: 'type_passive', desc: `${unit.name} pret au combat ! Peut attaquer immediatement` });
+  }
+}
+
+function applyTurnStartPassives(activeField, oppField, events) {
+  // Divin aura
+  const divinCount = getFieldAlive(activeField).filter(u => u.type === 'divin').length;
+  if (divinCount > 0) {
+    getFieldAlive(activeField).forEach(u => { u.currentHp = Math.min(u.maxHp, u.currentHp + divinCount); });
+    events.push({ type: 'type_passive', desc: `Aura divine : +${divinCount} PV` });
+  }
+  // Esprit des Forets
+  const espritCount = getFieldAlive(activeField).filter(u => u.name === 'Esprit des Forets').length;
+  if (espritCount > 0) {
+    getFieldAlive(activeField).filter(u => u.element === 'terre').forEach(u => { u.buffDef += espritCount; });
+    events.push({ type: 'type_passive', desc: `Esprit des Forets : +${espritCount} DEF aux Terre` });
+  }
+  // Eclaireur des Dunes
+  const aliveUnits = getFieldAlive(activeField);
+  aliveUnits.filter(u => u.name === 'Eclaireur des Dunes').forEach(u => {
+    if (aliveUnits.length === 1) { u.buffDef += 2; events.push({ type: 'type_passive', desc: `${u.name} est seule ! +2 DEF` }); }
+  });
+  // Phoenix Ancestral
+  const phoenixCount = getFieldAlive(activeField).filter(u => u.name === 'Phoenix Ancestral').length;
+  if (phoenixCount > 0) {
+    getFieldAlive(oppField).forEach(u => {
+      u.currentHp = Math.max(0, u.currentHp - phoenixCount);
+      if (u.currentHp <= 0) checkKO(u, events, { deadTempCards: [] });
+    });
+    cleanDeadFromField(oppField);
+    events.push({ type: 'type_passive', desc: `Phoenix Ancestral : ${phoenixCount} degat(s) aux ennemis` });
+  }
+  // Leviathan Abyssal
+  const leviathanCount = getFieldAlive(activeField).filter(u => u.name === 'Leviathan Abyssal').length;
+  if (leviathanCount > 0) {
+    getFieldAlive(activeField).filter(u => u.element === 'eau').forEach(u => { u.buffAtk += leviathanCount; });
+    events.push({ type: 'type_passive', desc: `Leviathan Abyssal : +${leviathanCount} ATK aux Eau` });
+  }
+  // Pretresse Solaire
+  const pretresseCount = getFieldAlive(activeField).filter(u => u.name === 'Pretresse Solaire').length;
+  if (pretresseCount > 0) {
+    for (let i = 0; i < pretresseCount; i++) {
+      const wounded = getFieldAlive(activeField).filter(u => u.currentHp < u.maxHp).sort((a, b) => a.currentHp - b.currentHp)[0];
+      if (wounded) { wounded.currentHp = Math.min(wounded.maxHp, wounded.currentHp + 1); events.push({ type: 'type_passive', desc: `Pretresse Solaire soigne ${wounded.name} de 1 PV` }); }
+    }
+  }
+}
+
+function tryMatchPlayers() {
+  while (pvpQueue.length >= 2) {
+    const p1 = pvpQueue.shift();
+    const p2 = pvpQueue.shift();
+    const s1 = userSocketMap.get(p1.userId);
+    const s2 = userSocketMap.get(p2.userId);
+    if (!s1 || !s1.connected) { pvpQueue.unshift(p2); continue; }
+    if (!s2 || !s2.connected) { pvpQueue.unshift(p1); continue; }
+    createPvpBattle(p1, p2);
+  }
+}
+
+function createPvpBattle(p1Data, p2Data) {
+  const battleId = 'pvp_' + (pvpBattleIdCounter++);
+
+  const p1Deck = shuffleArray(p1Data.playerCards.map(c => makeHandCard(c)));
+  const p2Deck = shuffleArray(p2Data.playerCards.map(c => makeHandCard(c)));
+  const p1Hand = p1Deck.splice(0, 5);
+  const p2Hand = p2Deck.splice(0, 5);
+  const firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
+
+  const state = {
+    battleId,
+    isPvp: true,
+    isDeckBattle: true,
+    turn: 1,
+    maxTurns: 20,
+    currentTurn: firstPlayer,
+    p1: {
+      userId: p1Data.userId, username: p1Data.username,
+      deck: p1Deck, hand: p1Hand, field: [null, null, null],
+      energy: getManaForTurn(1), maxEnergy: getManaForTurn(1),
+      crystal: 0, crystalRate: 0.3, maxCrystal: 2,
+      hp: 20, maxHp: 20, attackedThisTurn: [],
+    },
+    p2: {
+      userId: p2Data.userId, username: p2Data.username,
+      deck: p2Deck, hand: p2Hand, field: [null, null, null],
+      energy: getManaForTurn(1), maxEnergy: getManaForTurn(1),
+      crystal: 0, crystalRate: 0.3, maxCrystal: 2,
+      hp: 20, maxHp: 20, attackedThisTurn: [],
+    },
+    result: null,
+    deadTempCards: [],
+    lastAction: Date.now(),
+  };
+
+  pvpBattles.set(battleId, state);
+
+  const s1 = userSocketMap.get(p1Data.userId);
+  const s2 = userSocketMap.get(p2Data.userId);
+  s1.pvpBattleId = battleId; s1.pvpSide = 'p1';
+  s2.pvpBattleId = battleId; s2.pvpSide = 'p2';
+  s1.join(battleId);
+  s2.join(battleId);
+
+  s1.emit('pvp:battle-start', {
+    ...getPvpSnapshot(state, 'p1'),
+    opponentName: p2Data.username,
+    myTurn: firstPlayer === 'p1',
+  });
+  s2.emit('pvp:battle-start', {
+    ...getPvpSnapshot(state, 'p2'),
+    opponentName: p1Data.username,
+    myTurn: firstPlayer === 'p2',
+  });
+
+  console.log(`[PVP] Match: ${p1Data.username} vs ${p2Data.username} (${battleId})`);
+}
+
+function handlePvpDisconnect(userId) {
+  for (const [battleId, battle] of pvpBattles) {
+    if (battle.result) continue;
+    let disconnectedSide = null;
+    if (battle.p1.userId === userId) disconnectedSide = 'p1';
+    if (battle.p2.userId === userId) disconnectedSide = 'p2';
+    if (disconnectedSide) {
+      battle.disconnectTimer = setTimeout(() => {
+        const winnerSide = disconnectedSide === 'p1' ? 'p2' : 'p1';
+        battle.result = { winner: winnerSide };
+        finalizePvpBattle(battle);
+      }, 30000);
+      const oppSide = disconnectedSide === 'p1' ? 'p2' : 'p1';
+      const oppSocket = userSocketMap.get(battle[oppSide].userId);
+      if (oppSocket) oppSocket.emit('pvp:opponent-disconnected', { timeout: 30 });
+      break;
+    }
+  }
+}
+
+// --- Socket.io Connection ---
+
+io.on('connection', (socket) => {
+  const sess = socket.request.session;
+  if (!sess || !sess.userId) { socket.disconnect(); return; }
+  const userId = sess.userId;
+  userSocketMap.set(userId, socket);
+
+  // Check reconnection to active PVP battle
+  for (const [battleId, battle] of pvpBattles) {
+    if (battle.result) continue;
+    let side = null;
+    if (battle.p1.userId === userId) side = 'p1';
+    if (battle.p2.userId === userId) side = 'p2';
+    if (side) {
+      socket.pvpBattleId = battleId;
+      socket.pvpSide = side;
+      socket.join(battleId);
+      if (battle.disconnectTimer) { clearTimeout(battle.disconnectTimer); battle.disconnectTimer = null; }
+      socket.emit('pvp:reconnect', { ...getPvpSnapshot(battle, side), opponentName: battle[side === 'p1' ? 'p2' : 'p1'].username, myTurn: battle.currentTurn === side });
+      const oppSide = side === 'p1' ? 'p2' : 'p1';
+      const oppSocket = userSocketMap.get(battle[oppSide].userId);
+      if (oppSocket) oppSocket.emit('pvp:opponent-reconnected');
+      break;
+    }
+  }
+
+  socket.on('disconnect', () => {
+    const qIdx = pvpQueue.findIndex(p => p.userId === userId);
+    if (qIdx !== -1) pvpQueue.splice(qIdx, 1);
+    handlePvpDisconnect(userId);
+    userSocketMap.delete(userId);
+  });
+
+  // --- Matchmaking ---
+
+  socket.on('pvp:join-queue', ({ deckId }) => {
+    if (pvpQueue.some(p => p.userId === userId)) { socket.emit('pvp:error', { message: 'Deja en file' }); return; }
+
+    let playerCards;
+    if (deckId === 'starter') {
+      playerCards = STARTER_DECK.map(c => ({ ...c }));
+    } else {
+      const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(deckId, userId);
+      if (!deck) { socket.emit('pvp:error', { message: 'Deck introuvable' }); return; }
+      const cards = db.prepare(`SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.* FROM deck_cards dc JOIN user_cards uc ON dc.user_card_id = uc.id JOIN cards c ON uc.card_id = c.id WHERE dc.deck_id = ? ORDER BY dc.position`).all(deck.id);
+      if (cards.length !== 20) { socket.emit('pvp:error', { message: 'Deck incomplet (20 cartes)' }); return; }
+      playerCards = cards;
+    }
+
+    const user = db.prepare('SELECT username, display_name FROM users WHERE id = ?').get(userId);
+    pvpQueue.push({ userId, username: user.display_name || user.username, deckId, playerCards, socketId: socket.id, joinedAt: Date.now() });
+    socket.emit('pvp:queued');
+    tryMatchPlayers();
+  });
+
+  socket.on('pvp:leave-queue', () => {
+    const idx = pvpQueue.findIndex(p => p.userId === userId);
+    if (idx !== -1) pvpQueue.splice(idx, 1);
+  });
+
+  // --- PVP Battle Actions ---
+
+  socket.on('pvp:deploy', ({ handIndex, fieldSlot }) => {
+    const battle = pvpBattles.get(socket.pvpBattleId);
+    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
+    const { me } = getPvpSides(battle, socket.pvpSide);
+
+    const card = me.hand[handIndex];
+    if (!card || card.type === 'objet') return;
+    if (fieldSlot < 0 || fieldSlot > 2) return;
+    if (me.field[fieldSlot] && me.field[fieldSlot].alive) return;
+    if (card.mana_cost > me.energy) return;
+
+    me.hand.splice(handIndex, 1);
+    me.field[fieldSlot] = null;
+    const unit = makeDeckFieldUnit(card, 'player');
+    unit.justDeployed = true;
+    me.field[fieldSlot] = unit;
+    me.energy -= card.mana_cost;
+
+    const events = [{ type: 'deploy', slot: fieldSlot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost }];
+    applyPvpDeployPassives(unit, me.field, events);
+    battle.lastAction = Date.now();
+    emitPvpUpdate(battle, socket.pvpSide, events);
+  });
+
+  socket.on('pvp:attack-card', ({ fieldSlot, targetSlot }) => {
+    const battle = pvpBattles.get(socket.pvpBattleId);
+    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
+    const { me, opp } = getPvpSides(battle, socket.pvpSide);
+
+    const attacker = me.field[fieldSlot];
+    if (!attacker || !attacker.alive || attacker.stunned || attacker.justDeployed) return;
+    if (me.attackedThisTurn.includes(fieldSlot)) return;
+    if (me.energy < 1) return;
+    const target = opp.field[targetSlot];
+    if (!target || !target.alive) return;
+
+    me.energy -= 1;
+    const events = [];
+
+    // Fortification Guerrier
+    if (attacker.type === 'guerrier' && !attacker.lowHpDefTriggered && attacker.currentHp / attacker.maxHp < 0.3) {
+      attacker.permanentBonusDef += 2; attacker.lowHpDefTriggered = true;
+      events.push({ type: 'type_passive', desc: `${attacker.name} active Fortification ! +2 DEF` });
+    }
+
+    const packBonus = getPackBonus(me.field, attacker);
+    attacker.permanentBonusAtk += packBonus;
+    const dmg = calcDamage(attacker, target, false, me.field);
+    attacker.permanentBonusAtk -= packBonus;
+
+    applyDamage(target, dmg, events, attacker, battle);
+    events.push({ type: 'attack', attacker: attacker.name, attackerSlot: fieldSlot, target: target.name, targetSlot, damage: dmg, side: 'player' });
+
+    if (attacker.name === 'Salamandre Ardente' && !target.alive) {
+      attacker.permanentBonusAtk = (attacker.permanentBonusAtk || 0) + 1;
+      attacker.lastingAtkBuff = (attacker.lastingAtkBuff || 0) + 1; attacker.lastingAtkTurns = 2;
+      events.push({ type: 'type_passive', desc: `${attacker.name} s'enflamme ! +1 ATK` });
+    }
+
+    me.attackedThisTurn.push(fieldSlot);
+
+    if (attacker.lifestealPercent > 0) {
+      const healed = Math.floor(dmg * attacker.lifestealPercent / 100);
+      attacker.currentHp = Math.min(attacker.maxHp, attacker.currentHp + healed);
+      events.push({ type: 'ability_heal', unit: attacker.name, target: attacker.name, ability: 'Vampirisme', heal: healed });
+    }
+    if (!target.alive && attacker.type === 'bete') {
+      attacker.permanentBonusAtk += 1;
+      events.push({ type: 'type_passive', desc: `${attacker.name} gagne en feroce ! +1 ATK` });
+    }
+    if (!target.alive) {
+      getFieldAlive(me.field).filter(u => u.name === 'Dragonnet de Braise').forEach(u => {
+        u.buffAtk += 1; events.push({ type: 'type_passive', desc: `${u.name} s'embrase ! +1 ATK` });
+      });
+    }
+    if (!target.alive && attacker.name === 'Requin des Profondeurs' && attacker.alive) {
+      const idx = me.attackedThisTurn.indexOf(fieldSlot);
+      if (idx !== -1) { me.attackedThisTurn.splice(idx, 1); events.push({ type: 'type_passive', desc: `${attacker.name} sent le sang ! Peut attaquer a nouveau` }); }
+    }
+
+    cleanDeadFromField(opp.field);
+    checkPvpWin(battle);
+    battle.lastAction = Date.now();
+    emitPvpUpdate(battle, socket.pvpSide, events);
+    if (battle.result) finalizePvpBattle(battle);
+  });
+
+  socket.on('pvp:attack-avatar', ({ fieldSlot }) => {
+    const battle = pvpBattles.get(socket.pvpBattleId);
+    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
+    const { me, opp } = getPvpSides(battle, socket.pvpSide);
+
+    const attacker = me.field[fieldSlot];
+    if (!attacker || !attacker.alive || attacker.stunned || attacker.justDeployed) return;
+    if (me.attackedThisTurn.includes(fieldSlot) || me.energy < 1) return;
+    if (getFieldAlive(opp.field).length > 0) return;
+
+    me.energy -= 1;
+    const totalAtk = attacker.effectiveStats.attack + (attacker.buffAtk || 0) + (attacker.permanentBonusAtk || 0);
+    const dmg = Math.max(1, totalAtk);
+    opp.hp = Math.max(0, opp.hp - dmg);
+    me.attackedThisTurn.push(fieldSlot);
+
+    const events = [{ type: 'avatar_damage', attacker: attacker.name, damage: dmg, targetHp: opp.hp, side: 'player' }];
+    checkPvpWin(battle);
+    battle.lastAction = Date.now();
+    emitPvpUpdate(battle, socket.pvpSide, events);
+    if (battle.result) finalizePvpBattle(battle);
+  });
+
+  socket.on('pvp:use-ability', ({ fieldSlot, targetSlot }) => {
+    const battle = pvpBattles.get(socket.pvpBattleId);
+    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
+    const { me, opp } = getPvpSides(battle, socket.pvpSide);
+
+    const unit = me.field[fieldSlot];
+    if (!unit || !unit.alive || unit.usedAbility || unit.stunned) return;
+    const crystalCost = unit.crystal_cost || 1;
+    if ((me.crystal || 0) < crystalCost) return;
+    const ability = ABILITY_MAP[unit.ability_name];
+    if (!ability) return;
+
+    const myAlive = getFieldAlive(me.field);
+    const oppAlive = getFieldAlive(opp.field);
+    let targets = oppAlive;
+    if (targetSlot !== undefined && targetSlot !== null) {
+      const t = opp.field[targetSlot];
+      if (t && t.alive) targets = [t];
+    }
+
+    const events = resolveAbility(unit, targets, myAlive, oppAlive, battle);
+    me.crystal -= crystalCost;
+    cleanDeadFromField(opp.field);
+    cleanDeadFromField(me.field);
+    checkPvpWin(battle);
+    battle.lastAction = Date.now();
+    emitPvpUpdate(battle, socket.pvpSide, events);
+    if (battle.result) finalizePvpBattle(battle);
+  });
+
+  socket.on('pvp:use-ability-avatar', ({ fieldSlot }) => {
+    const battle = pvpBattles.get(socket.pvpBattleId);
+    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
+    const { me, opp } = getPvpSides(battle, socket.pvpSide);
+
+    const unit = me.field[fieldSlot];
+    if (!unit || !unit.alive || unit.usedAbility || unit.stunned) return;
+    const crystalCost = unit.crystal_cost || 1;
+    if ((me.crystal || 0) < crystalCost) return;
+    if (getFieldAlive(opp.field).length > 0) return;
+    const ability = ABILITY_MAP[unit.ability_name];
+    if (!ability) return;
+
+    let dmg = 0;
+    const events = [];
+    if (['direct_damage', 'direct_damage_ignore_def', 'aoe_damage', 'ignore_def'].includes(ability.type)) {
+      dmg = ability.value || 1;
+    } else if (ability.type === 'sacrifice') {
+      unit.currentHp = Math.max(1, unit.currentHp - Math.floor(unit.maxHp * ability.selfPercent / 100));
+      dmg = ability.value || 3;
+    } else {
+      const myAlive = getFieldAlive(me.field);
+      const abilityEvents = resolveAbility(unit, [], myAlive, [], battle);
+      me.crystal -= crystalCost;
+      emitPvpUpdate(battle, socket.pvpSide, abilityEvents);
+      return;
+    }
+
+    opp.hp = Math.max(0, opp.hp - dmg);
+    me.crystal -= crystalCost;
+    unit.usedAbility = true;
+    events.push({ type: 'ability', unit: unit.name, ability: unit.ability_name, desc: unit.ability_desc });
+    events.push({ type: 'avatar_damage', attacker: unit.name, damage: dmg, targetHp: opp.hp, side: 'player' });
+    checkPvpWin(battle);
+    battle.lastAction = Date.now();
+    emitPvpUpdate(battle, socket.pvpSide, events);
+    if (battle.result) finalizePvpBattle(battle);
+  });
+
+  socket.on('pvp:use-item', ({ handIndex, targetSlot, targetSide }) => {
+    const battle = pvpBattles.get(socket.pvpBattleId);
+    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
+    const { me, opp } = getPvpSides(battle, socket.pvpSide);
+
+    const item = me.hand[handIndex];
+    if (!item || item.type !== 'objet') return;
+    if (item.mana_cost > me.energy) return;
+    const effect = ITEM_EFFECTS[item.ability_name];
+    if (!effect) return;
+
+    const myAlive = getFieldAlive(me.field);
+    const oppAlive = getFieldAlive(opp.field);
+    let target = null;
+    if (effect.target === 'ally' && targetSlot !== undefined) {
+      target = me.field[targetSlot];
+      if (!target || !target.alive) return;
+    } else if (effect.target === 'enemy' && targetSlot !== undefined) {
+      target = opp.field[targetSlot];
+      if (!target || !target.alive) return;
+    }
+
+    const events = [];
+    resolveItemEffect(item, target, myAlive, oppAlive, events, battle);
+    if (effect.type === 'add_crystal') {
+      me.crystal = Math.min(me.maxCrystal, (me.crystal || 0) + effect.value);
+    }
+    me.hand.splice(handIndex, 1);
+    me.energy -= item.mana_cost;
+    cleanDeadFromField(opp.field);
+    cleanDeadFromField(me.field);
+    checkPvpWin(battle);
+    battle.lastAction = Date.now();
+    emitPvpUpdate(battle, socket.pvpSide, events);
+    if (battle.result) finalizePvpBattle(battle);
+  });
+
+  socket.on('pvp:end-turn', () => {
+    const battle = pvpBattles.get(socket.pvpBattleId);
+    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
+    const side = socket.pvpSide;
+    const { me, opp, oppSide } = getPvpSides(battle, side);
+    const events = [];
+
+    // 1. Poison ticks on current player's field
+    for (const unit of getFieldAlive(me.field)) {
+      if (unit.poisoned > 0) {
+        unit.currentHp = Math.max(1, unit.currentHp - unit.poisoned);
+        events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisoned });
+        unit.poisoned = 0;
+        if (unit.currentHp <= 0) checkKO(unit, events, battle);
+      }
+      if (unit.alive && unit.poisonDotTurns > 0 && unit.poisonDot > 0) {
+        unit.currentHp = Math.max(1, unit.currentHp - unit.poisonDot);
+        events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisonDot, desc: `Poison (${unit.poisonDotTurns} tours)` });
+        unit.poisonDotTurns--;
+        if (unit.poisonDotTurns <= 0) unit.poisonDot = 0;
+        if (unit.currentHp <= 0) checkKO(unit, events, battle);
+      }
+    }
+    cleanDeadFromField(me.field);
+
+    // 2. Reset temp buffs
+    for (const unit of getFieldAlive(me.field)) {
+      unit.buffAtk = 0; unit.buffDef = 0;
+      unit.marked = 0; unit.counterDamage = 0;
+      unit.lifestealPercent = 0; unit.hasAttacked = false;
+      if (unit.lastingDefBuff > 0) {
+        unit.permanentBonusDef = Math.max(0, (unit.permanentBonusDef || 0) - unit.lastingDefBuff);
+        unit.lastingDefBuff = 0;
+      }
+      if (unit.lastingAtkBuff > 0 && unit.lastingAtkTurns !== undefined) {
+        unit.lastingAtkTurns--;
+        if (unit.lastingAtkTurns <= 0) { unit.permanentBonusAtk = Math.max(0, (unit.permanentBonusAtk || 0) - unit.lastingAtkBuff); unit.lastingAtkBuff = 0; }
+      }
+      if (unit.ralliement && unit.alive) {
+        const earthCount = getFieldAlive(me.field).filter(a => a.alive && a.element === 'terre' && a !== unit).length;
+        unit.buffAtk += earthCount;
+      }
+    }
+
+    if (checkPvpWin(battle)) {
+      emitPvpUpdate(battle, side, events);
+      finalizePvpBattle(battle);
+      return;
+    }
+
+    // 3. Switch to opponent's turn
+    battle.currentTurn = oppSide;
+    battle.turn++;
+
+    // Clear summoning sickness
+    for (const unit of getFieldAlive(opp.field)) { unit.justDeployed = false; }
+
+    // Opponent energy
+    opp.maxEnergy = getManaForTurn(battle.turn);
+    opp.energy = opp.maxEnergy;
+    opp.crystal = Math.min(opp.maxCrystal, (opp.crystal || 0) + (opp.crystalRate || 0.3));
+    opp.attackedThisTurn = [];
+
+    // Opponent draws
+    if (opp.hand.length < 7 && opp.deck.length > 0) {
+      opp.hand.push(opp.deck.shift());
+      events.push({ type: 'enemy_draw' });
+    }
+
+    // Turn-start passives for opponent
+    applyTurnStartPassives(opp.field, me.field, events);
+
+    if (checkPvpWin(battle)) {
+      emitPvpUpdate(battle, side, events);
+      finalizePvpBattle(battle);
+      return;
+    }
+
+    battle.lastAction = Date.now();
+    emitPvpUpdate(battle, side, events);
+
+    const oppSocket = userSocketMap.get(opp.userId);
+    if (oppSocket && oppSocket.connected) oppSocket.emit('pvp:your-turn');
+  });
+
+  socket.on('pvp:surrender', () => {
+    const battle = pvpBattles.get(socket.pvpBattleId);
+    if (!battle || battle.result) return;
+    const winnerSide = socket.pvpSide === 'p1' ? 'p2' : 'p1';
+    battle.result = { winner: winnerSide };
+    emitPvpUpdate(battle, socket.pvpSide, [{ type: 'surrender', side: 'player' }]);
+    finalizePvpBattle(battle);
+  });
+});
+
+// Cleanup stale PVP battles
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, battle] of pvpBattles) {
+    if (now - battle.lastAction > 30 * 60 * 1000) pvpBattles.delete(id);
+  }
+}, 5 * 60 * 1000);
+
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Gacha Game lance sur http://0.0.0.0:${PORT}`);
 });

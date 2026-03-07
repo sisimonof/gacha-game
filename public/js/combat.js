@@ -1,17 +1,21 @@
-// combat.js — Combat hub with deck selection + PvP launch
+// combat.js — Combat hub: IA vs PVP mode selection
 
 let myDecks = [];
+let searchMode = null; // 'ia' or 'pvp'
+let pvpSocket = null;
+let searchTimer = null;
+let searchStartTime = null;
 
 async function init() {
   const res = await fetch('/api/me');
   if (!res.ok) { window.location.href = '/'; return; }
 
-  // Preload decks
   const deckRes = await fetch('/api/decks');
   if (deckRes.ok) myDecks = await deckRes.json();
 }
 
-function showDeckSelect() {
+function showDeckSelect(mode) {
+  searchMode = mode;
   const overlay = document.getElementById('deck-select-overlay');
   const list = document.getElementById('deck-select-list');
 
@@ -42,40 +46,78 @@ function hideDeckSelect() {
 
 async function startBattle(deckId) {
   hideDeckSelect();
-  showLoading();
 
-  try {
-    const res = await fetch('/api/battle/start-deck', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deckId })
-    });
-    const data = await res.json();
-    if (!res.ok) {
+  if (searchMode === 'ia') {
+    // Existing AI battle flow
+    showLoading();
+    try {
+      const res = await fetch('/api/battle/start-deck', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deckId })
+      });
+      const data = await res.json();
+      if (!res.ok) { hideLoading(); alert(data.error); return; }
+
+      sessionStorage.setItem('deckBattleData', JSON.stringify(data));
+      sessionStorage.setItem('opponentName', data.opponentName || '???');
+      sessionStorage.setItem('battleMode', 'ia');
+      window.location.href = '/battle';
+    } catch {
       hideLoading();
-      alert(data.error);
-      return;
+      alert('Erreur reseau');
     }
-
-    // Store battle data and go to battle page
-    sessionStorage.setItem('deckBattleData', JSON.stringify(data));
-    sessionStorage.setItem('opponentName', data.opponentName || '???');
-    window.location.href = '/battle';
-  } catch {
-    hideLoading();
-    alert('Erreur reseau');
+  } else if (searchMode === 'pvp') {
+    startPvpSearch(deckId);
   }
 }
 
-async function startBattleStarter() {
-  await startBattle('starter');
+function startPvpSearch(deckId) {
+  document.getElementById('pvp-searching').classList.remove('hidden');
+  searchStartTime = Date.now();
+
+  searchTimer = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - searchStartTime) / 1000);
+    const min = Math.floor(elapsed / 60);
+    const sec = elapsed % 60;
+    document.getElementById('pvp-timer').textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+  }, 1000);
+
+  pvpSocket = io();
+
+  pvpSocket.on('connect', () => {
+    pvpSocket.emit('pvp:join-queue', { deckId });
+  });
+
+  pvpSocket.on('pvp:queued', () => {
+    // Searching...
+  });
+
+  pvpSocket.on('pvp:battle-start', (data) => {
+    clearInterval(searchTimer);
+    sessionStorage.setItem('deckBattleData', JSON.stringify(data));
+    sessionStorage.setItem('opponentName', data.opponentName || '???');
+    sessionStorage.setItem('battleMode', 'pvp');
+    window.location.href = '/battle';
+  });
+
+  pvpSocket.on('pvp:error', ({ message }) => {
+    alert(message);
+    cancelPvpSearch();
+  });
 }
 
-function showLoading() {
-  document.getElementById('combat-loading').classList.remove('hidden');
+function cancelPvpSearch() {
+  if (searchTimer) { clearInterval(searchTimer); searchTimer = null; }
+  if (pvpSocket) {
+    pvpSocket.emit('pvp:leave-queue');
+    pvpSocket.disconnect();
+    pvpSocket = null;
+  }
+  document.getElementById('pvp-searching').classList.add('hidden');
 }
-function hideLoading() {
-  document.getElementById('combat-loading').classList.add('hidden');
-}
+
+function showLoading() { document.getElementById('combat-loading').classList.remove('hidden'); }
+function hideLoading() { document.getElementById('combat-loading').classList.add('hidden'); }
 
 init();
