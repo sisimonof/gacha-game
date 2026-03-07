@@ -108,11 +108,12 @@ db.exec(`
 {
   const adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
   if (!adminUser) {
-    const hash = bcrypt.hashSync('admin123321', 10);
+    const hash = bcrypt.hashSync('Gx$9kL#mQ2vR7!', 10);
     db.prepare('INSERT INTO users (username, password, credits, is_admin) VALUES (?, ?, 999999, 1)').run('admin', hash);
-    console.log('Compte admin cree (admin / admin123321)');
+    console.log('Compte admin cree');
   } else {
-    db.prepare('UPDATE users SET is_admin = 1 WHERE username = ?').run('admin');
+    const newHash = bcrypt.hashSync('Gx$9kL#mQ2vR7!', 10);
+    db.prepare('UPDATE users SET is_admin = 1, password = ? WHERE username = ?').run(newHash, 'admin');
   }
 }
 
