@@ -2379,11 +2379,19 @@ function requireAuth(req, res, next) {
 }
 
 // --- Routes AUTH ---
+app.post('/api/check-username', (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'Champs requis' });
+  const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  res.json({ exists: !!existing });
+});
+
 app.post('/api/register', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ error: 'Champs requis' });
   if (username.length < 3 || username.length > 20) return res.status(400).json({ error: 'Pseudo: 3-20 caracteres' });
-  if (password.length < 4) return res.status(400).json({ error: 'Mot de passe: 4 caracteres min' });
+  if (password.length < 6) return res.status(400).json({ error: 'Mot de passe: 6 caracteres min' });
+  if (!/[A-Z]/.test(password)) return res.status(400).json({ error: 'Mot de passe: 1 majuscule requise' });
 
   const existing = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
   if (existing) return res.status(409).json({ error: 'Pseudo deja pris' });

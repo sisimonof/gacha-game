@@ -6,53 +6,30 @@
   <title>GACHA CARDS - Connexion</title>
   <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-  <div class="crt-screen">
-    <div class="auth-container">
-      <h1 class="auth-title">GACHA CARDS</h1>
-      <p class="auth-subtitle">- Terminal d'accès -</p>
+<body class="intro-page">
+  <div class="intro-scanlines"></div>
 
-      <!-- Onglets -->
-      <div class="tab-container">
-        <button class="tab-btn active" data-tab="login">CONNEXION</button>
-        <button class="tab-btn" data-tab="register">INSCRIPTION</button>
-      </div>
+  <!-- PHASE 1 : Ecran titre -->
+  <div class="auth-title-screen" id="title-screen">
+    <h1 class="auth-title-big" data-text="GACHA CARDS">GACHA CARDS</h1>
+    <button class="auth-enter-btn" id="enter-btn">ENTRER</button>
+  </div>
 
-      <!-- Formulaire Connexion -->
-      <form id="login-form" class="form-panel active">
-        <div class="form-group">
-          <label>Identifiant :</label>
-          <input type="text" id="login-username" placeholder="Entrez votre pseudo..." autocomplete="username">
-        </div>
-        <div class="form-group">
-          <label>Mot de passe :</label>
-          <input type="password" id="login-password" placeholder="Entrez votre mot de passe..." autocomplete="current-password">
-        </div>
-        <button type="submit" class="submit-btn">> SE CONNECTER</button>
-        <p id="login-msg" class="message"></p>
-      </form>
-
-      <!-- Formulaire Inscription -->
-      <form id="register-form" class="form-panel">
-        <div class="form-group">
-          <label>Choisir un pseudo :</label>
-          <input type="text" id="reg-username" placeholder="3-20 caractères..." autocomplete="username">
-        </div>
-        <div class="form-group">
-          <label>Choisir un mot de passe :</label>
-          <input type="password" id="reg-password" placeholder="4 caractères minimum..." autocomplete="new-password">
-        </div>
-        <div class="form-group">
-          <label>Confirmer le mot de passe :</label>
-          <input type="password" id="reg-password2" placeholder="Retapez le mot de passe..." autocomplete="new-password">
-        </div>
-        <button type="submit" class="submit-btn">> S'INSCRIRE</button>
-        <p id="reg-msg" class="message"></p>
-      </form>
+  <!-- PHASE 2 : Terminal (cache au depart) -->
+  <div class="intro-terminal auth-hidden" id="auth-terminal">
+    <div class="intro-header">
+      <span class="intro-header-dot intro-dot-red"></span>
+      <span class="intro-header-dot intro-dot-yellow"></span>
+      <span class="intro-header-dot intro-dot-green"></span>
+      <span class="intro-header-title">GACHA_CARDS — acces securise</span>
+    </div>
+    <div class="intro-body" id="auth-body">
+      <div class="intro-text" id="auth-text"></div>
+      <span class="intro-cursor" id="auth-cursor">█</span>
     </div>
   </div>
 
-  <div class="version-tag">v1.2.0</div>
+  <div class="version-tag">v1.3.0</div>
 
   <script src="/js/auth.js"></script>
 </body>

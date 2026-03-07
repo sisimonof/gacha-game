@@ -1,6 +1,7 @@
 // shop.js — Booster opening with click-to-reveal system
 
 const legendarySound = new Audio('/audio/legendary-hit.mp3');
+const secretSound = new Audio('/audio/secret-reveal.mp3');
 
 const BOOSTER_IMAGES = {
   origines: '/img/booster-origines.png',
@@ -226,7 +227,7 @@ function showCardsReveal(cards) {
         el.classList.add('secret-reveal');
         title.textContent = '🔒 SECRET 🔒';
         title.style.color = '#ffffff';
-        legendarySound.currentTime = 0; legendarySound.play();
+        secretSound.currentTime = 0; secretSound.play();
         screenFlash();
         screenShake();
         screenShake();
@@ -235,7 +236,7 @@ function showCardsReveal(cards) {
         el.classList.add('chaos-reveal');
         title.textContent = '☠ CHAOS ☠';
         title.style.color = RARITY_COLORS.chaos.color;
-        legendarySound.currentTime = 0; legendarySound.play();
+        secretSound.currentTime = 0; secretSound.play();
         screenFlash();
         screenShake();
         screenShake();
