@@ -268,12 +268,75 @@ async function saveCard(cardId) {
   }
 }
 
+// === BACKUPS ===
+async function loadBackups() {
+  const res = await fetch('/api/admin/backups');
+  const backups = await res.json();
+  const tbody = document.getElementById('backups-body');
+  if (!tbody) return;
+  tbody.innerHTML = backups.map(b => {
+    const date = new Date(b.date).toLocaleString('fr-FR');
+    const sizeMB = (b.size / 1024 / 1024).toFixed(2);
+    const isAuto = b.name.includes('-auto-') || b.name.includes('-startup-') || b.name.includes('-shutdown-');
+    const label = b.name.includes('-manual-') ? '🟢 Manuel'
+      : b.name.includes('-startup-') ? '🔵 Demarrage'
+      : b.name.includes('-shutdown-') ? '🟡 Arret'
+      : b.name.includes('-pre-restore-') ? '🟠 Pre-restore'
+      : '⚪ Auto';
+    return `
+      <tr>
+        <td style="font-size:11px">${label}<br><span style="color:#888">${b.name}</span></td>
+        <td>${sizeMB} MB</td>
+        <td style="font-size:12px">${date}</td>
+        <td>
+          <button class="admin-action-btn" onclick="restoreBackup('${b.name}')">Restaurer</button>
+        </td>
+      </tr>`;
+  }).join('');
+  if (backups.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#888">Aucun backup</td></tr>';
+  }
+}
+
+async function createBackup() {
+  const statusEl = document.getElementById('backup-status');
+  statusEl.textContent = 'Sauvegarde en cours...';
+  const res = await fetch('/api/admin/backup', { method: 'POST' });
+  const data = await res.json();
+  if (res.ok) {
+    statusEl.textContent = `Backup cree: ${data.name}`;
+    showFeedback('Backup cree avec succes');
+    loadBackups();
+  } else {
+    statusEl.textContent = '';
+    showFeedback(data.error, true);
+  }
+}
+
+async function restoreBackup(name) {
+  if (!confirm(`ATTENTION: Restaurer "${name}" ?\n\nCela va remplacer TOUTES les donnees actuelles par celles du backup.\nUn backup de securite sera cree avant la restauration.`)) return;
+
+  const res = await fetch('/api/admin/restore', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ backupName: name })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    showFeedback(`Base restauree depuis: ${data.restored}`);
+    loadAll();
+  } else {
+    showFeedback(data.error, true);
+  }
+}
+
 // === TABS ===
 function showTab(tabName) {
   document.querySelectorAll('.admin-panel').forEach(p => p.classList.add('hidden'));
   document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(`tab-${tabName}`).classList.remove('hidden');
   event.target.classList.add('active');
+  if (tabName === 'backups') loadBackups();
 }
 
 // === ACTIONS ===

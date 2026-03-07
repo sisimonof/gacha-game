@@ -3,6 +3,7 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const Database = require('better-sqlite3');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,8 +16,17 @@ const SELL_PRICES = {
   legendaire: 400
 };
 
-// --- Base de données ---
-const db = new Database(path.join(__dirname, 'gacha.db'));
+// --- Base de données (chemin configurable via env pour Railway volume) ---
+const DB_DIR = process.env.DB_PATH || __dirname;
+const DB_FILE = path.join(DB_DIR, 'gacha.db');
+const BACKUP_DIR = path.join(DB_DIR, 'backups');
+
+// Créer les dossiers si nécessaire
+if (!fs.existsSync(DB_DIR)) fs.mkdirSync(DB_DIR, { recursive: true });
+if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+
+console.log(`[DB] Chemin base de donnees: ${DB_FILE}`);
+const db = new Database(DB_FILE);
 db.pragma('journal_mode = WAL');
 
 db.exec(`
@@ -3599,6 +3609,128 @@ app.get('/wiki', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'wi
 app.get('/', (req, res) => {
   if (req.session.userId) return res.redirect('/menu');
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// ============================================
+// BACKUP SYSTEM
+// ============================================
+
+function createBackup(label) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const backupName = `gacha-${label || 'auto'}-${timestamp}.db`;
+  const backupPath = path.join(BACKUP_DIR, backupName);
+  try {
+    db.backup(backupPath);
+    // Garder seulement les 20 derniers backups
+    const backups = fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.endsWith('.db'))
+      .sort()
+      .reverse();
+    if (backups.length > 20) {
+      backups.slice(20).forEach(f => {
+        try { fs.unlinkSync(path.join(BACKUP_DIR, f)); } catch(e) {}
+      });
+    }
+    console.log(`[BACKUP] Sauvegarde: ${backupName}`);
+    return { success: true, name: backupName, path: backupPath };
+  } catch (err) {
+    console.error(`[BACKUP] Erreur: ${err.message}`);
+    return { success: false, error: err.message };
+  }
+}
+
+// Backup automatique toutes les heures
+const BACKUP_INTERVAL = (process.env.BACKUP_INTERVAL_MIN || 60) * 60 * 1000;
+setInterval(() => createBackup('auto'), BACKUP_INTERVAL);
+
+// Backup au démarrage
+createBackup('startup');
+
+// Backup à l'arrêt propre
+function gracefulShutdown(signal) {
+  console.log(`[SHUTDOWN] Signal ${signal} recu, sauvegarde en cours...`);
+  createBackup('shutdown');
+  process.exit(0);
+}
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+// --- Routes admin backup ---
+app.get('/api/admin/backups', requireAdmin, (req, res) => {
+  try {
+    const backups = fs.readdirSync(BACKUP_DIR)
+      .filter(f => f.endsWith('.db'))
+      .map(f => {
+        const stat = fs.statSync(path.join(BACKUP_DIR, f));
+        return { name: f, size: stat.size, date: stat.mtime };
+      })
+      .sort((a, b) => new Date(b.date) - new Date(a.date));
+    res.json(backups);
+  } catch (err) {
+    res.json([]);
+  }
+});
+
+app.post('/api/admin/backup', requireAdmin, (req, res) => {
+  const result = createBackup('manual');
+  if (result.success) {
+    res.json({ success: true, name: result.name });
+  } else {
+    res.status(500).json({ error: result.error });
+  }
+});
+
+app.post('/api/admin/restore', requireAdmin, (req, res) => {
+  const { backupName } = req.body;
+  if (!backupName) return res.status(400).json({ error: 'backupName requis' });
+
+  const backupPath = path.join(BACKUP_DIR, backupName);
+  if (!fs.existsSync(backupPath)) return res.status(404).json({ error: 'Backup introuvable' });
+
+  // Sécurité: vérifier que le nom ne contient pas de traversal
+  if (backupName.includes('..') || backupName.includes('/')) {
+    return res.status(400).json({ error: 'Nom invalide' });
+  }
+
+  try {
+    // D'abord sauvegarder l'état actuel
+    createBackup('pre-restore');
+
+    // Fermer la DB, copier le backup, la DB se reconnectera au prochain appel
+    // Note: avec better-sqlite3, on ne peut pas fermer et rouvrir facilement
+    // Donc on copie les données du backup dans la DB actuelle
+    const backupDb = new Database(backupPath, { readonly: true });
+
+    // Vider et remplir les tables principales
+    const tables = ['users', 'cards', 'user_cards', 'campaign_progress', 'pvp_teams', 'battle_log'];
+
+    db.exec('BEGIN');
+    for (const table of tables) {
+      try {
+        const rows = backupDb.prepare(`SELECT * FROM ${table}`).all();
+        db.prepare(`DELETE FROM ${table}`).run();
+        if (rows.length > 0) {
+          const cols = Object.keys(rows[0]);
+          const placeholders = cols.map(() => '?').join(',');
+          const insert = db.prepare(`INSERT INTO ${table} (${cols.join(',')}) VALUES (${placeholders})`);
+          for (const row of rows) {
+            insert.run(...cols.map(c => row[c]));
+          }
+        }
+      } catch (e) {
+        console.log(`[RESTORE] Table ${table} ignoree: ${e.message}`);
+      }
+    }
+    db.exec('COMMIT');
+    backupDb.close();
+
+    console.log(`[RESTORE] Base restauree depuis: ${backupName}`);
+    res.json({ success: true, restored: backupName });
+  } catch (err) {
+    try { db.exec('ROLLBACK'); } catch(e) {}
+    console.error(`[RESTORE] Erreur: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.listen(PORT, '0.0.0.0', () => {

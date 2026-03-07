@@ -4,3 +4,4 @@ gacha.db-shm
 gacha.db-wal
 .env
 .DS_Store
+backups/

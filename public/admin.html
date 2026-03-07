@@ -25,6 +25,7 @@
         <button class="admin-tab" onclick="showTab('cards')">CARTES</button>
         <button class="admin-tab" onclick="showTab('give')">DONNER</button>
         <button class="admin-tab" onclick="showTab('create')">CREER CARTE</button>
+        <button class="admin-tab" onclick="showTab('backups')">BACKUPS</button>
       </div>
 
       <!-- Tab: Users -->
@@ -154,6 +155,25 @@
             <button class="submit-btn" onclick="createCard()">CREER LA CARTE</button>
           </div>
         </div>
+      </div>
+
+      <!-- Tab: Backups -->
+      <div class="admin-panel hidden" id="tab-backups">
+        <h3 class="admin-section-title" style="margin-bottom:12px">SAUVEGARDES</h3>
+        <p style="color:#888;margin-bottom:12px;font-family:VT323,monospace;font-size:14px">
+          Backups automatiques toutes les heures + au demarrage/arret du serveur.<br>
+          Les 20 derniers backups sont conserves.
+        </p>
+        <div style="margin-bottom:16px">
+          <button class="submit-btn admin-small-btn" onclick="createBackup()" style="margin-right:8px">CREER UN BACKUP</button>
+          <span id="backup-status" style="color:#44dd44;font-family:VT323,monospace"></span>
+        </div>
+        <table class="admin-table" id="backups-table">
+          <thead>
+            <tr><th>Nom</th><th>Taille</th><th>Date</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="backups-body"></tbody>
+        </table>
       </div>
 
       <!-- Feedback -->
