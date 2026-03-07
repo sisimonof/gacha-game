@@ -2475,6 +2475,12 @@ body.collection-page .screen-flash.flash-active {
 .card-type { font-size: 10px; color: #006b1f; text-transform: uppercase; flex-shrink: 0; margin-top: auto; padding-bottom: 4px; }
 
 /* === EFFETS RARITY REVEAL === */
+.chaos-reveal { animation: chaosShine 0.8s ease-in-out infinite; }
+@keyframes chaosShine {
+  0%, 100% { filter: brightness(1.2) drop-shadow(0 0 15px rgba(255, 0, 68, 0.7)); }
+  50% { filter: brightness(1.5) drop-shadow(0 0 40px rgba(255, 0, 68, 1)) drop-shadow(0 0 60px rgba(180, 0, 40, 0.8)); }
+}
+
 .legendary-reveal { animation: legendaryShine 1.5s ease-in-out infinite; }
 @keyframes legendaryShine {
   0%, 100% { filter: brightness(1) drop-shadow(0 0 10px rgba(255, 170, 0, 0.5)); }
@@ -2631,6 +2637,7 @@ body.collection-page .screen-flash.flash-active {
 .stat-chip.stat-rare { border-color: #4488ff; color: #4488ff; }
 .stat-chip.stat-epique { border-color: #cc44ff; color: #cc44ff; }
 .stat-chip.stat-legendaire { border-color: #ffaa00; color: #ffaa00; }
+.stat-chip.stat-chaos { border-color: #ff0044; color: #ff0044; background: rgba(60, 0, 0, 0.4); }
 .stat-chip.stat-shiny {
   border-color: #ff66ff;
   color: #ff66ff;
@@ -3047,6 +3054,17 @@ body.collection-page .screen-flash.flash-active {
   background-size: 200% 200%;
 }
 
+.card-holo.holo-chaos {
+  background: linear-gradient(
+    125deg,
+    transparent 0%, rgba(255,0,68,0.2) 10%, rgba(0,0,0,0.3) 25%,
+    rgba(255,0,68,0.15) 40%, rgba(180,0,40,0.2) 55%,
+    rgba(0,0,0,0.25) 70%, rgba(255,0,68,0.2) 85%, transparent 100%
+  );
+  background-size: 300% 300%;
+  animation: holoFloat 3s ease-in-out infinite, chaosFlicker 0.3s ease-in-out infinite;
+}
+
 .card-holo.holo-legendary {
   background: linear-gradient(
     125deg,
@@ -3092,6 +3110,24 @@ body.collection-page .screen-flash.flash-active {
   border: 2px solid #ffaa00;
   box-shadow: 0 0 15px rgba(255,170,0,0.5);
   animation: borderPulseLegendary 1.5s ease-in-out infinite;
+}
+
+.card-front.rarity-chaos {
+  border: 2px solid #ff0044;
+  box-shadow: 0 0 20px rgba(255,0,68,0.6), 0 0 40px rgba(255,0,68,0.3);
+  animation: borderPulseChaos 1s ease-in-out infinite;
+}
+
+@keyframes borderPulseChaos {
+  0%, 100% { box-shadow: 0 0 15px rgba(255,0,68,0.5), inset 0 0 8px rgba(255,0,68,0.2); border-color: #ff0044; }
+  25% { box-shadow: 0 0 30px rgba(255,0,68,0.8), inset 0 0 15px rgba(255,0,68,0.4); border-color: #ff3366; }
+  50% { box-shadow: 0 0 20px rgba(180,0,40,0.6), inset 0 0 10px rgba(180,0,40,0.3); border-color: #cc0033; }
+  75% { box-shadow: 0 0 35px rgba(255,0,68,0.9), inset 0 0 12px rgba(255,0,68,0.3); border-color: #ff1155; }
+}
+
+@keyframes chaosFlicker {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
 }
 
 @keyframes borderPulseEpic {

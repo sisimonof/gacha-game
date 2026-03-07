@@ -173,6 +173,7 @@ function renderCardsTable() {
               <option value="rare" ${c.rarity==='rare'?'selected':''}>Rare</option>
               <option value="epique" ${c.rarity==='epique'?'selected':''}>Epique</option>
               <option value="legendaire" ${c.rarity==='legendaire'?'selected':''}>Legendaire</option>
+              <option value="chaos" ${c.rarity==='chaos'?'selected':''}>Chaos</option>
             </select>
             <label>Type:</label>
             <select class="admin-input-sm" id="edit-${c.id}-type" style="width:100px">

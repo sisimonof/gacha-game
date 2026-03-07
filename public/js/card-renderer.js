@@ -3,7 +3,8 @@ const RARITY_COLORS = {
   commune:    { color: '#888888', glow: 'rgba(136,136,136,0.4)', label: 'COMMUNE' },
   rare:       { color: '#4488ff', glow: 'rgba(68,136,255,0.5)',  label: 'RARE' },
   epique:     { color: '#cc44ff', glow: 'rgba(204,68,255,0.5)',  label: 'EPIQUE' },
-  legendaire: { color: '#ffaa00', glow: 'rgba(255,170,0,0.6)',   label: 'LEGENDAIRE' }
+  legendaire: { color: '#ffaa00', glow: 'rgba(255,170,0,0.6)',   label: 'LEGENDAIRE' },
+  chaos:      { color: '#ff0044', glow: 'rgba(255,0,68,0.7)',    label: 'CHAOS' }
 };
 
 const ELEMENT_ICONS  = { feu: '🔥', eau: '💧', terre: '🌿', lumiere: '✨', ombre: '🌑', neutre: '⚪' };
@@ -77,6 +78,7 @@ function renderStatBars(card) {
 function renderHolo(rarity, isShiny, isTemp) {
   if (isTemp) return '<div class="card-holo holo-temp"></div>';
   if (isShiny) return '<div class="card-holo holo-shiny"></div>';
+  if (rarity === 'chaos') return '<div class="card-holo holo-chaos"></div>';
   if (rarity === 'legendaire') return '<div class="card-holo holo-legendary"></div>';
   if (rarity === 'epique') return '<div class="card-holo holo-epic"></div>';
   return '';

@@ -149,7 +149,7 @@ function showCardsReveal(cards) {
   const totalCards = cards.length;
 
   // Tri : commune -> legendaire, shiny en dernier
-  const rarityOrder = { commune: 0, rare: 1, epique: 2, legendaire: 3 };
+  const rarityOrder = { commune: 0, rare: 1, epique: 2, legendaire: 3, chaos: 4 };
   const sorted = [...cards].sort((a, b) => {
     const rd = rarityOrder[a.rarity] - rarityOrder[b.rarity];
     if (rd !== 0) return rd;
@@ -219,6 +219,13 @@ function showCardsReveal(cards) {
         title.textContent = '✦ SHINY !';
         title.style.color = '#ff66ff';
         screenFlash();
+        screenShake();
+      } else if (card.rarity === 'chaos') {
+        el.classList.add('chaos-reveal');
+        title.textContent = '☠ CHAOS ☠';
+        title.style.color = RARITY_COLORS.chaos.color;
+        screenFlash();
+        screenShake();
         screenShake();
       } else if (card.rarity === 'legendaire') {
         el.classList.add('legendary-reveal');

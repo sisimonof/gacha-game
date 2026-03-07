@@ -13,7 +13,8 @@ const SELL_PRICES = {
   commune: 30,
   rare: 75,
   epique: 150,
-  legendaire: 400
+  legendaire: 400,
+  chaos: 1000
 };
 
 // --- Base de données (chemin configurable via env pour Railway volume) ---
@@ -315,6 +316,18 @@ function getManaForTurn(turn) {
   }
 }
 
+// --- Migration : Carte CHAOS - La Voie Lactee ---
+{
+  const hasVoieLactee = db.prepare("SELECT id FROM cards WHERE name = 'La Voie Lactee'").get();
+  if (!hasVoieLactee) {
+    db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('La Voie Lactee', 'chaos', 'creature', 'neutre', 2, 5, 10, 6, 'Quitte ou Double', 'Choisis un ennemi : 50% de chance de le tuer instantanement, 50% de chance de tuer ta carte', '🌌', 'Une carte La Voie Lactee max sur le plateau', 1.0);
+    console.log('Migration: carte CHAOS La Voie Lactee ajoutee');
+  }
+}
+
 // --- Tables Decks ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS decks (
@@ -346,7 +359,7 @@ const BOOSTERS = [
     description: '5 cartes du monde originel.',
     price: 300,
     cardsPerPack: 5,
-    weights: { commune: 60, rare: 25, epique: 12, legendaire: 3 },
+    weights: { commune: 59.9, rare: 25, epique: 12, legendaire: 3, chaos: 0.1 },
     shinyRate: 0.02
   },
   {
@@ -355,7 +368,7 @@ const BOOSTERS = [
     description: '7 cartes de la faille dimensionnelle.',
     price: 415,
     cardsPerPack: 7,
-    weights: { commune: 50, rare: 28, epique: 16, legendaire: 6 },
+    weights: { commune: 49.8, rare: 28, epique: 16, legendaire: 6, chaos: 0.2 },
     shinyRate: 0.05
   }
 ];
@@ -383,7 +396,7 @@ function openBooster(boosterId, userId) {
     let cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(rarity);
     // Fallback : si aucune carte de cette rarete, descendre d'un cran
     if (!cards.length) {
-      const fallbackOrder = ['legendaire', 'epique', 'rare', 'commune'];
+      const fallbackOrder = ['chaos', 'legendaire', 'epique', 'rare', 'commune'];
       const idx = fallbackOrder.indexOf(rarity);
       for (let f = idx + 1; f < fallbackOrder.length; f++) {
         cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(fallbackOrder[f]);
@@ -2195,7 +2208,7 @@ app.get('/api/collection', requireAuth, (req, res) => {
     WHERE uc.user_id = ?
     GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp
     ORDER BY
-      CASE c.rarity WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
   res.json(cards);
@@ -2239,7 +2252,7 @@ app.post('/api/collection/sell', requireAuth, (req, res) => {
     WHERE uc.user_id = ?
     GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp
     ORDER BY
-      CASE c.rarity WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
 
@@ -2266,7 +2279,7 @@ app.get('/api/fusion/available', requireAuth, (req, res) => {
     GROUP BY c.id
     HAVING count >= 5
     ORDER BY
-      CASE c.rarity WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       c.attack DESC
   `).all(req.session.userId);
   res.json(cards);
@@ -3447,6 +3460,7 @@ app.post('/api/admin/update-booster', requireAdmin, (req, res) => {
     if (weights.rare !== undefined) booster.weights.rare = Number(weights.rare);
     if (weights.epique !== undefined) booster.weights.epique = Number(weights.epique);
     if (weights.legendaire !== undefined) booster.weights.legendaire = Number(weights.legendaire);
+    if (weights.chaos !== undefined) booster.weights.chaos = Number(weights.chaos);
   }
   if (shinyRate !== undefined) booster.shinyRate = Number(shinyRate);
   if (price !== undefined) booster.price = Number(price);
@@ -3641,7 +3655,7 @@ app.get('/api/my-cards', requireAuth, (req, res) => {
     JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ?
     ORDER BY
-      CASE c.rarity WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
   res.json(cards);
