@@ -22,19 +22,20 @@ const MAX_HP_FUSED  = 100;
 function renderCardVisual(card) {
   const hasImage = card.image && card.image !== '';
   const imgPath = `/img/cards/${card.image}`;
-  const icon = ELEMENT_ICONS[card.element] || '?';
-  const watermark = `<div class="card-visual-watermark">${icon}</div>`;
+  const elemIcon = ELEMENT_ICONS[card.element] || '?';
+  const displayIcon = card.emoji || elemIcon;
+  const watermark = `<div class="card-visual-watermark">${elemIcon}</div>`;
 
   if (hasImage) {
     return `
       <div class="card-visual">
         ${watermark}
         <img src="${imgPath}" alt="${card.name}"
-          onerror="this.parentElement.innerHTML='<div class=\\'card-visual-fallback elem-${card.element}\\'>${icon}</div>'">
+          onerror="this.parentElement.innerHTML='<div class=\\'card-visual-fallback elem-${card.element}\\'>${displayIcon}</div>'">
       </div>
     `;
   }
-  return `<div class="card-visual">${watermark}<div class="card-visual-fallback elem-${card.element}">${icon}</div></div>`;
+  return `<div class="card-visual">${watermark}<div class="card-visual-fallback elem-${card.element}">${displayIcon}</div></div>`;
 }
 
 // === BARRES DE STATS ===
