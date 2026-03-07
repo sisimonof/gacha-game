@@ -7,28 +7,71 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
+
   <div class="crt-screen">
     <div class="battle-wrapper">
-      <!-- Turn info -->
+
+      <!-- Header: Turn + Energy info -->
       <div class="battle-header">
-        <div class="battle-turn" id="battle-turn">Tour 1</div>
-        <div class="battle-vs">VS</div>
+        <div class="battle-info-left">
+          <span class="battle-opponent" id="opponent-name">VS ???</span>
+          <span class="battle-deck-count enemy-deck-count">🃏 <span id="enemy-deck-count">0</span></span>
+          <span class="battle-hand-count">✋ <span id="enemy-hand-count">0</span></span>
+        </div>
+        <div class="battle-turn-display" id="battle-turn">TOUR 1</div>
+        <div class="battle-info-right">
+          <span class="battle-energy enemy-energy">⚡<span id="enemy-energy">0</span>/<span id="enemy-max-energy">0</span></span>
+        </div>
       </div>
 
-      <!-- Enemy team -->
-      <div class="battle-team battle-enemy-team" id="enemy-team"></div>
+      <!-- Enemy field (3 slots) -->
+      <div class="battle-field enemy-field" id="enemy-field">
+        <div class="field-slot" data-slot="0" data-side="enemy" onclick="clickFieldSlot('enemy', 0)">
+          <div class="field-slot-empty">VIDE</div>
+        </div>
+        <div class="field-slot" data-slot="1" data-side="enemy" onclick="clickFieldSlot('enemy', 1)">
+          <div class="field-slot-empty">VIDE</div>
+        </div>
+        <div class="field-slot" data-slot="2" data-side="enemy" onclick="clickFieldSlot('enemy', 2)">
+          <div class="field-slot-empty">VIDE</div>
+        </div>
+      </div>
 
       <!-- Battle log -->
       <div class="battle-log" id="battle-log"></div>
 
-      <!-- Player team -->
-      <div class="battle-team battle-player-team" id="player-team"></div>
+      <!-- Midline separator -->
+      <div class="battle-midline"></div>
 
-      <!-- Action bar -->
-      <div class="battle-actions" id="battle-actions">
-        <div class="battle-instruction" id="battle-instruction">Selectionnez votre carte puis une cible ennemie</div>
-        <button class="submit-btn battle-attack-btn hidden" id="attack-btn" onclick="doAttack()">ATTAQUER</button>
+      <!-- Player field (3 slots) -->
+      <div class="battle-field player-field" id="player-field">
+        <div class="field-slot" data-slot="0" data-side="player" onclick="clickFieldSlot('player', 0)">
+          <div class="field-slot-empty">VIDE</div>
+        </div>
+        <div class="field-slot" data-slot="1" data-side="player" onclick="clickFieldSlot('player', 1)">
+          <div class="field-slot-empty">VIDE</div>
+        </div>
+        <div class="field-slot" data-slot="2" data-side="player" onclick="clickFieldSlot('player', 2)">
+          <div class="field-slot-empty">VIDE</div>
+        </div>
       </div>
+
+      <!-- Player info bar -->
+      <div class="battle-player-bar">
+        <span class="battle-energy player-energy">⚡<span id="player-energy">2</span>/<span id="player-max-energy">2</span></span>
+        <span class="battle-deck-count player-deck-count">🃏 <span id="player-deck-count">0</span></span>
+        <div class="battle-action-buttons">
+          <button class="btn-end-turn" id="end-turn-btn" onclick="endTurn()">FIN DU TOUR ⏩</button>
+        </div>
+      </div>
+
+      <!-- Player hand -->
+      <div class="battle-hand" id="player-hand"></div>
+
+      <!-- Instruction bar -->
+      <div class="battle-instruction" id="battle-instruction"></div>
 
       <!-- Result overlay -->
       <div class="battle-result-overlay hidden" id="battle-result">
@@ -41,8 +84,8 @@
     </div>
   </div>
 
+  <div class="battle-anim-overlay" id="battle-anim-overlay"></div>
   <div class="screen-flash hidden" id="screen-flash"></div>
-  <div class="version-tag">v0.6.0</div>
 
   <script src="/js/card-renderer.js"></script>
   <script src="/js/battle.js"></script>

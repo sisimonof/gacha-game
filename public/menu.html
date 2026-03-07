@@ -26,7 +26,7 @@
       <!-- Titre -->
       <h1 class="menu-title" data-text="GACHA CARDS">GACHA CARDS</h1>
 
-      <!-- Navigation : 3 boutons ronds -->
+      <!-- Navigation : 4 boutons ronds -->
       <div class="menu-nav">
         <div class="nav-item" onclick="window.location.href='/shop'">
           <div class="nav-btn nav-shop"><span>&#127978;</span></div>
@@ -36,10 +36,18 @@
           <div class="nav-btn nav-collection"><span>&#128214;</span></div>
           <div class="nav-label">COLLECTION</div>
         </div>
+        <div class="nav-item" onclick="window.location.href='/combat'">
+          <div class="nav-btn nav-combat"><span>&#9876;</span></div>
+          <div class="nav-label">COMBAT</div>
+        </div>
         <div class="nav-item" id="daily-item" onclick="claimDaily()">
           <div class="nav-btn nav-daily" id="daily-btn"><span>&#127873;</span></div>
           <div class="nav-label">BONUS</div>
           <div class="nav-sub" id="daily-sub">+200 CR</div>
+        </div>
+        <div class="nav-item" onclick="window.location.href='/wiki'">
+          <div class="nav-btn nav-wiki"><span>&#128214;</span></div>
+          <div class="nav-label">WIKI</div>
         </div>
       </div>
 
@@ -50,7 +58,7 @@
 
       <!-- Footer -->
       <div class="menu-footer">
-        <span class="footer-version" id="version-tag">v0.8.0 — PATCH NOTES</span>
+        <span class="footer-version" id="version-tag">v0.9.0 — PATCH NOTES</span>
         <span class="footer-status">SYS: <span class="status-online">EN LIGNE</span></span>
         <span class="footer-logout" id="logout-btn">DECONNEXION</span>
       </div>
@@ -64,6 +72,35 @@
       <button class="patchnotes-close" id="patchnotes-close">&times;</button>
       <h2 class="patchnotes-title">PATCH NOTES</h2>
       <div class="patchnotes-content">
+
+        <div class="patch-version">
+          <h3>v0.9.0 - SYSTEME DE DECK &amp; COMBAT</h3>
+          <span class="patch-date">06/03/2026</span>
+        </div>
+        <div class="patch-section">
+          <h4>NOUVEAU SYSTEME DE COMBAT</h4>
+          <ul>
+            <li><span class="patch-new">NEW</span> Decks de 20 cartes — max 3 decks par joueur</li>
+            <li><span class="patch-new">NEW</span> Systeme d'energie : +1 par tour (max 10)</li>
+            <li><span class="patch-new">NEW</span> Terrain de 3 slots — deployez depuis la main</li>
+            <li><span class="patch-new">NEW</span> 15 cartes Objet utilitaires (potions, bombes, parchemins)</li>
+            <li><span class="patch-new">NEW</span> Emojis representatifs sur toutes les cartes</li>
+            <li><span class="patch-new">NEW</span> Deck starter gratuit pour tester le combat</li>
+            <li><span class="patch-new">NEW</span> Page Deck Builder complete</li>
+            <li><span class="patch-new">NEW</span> Hub Combat avec PvP</li>
+          </ul>
+        </div>
+        <div class="patch-section">
+          <h4>MECANIQUES</h4>
+          <ul>
+            <li><span class="patch-buff">BUFF</span> Deploiement coute le mana de la carte</li>
+            <li><span class="patch-buff">BUFF</span> Abilities coutent ceil(mana/2) energie, 1x/combat</li>
+            <li><span class="patch-buff">BUFF</span> Attaque gratuite, 1x par carte par tour</li>
+            <li><span class="patch-buff">BUFF</span> Objets : effet instantane depuis la main</li>
+            <li><span class="patch-change">CHANGE</span> IA ennemie deploie, attaque et utilise items</li>
+            <li><span class="patch-change">CHANGE</span> Victoire quand l'ennemi n'a plus rien</li>
+          </ul>
+        </div>
 
         <div class="patch-version">
           <h3>v0.7.0 - REFONTE DES POUVOIRS</h3>

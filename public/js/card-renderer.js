@@ -6,9 +6,9 @@ const RARITY_COLORS = {
   legendaire: { color: '#ffaa00', glow: 'rgba(255,170,0,0.6)',   label: 'LEGENDAIRE' }
 };
 
-const ELEMENT_ICONS  = { feu: '🔥', eau: '💧', terre: '🌿', lumiere: '✨', ombre: '🌑' };
-const ELEMENT_NAMES  = { feu: 'Feu', eau: 'Eau', terre: 'Terre', lumiere: 'Lumiere', ombre: 'Ombre' };
-const ELEMENT_COLORS = { feu: '#ff4422', eau: '#2299ff', terre: '#44aa33', lumiere: '#ffcc00', ombre: '#9944cc' };
+const ELEMENT_ICONS  = { feu: '🔥', eau: '💧', terre: '🌿', lumiere: '✨', ombre: '🌑', neutre: '⚪' };
+const ELEMENT_NAMES  = { feu: 'Feu', eau: 'Eau', terre: 'Terre', lumiere: 'Lumiere', ombre: 'Ombre', neutre: 'Neutre' };
+const ELEMENT_COLORS = { feu: '#ff4422', eau: '#2299ff', terre: '#44aa33', lumiere: '#ffcc00', ombre: '#9944cc', neutre: '#aaaaaa' };
 
 // Max stats pour les barres (fused = x2)
 const MAX_ATK = 10;

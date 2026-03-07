@@ -7,29 +7,60 @@
   <link rel="stylesheet" href="/css/style.css">
 </head>
 <body>
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
   <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
 
   <div class="crt-screen">
     <div class="combat-hub">
-      <h1 class="menu-title">COMBAT</h1>
-      <p class="shop-subtitle">- Choisissez votre mode -</p>
+      <h1 class="menu-title" data-text="COMBAT">COMBAT</h1>
 
       <div class="combat-grid">
-        <button class="combat-mode-btn" onclick="window.location.href='/campaign'">
-          <span class="combat-mode-icon">🗺️</span>
-          <span class="combat-mode-label">CAMPAGNE</span>
-          <span class="combat-mode-desc">Explorez 15 niveaux et gagnez des recompenses</span>
+        <!-- DECKS -->
+        <button class="combat-mode-btn" onclick="window.location.href='/decks'">
+          <span class="combat-mode-icon">🃏</span>
+          <span class="combat-mode-label">MES DECKS</span>
+          <span class="combat-mode-desc">Creez et gerez vos decks de 20 cartes</span>
         </button>
-        <button class="combat-mode-btn" onclick="window.location.href='/pvp'">
+
+        <!-- PVP avec decks -->
+        <button class="combat-mode-btn combat-mode-pvp" onclick="showDeckSelect()">
           <span class="combat-mode-icon">⚔️</span>
           <span class="combat-mode-label">PVP</span>
-          <span class="combat-mode-desc">Affrontez d'autres joueurs</span>
+          <span class="combat-mode-desc">Affrontez un adversaire avec votre deck</span>
         </button>
+
+        <!-- WIKI -->
+        <button class="combat-mode-btn combat-mode-wiki" onclick="window.location.href='/wiki'">
+          <span class="combat-mode-icon">📖</span>
+          <span class="combat-mode-label">WIKI</span>
+          <span class="combat-mode-desc">Guide complet des mecaniques de combat</span>
+        </button>
+      </div>
+
+      <!-- Deck selection overlay -->
+      <div class="deck-select-overlay hidden" id="deck-select-overlay">
+        <div class="deck-select-modal">
+          <h2 class="deck-select-title">CHOISIR UN DECK</h2>
+          <div class="deck-select-list" id="deck-select-list"></div>
+          <div class="deck-select-or">— OU —</div>
+          <button class="combat-mode-btn combat-starter-btn" onclick="startBattleStarter()">
+            <span class="combat-mode-icon">🎮</span>
+            <span class="combat-mode-label">DECK STARTER</span>
+            <span class="combat-mode-desc">Deck de test gratuit (cartes faibles)</span>
+          </button>
+          <button class="deck-select-cancel" onclick="hideDeckSelect()">ANNULER</button>
+        </div>
+      </div>
+
+      <!-- Loading -->
+      <div class="combat-loading hidden" id="combat-loading">
+        <div class="loading-text">Recherche d'adversaire...</div>
       </div>
     </div>
   </div>
 
-  <div class="version-tag">v0.6.0</div>
+  <script src="/js/card-renderer.js"></script>
   <script src="/js/combat.js"></script>
 </body>
 </html>

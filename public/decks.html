@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Mes Decks</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
+  <button class="back-btn" onclick="window.location.href='/combat'">[ RETOUR ]</button>
+
+  <div class="crt-screen">
+    <div class="deck-wrapper">
+      <h1 class="menu-title" data-text="MES DECKS">MES DECKS</h1>
+
+      <!-- Liste des decks -->
+      <div class="deck-list" id="deck-list"></div>
+      <button class="submit-btn deck-new-btn" id="new-deck-btn" onclick="createNewDeck()">+ NOUVEAU DECK</button>
+
+      <!-- Editeur de deck (cache par defaut) -->
+      <div class="deck-editor hidden" id="deck-editor">
+        <div class="deck-editor-header">
+          <input type="text" class="deck-name-input" id="deck-name" placeholder="Nom du deck" maxlength="20">
+          <div class="deck-counter">
+            <span id="deck-count">0</span>/20
+            <span class="deck-counter-detail">(<span id="creature-count">0</span>🗡️ <span id="objet-count">0</span>🔧)</span>
+          </div>
+        </div>
+
+        <!-- Slots du deck -->
+        <div class="deck-slots" id="deck-slots"></div>
+
+        <!-- Filtres -->
+        <div class="deck-filters">
+          <input type="text" class="deck-search" id="deck-search" placeholder="Rechercher...">
+          <div class="deck-filter-row">
+            <button class="filter-btn active" data-filter="all" onclick="setFilter('type','all')">TOUS</button>
+            <button class="filter-btn" data-filter="guerrier" onclick="setFilter('type','guerrier')">GUERRIER</button>
+            <button class="filter-btn" data-filter="mage" onclick="setFilter('type','mage')">MAGE</button>
+            <button class="filter-btn" data-filter="bete" onclick="setFilter('type','bete')">BETE</button>
+            <button class="filter-btn" data-filter="divin" onclick="setFilter('type','divin')">DIVIN</button>
+            <button class="filter-btn" data-filter="objet" onclick="setFilter('type','objet')">OBJET</button>
+          </div>
+          <div class="deck-filter-row">
+            <button class="filter-btn active" data-filter="all-rarity" onclick="setFilter('rarity','all')">TOUS</button>
+            <button class="filter-btn" data-filter="commune" onclick="setFilter('rarity','commune')">COMMUNE</button>
+            <button class="filter-btn" data-filter="rare" onclick="setFilter('rarity','rare')">RARE</button>
+            <button class="filter-btn" data-filter="epique" onclick="setFilter('rarity','epique')">EPIQUE</button>
+            <button class="filter-btn" data-filter="legendaire" onclick="setFilter('rarity','legendaire')">LEGENDAIRE</button>
+          </div>
+        </div>
+
+        <!-- Grille des cartes disponibles -->
+        <div class="deck-card-grid" id="card-grid"></div>
+
+        <!-- Actions -->
+        <div class="deck-actions">
+          <button class="submit-btn" id="save-deck-btn" onclick="saveDeck()" disabled>SAUVEGARDER</button>
+          <button class="submit-btn deck-pvp-btn" id="pvp-deck-btn" onclick="setPvpDeck()">DECK PVP ⚔️</button>
+          <button class="submit-btn deck-delete-btn" id="delete-deck-btn" onclick="deleteDeck()">SUPPRIMER</button>
+          <button class="submit-btn deck-cancel-btn" onclick="closeEditor()">ANNULER</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/decks.js"></script>
+</body>
+</html>

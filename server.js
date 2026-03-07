@@ -132,7 +132,8 @@ const ELEMENT_ADVANTAGES = {
   terre:   { strong: 'eau',     weak: 'feu' },
   eau:     { strong: 'feu',     weak: 'terre' },
   lumiere: { strong: 'ombre',   weak: 'ombre' },
-  ombre:   { strong: 'lumiere', weak: 'lumiere' }
+  ombre:   { strong: 'lumiere', weak: 'lumiere' },
+  neutre:  { strong: null, weak: null }
 };
 
 const ELEMENT_CONFIG = {
@@ -140,7 +141,8 @@ const ELEMENT_CONFIG = {
   eau:     { icon: '💧', color: '#2299ff', name: 'Eau' },
   terre:   { icon: '🌿', color: '#44aa33', name: 'Terre' },
   lumiere: { icon: '✨', color: '#ffcc00', name: 'Lumière' },
-  ombre:   { icon: '🌑', color: '#9944cc', name: 'Ombre' }
+  ombre:   { icon: '🌑', color: '#9944cc', name: 'Ombre' },
+  neutre:  { icon: '🔧', color: '#888888', name: 'Neutre' }
 };
 
 // --- Seed des cartes ---
@@ -648,6 +650,295 @@ const newCards = [
   }
 }
 
+// --- Migration : ajout colonne emoji ---
+{
+  const cardCols = db.prepare("PRAGMA table_info(cards)").all().map(c => c.name);
+  if (!cardCols.includes('emoji')) {
+    db.exec("ALTER TABLE cards ADD COLUMN emoji TEXT DEFAULT ''");
+    console.log('Migration: emoji ajouté');
+
+    const updEmoji = db.prepare('UPDATE cards SET emoji = ? WHERE name = ?');
+    const runEmoji = db.transaction(() => {
+      // COMMUNES - TERRE
+      updEmoji.run('⛏️', 'Mineur');
+      updEmoji.run('🐹', 'Taupe');
+      updEmoji.run('🪲', 'Scarabee');
+      updEmoji.run('👨‍🌾', 'Paysan');
+      updEmoji.run('🪨', 'Caillou vivant');
+      updEmoji.run('🪱', 'Ver de terre');
+      updEmoji.run('🌿', 'Herboriste');
+      updEmoji.run('🍄', 'Champignon');
+      updEmoji.run('💪', 'Terrassier');
+      updEmoji.run('🐀', 'Rat');
+      updEmoji.run('💂', 'Sentinelle');
+      updEmoji.run('🐜', 'Fourmi');
+      updEmoji.run('🗡️', 'Brigand');
+      updEmoji.run('🪓', 'Bucheron');
+      updEmoji.run('🐗', 'Sanglier');
+      updEmoji.run('🦔', 'Herisson');
+      updEmoji.run('⚗️', 'Alchimiste');
+      updEmoji.run('🌾', 'Fermier');
+      // COMMUNES - EAU
+      updEmoji.run('🐟', 'Poisson');
+      updEmoji.run('🦀', 'Crabe');
+      updEmoji.run('⚓', 'Marin');
+      updEmoji.run('🐙', 'Pieuvre');
+      updEmoji.run('🪼', 'Meduse');
+      updEmoji.run('🔱', 'Triton');
+      updEmoji.run('🐴', 'Hippocampe');
+      updEmoji.run('🧚', 'Nymphe');
+      updEmoji.run('🏴‍☠️', 'Pirate');
+      updEmoji.run('🦅', 'Pelican');
+      updEmoji.run('🦭', 'Phoque');
+      updEmoji.run('🐚', 'Coquillage');
+      updEmoji.run('💧', 'Naiade');
+      updEmoji.run('🦦', 'Loutre');
+      updEmoji.run('🚣', 'Moussaillon');
+      updEmoji.run('🐍', 'Anguille');
+      updEmoji.run('🐢', 'Tortue');
+      updEmoji.run('🕊️', 'Mouette');
+      // COMMUNES - FEU
+      updEmoji.run('🔥', 'Torche');
+      updEmoji.run('🦎', 'Salamandre');
+      updEmoji.run('🔨', 'Forgeron');
+      updEmoji.run('🔥', 'Braise');
+      updEmoji.run('💣', 'Artificier');
+      updEmoji.run('🦊', 'Fennec');
+      updEmoji.run('🌵', 'Cactus ardent');
+      updEmoji.run('🪨', 'Charbon');
+      updEmoji.run('🦎', 'Lezard');
+      updEmoji.run('🌋', 'Volcanologue');
+      updEmoji.run('🧑‍🏭', 'Charbonnier');
+      updEmoji.run('⚡', 'Etincelle');
+      updEmoji.run('🐕‍🦺', 'Chien de feu');
+      updEmoji.run('💃', 'Danseur');
+      updEmoji.run('🌊', 'Magma');
+      updEmoji.run('🍳', 'Cuisinier');
+      updEmoji.run('🪰', 'Mouche de feu');
+      updEmoji.run('💨', 'Fumigene');
+      updEmoji.run('🕯️', 'Flambeau');
+      // COMMUNES - OMBRE
+      updEmoji.run('🦇', 'Chauve-souris');
+      updEmoji.run('🕷️', 'Araignee');
+      updEmoji.run('🥷', 'Voleur');
+      updEmoji.run('🐦‍⬛', 'Corbeau');
+      updEmoji.run('🐀', 'Rat noir');
+      updEmoji.run('👻', 'Spectre');
+      updEmoji.run('🏴', 'Bandit');
+      updEmoji.run('🧟', 'Zombie');
+      updEmoji.run('💀', 'Squelette');
+      updEmoji.run('🐈‍⬛', 'Chat noir');
+      updEmoji.run('👤', 'Ombre rampante');
+      updEmoji.run('🐛', 'Larve');
+      updEmoji.run('🗡️', 'Assassin novice');
+      updEmoji.run('🐸', 'Crapaud sombre');
+      updEmoji.run('👻', 'Ectoplasme');
+      updEmoji.run('😈', 'Goule');
+      updEmoji.run('🎭', 'Marionnette');
+      updEmoji.run('🐍', 'Serpent venimeux');
+      updEmoji.run('💰', 'Pilleur');
+      // COMMUNES - LUMIERE
+      updEmoji.run('🐦', 'Moineau celeste');
+      updEmoji.run('🙏', 'Pretre novice');
+      updEmoji.run('🔭', 'Eclaireur');
+      updEmoji.run('🦋', 'Papillon');
+      updEmoji.run('🐝', 'Abeille sacree');
+      updEmoji.run('🛡️', 'Gardien');
+      updEmoji.run('🧙', 'Apprenti mage');
+      updEmoji.run('🐑', 'Agneau');
+      updEmoji.run('🕊️', 'Colombe');
+      updEmoji.run('⚔️', 'Paladin novice');
+      updEmoji.run('🧝', 'Lutin');
+      updEmoji.run('🧘', 'Moine');
+      updEmoji.run('🦌', 'Cerf blanc');
+      updEmoji.run('🧚', 'Fee');
+      updEmoji.run('📯', 'Heraut');
+      updEmoji.run('🐱', 'Chat blanc');
+      updEmoji.run('✨', 'Scarabee dore');
+      updEmoji.run('📨', 'Messager');
+      // RARES - TERRE
+      updEmoji.run('🐎', 'Centaure');
+      updEmoji.run('🌳', 'Druidesse');
+      updEmoji.run('🐂', 'Taureau');
+      updEmoji.run('🌲', 'Treant');
+      updEmoji.run('⚔️', 'Gladiateur');
+      updEmoji.run('🐢', 'Tortue geante');
+      updEmoji.run('⛏️', 'Nain mineur');
+      updEmoji.run('🐍', 'Basilic');
+      updEmoji.run('🪨', 'Geomancien');
+      updEmoji.run('🐻', 'Ours brun');
+      updEmoji.run('🧙‍♂️', 'Sage des forets');
+      // RARES - EAU
+      updEmoji.run('🦈', 'Requin');
+      updEmoji.run('🧜‍♀️', 'Ondine');
+      updEmoji.run('🏴‍☠️', 'Corsaire');
+      updEmoji.run('🦭', 'Morse');
+      updEmoji.run('💧', 'Elementaire d eau');
+      updEmoji.run('🐸', 'Kappa');
+      updEmoji.run('👻', 'Pirate fantome');
+      updEmoji.run('🐬', 'Dauphin');
+      updEmoji.run('🌧️', 'Invoqueuse de pluie');
+      updEmoji.run('🦄', 'Narval');
+      // RARES - FEU
+      updEmoji.run('🧞', 'Ifrit');
+      updEmoji.run('😤', 'Berserker');
+      updEmoji.run('🐂', 'Minotaure');
+      updEmoji.run('🐍', 'Serpent de lave');
+      updEmoji.run('🦁', 'Chimere');
+      updEmoji.run('🦁', 'Lion de feu');
+      updEmoji.run('🔥', 'Pyromancien');
+      updEmoji.run('🦂', 'Scorpion geant');
+      updEmoji.run('🧞‍♂️', 'Djinn');
+      updEmoji.run('🦖', 'Raptor');
+      updEmoji.run('🥷', 'Samourai de feu');
+      // RARES - OMBRE
+      updEmoji.run('🧛', 'Vampire');
+      updEmoji.run('🐺', 'Loup-garou');
+      updEmoji.run('💀', 'Necromancien');
+      updEmoji.run('🗡️', 'Assassin');
+      updEmoji.run('🦅', 'Harpie');
+      updEmoji.run('👻', 'Wraith');
+      updEmoji.run('🖤', 'Chevalier noir');
+      updEmoji.run('🦂', 'Manticore');
+      updEmoji.run('☠️', 'Liche');
+      updEmoji.run('🐆', 'Panthere noire');
+      // RARES - LUMIERE
+      updEmoji.run('🛡️', 'Paladin');
+      updEmoji.run('😇', 'Ange gardien');
+      updEmoji.run('🦄', 'Licorne');
+      updEmoji.run('🦅', 'Griffon');
+      updEmoji.run('⛪', 'Pretre');
+      updEmoji.run('⚔️', 'Templier');
+      updEmoji.run('🐴', 'Pegase');
+      updEmoji.run('🧙‍♂️', 'Mage blanc');
+      updEmoji.run('⚔️', 'Valkyrie');
+      updEmoji.run('✝️', 'Esprit sacre');
+      // EPIQUES - TERRE
+      updEmoji.run('🗿', 'Titan de pierre');
+      updEmoji.run('👑', 'Roi des nains');
+      updEmoji.run('🐲', 'Hydre de terre');
+      updEmoji.run('🌿', 'Druide ancien');
+      updEmoji.run('🦣', 'Behemoth');
+      updEmoji.run('🦁', 'Sphinx');
+      // EPIQUES - EAU
+      updEmoji.run('🦑', 'Kraken');
+      updEmoji.run('🐋', 'Leviathan');
+      updEmoji.run('🧙', 'Sorcier des mers');
+      updEmoji.run('⚓', 'Amiral fantome');
+      updEmoji.run('👑', 'Roi triton');
+      // EPIQUES - FEU
+      updEmoji.run('😈', 'Demon de feu');
+      updEmoji.run('🐲', 'Hydre de feu');
+      updEmoji.run('🐉', 'Wyvern');
+      updEmoji.run('🔥', 'Efreet');
+      updEmoji.run('👑', 'Roi volcanique');
+      updEmoji.run('👹', 'Guerrier infernal');
+      // EPIQUES - OMBRE
+      updEmoji.run('💀', 'Faucheur');
+      updEmoji.run('🐉', 'Dragon d ombre');
+      updEmoji.run('🧛‍♂️', 'Seigneur vampire');
+      updEmoji.run('👑', 'Roi des morts');
+      updEmoji.run('😱', 'Cauchemar');
+      // EPIQUES - LUMIERE
+      updEmoji.run('👼', 'Seraphin');
+      updEmoji.run('🏆', 'Champion sacre');
+      updEmoji.run('🌿', 'Druide celeste');
+      updEmoji.run('✨', 'Chimere celeste');
+      updEmoji.run('⚖️', 'Inquisiteur');
+      // LEGENDAIRES
+      updEmoji.run('🌍', 'Gaia');
+      updEmoji.run('🌳', 'Roi des forets');
+      updEmoji.run('🏔️', 'Atlas');
+      updEmoji.run('🔱', 'Poseidon');
+      updEmoji.run('🐍', 'Serpent de mer');
+      updEmoji.run('❄️', 'Reine des glaces');
+      updEmoji.run('🔥', 'Ifrit supreme');
+      updEmoji.run('🐉', 'Empereur dragon');
+      updEmoji.run('💀', 'Thanatos');
+      updEmoji.run('👿', 'Roi demon');
+      updEmoji.run('🐺', 'Fenrir');
+      updEmoji.run('⚡', 'Zeus');
+      updEmoji.run('🛡️', 'Gardien eternel');
+      // Seed cards
+      updEmoji.run('⚔️', 'Soldat');
+      updEmoji.run('🐺', 'Loup');
+      updEmoji.run('🏹', 'Archer');
+      updEmoji.run('🛡️', 'Chevalier');
+      updEmoji.run('🧙', 'Mage');
+      updEmoji.run('🧙‍♀️', 'Sorciere');
+      updEmoji.run('🐉', 'Dragon');
+      updEmoji.run('👼', 'Archange');
+      updEmoji.run('🔥', 'Phenix');
+      updEmoji.run('🗿', 'Golem');
+      updEmoji.run('🧜‍♀️', 'Sirene');
+      updEmoji.run('👺', 'Gobelin');
+      updEmoji.run('👻', 'Fantome');
+      updEmoji.run('🐸', 'Grenouille');
+      updEmoji.run('✨', 'Luciole');
+      updEmoji.run('🤡', 'Pyromane');
+
+      console.log('Migration emojis terminee.');
+    });
+    runEmoji();
+  }
+}
+
+// --- Migration : cartes objet ---
+{
+  const hasItems = db.prepare("SELECT id FROM cards WHERE type = 'objet'").get();
+  if (!hasItems) {
+    const insertItem = db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, image, emoji)
+      VALUES (?, ?, 'objet', 'neutre', 0, 0, 0, ?, ?, ?, '', ?)
+    `);
+    const addItems = db.transaction(() => {
+      // Communes (mana 1)
+      insertItem.run('Potion mineure',  'commune', 1, 'Soin mineur',     '+5 PV a un allie',           '🧪');
+      insertItem.run('Pierre lancee',   'commune', 1, 'Lancer',          '3 degats a un ennemi',       '🪨');
+      insertItem.run('Herbe medicinale','commune', 1, 'Herboristerie',   '+3 PV a un allie',           '🌿');
+      insertItem.run('Bandage',         'commune', 1, 'Premiers soins',  '+4 PV a un allie',           '🩹');
+      insertItem.run('Caillou pointu',  'commune', 1, 'Lancer precis',   '2 degats (ignore DEF)',      '💎');
+      // Rares (mana 2)
+      insertItem.run('Potion de force', 'rare', 2, 'Rage chimique',     '+3 ATK a un allie ce tour',   '💪');
+      insertItem.run('Armure legere',   'rare', 2, 'Protection',        '+4 bouclier a un allie',      '🛡️');
+      insertItem.run('Bombe fumigene',  'rare', 2, 'Aveuglement',       'Stun un ennemi',              '💨');
+      insertItem.run('Fiole de poison', 'rare', 2, 'Empoisonnement',    'Empoisonne ennemi (2/tour)',   '☠️');
+      insertItem.run('Parchemin de soin','rare',2, 'Soin de groupe',    '+3 PV a toute l equipe',      '📜');
+      // Epiques (mana 3)
+      insertItem.run('Epee enchantee',  'epique', 3, 'Enchantement',    '+5 ATK permanent a un allie', '⚔️');
+      insertItem.run('Grimoire de foudre','epique',3,'Foudroiement',    '7 degats a un ennemi',        '📕');
+      insertItem.run('Totem de guerre', 'epique', 3, 'Cri de guerre',   '+2 ATK a tous les allies',    '🗿');
+      insertItem.run('Elixir de vie',   'epique', 3, 'Miracle',         '+12 PV a un allie',           '✨');
+      insertItem.run('Parchemin interdit','epique',3,'Destruction',     '4 degats a tous les ennemis', '📜');
+      console.log('15 cartes objet ajoutees.');
+    });
+    addItems();
+  }
+}
+
+// --- Tables Decks ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS decks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL DEFAULT 'Deck 1',
+    is_pvp_deck INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS deck_cards (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    deck_id INTEGER NOT NULL,
+    user_card_id INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    FOREIGN KEY (deck_id) REFERENCES decks(id),
+    FOREIGN KEY (user_card_id) REFERENCES user_cards(id)
+  )
+`);
+
 // --- Boosters ---
 const BOOSTERS = [
   {
@@ -972,6 +1263,37 @@ const ABILITY_MAP = {
 
   // ===== LEGACY (keep for backward compat, may be unused after migration) =====
   'Renaissance':        { type: 'revive',            hp: 15 },
+
+  // ===== STARTER DECK abilities =====
+  'Coup de massue':     { type: 'direct_damage',     value: 1 },
+  'Morsure de rat':     { type: 'first_turn_damage', value: 2 },
+  'Nuee de mandibules': { type: 'random_damage',     damage: 1, hits: 3 },
+  'Ecaille coupante':   { type: 'direct_damage',     value: 1 },
+  'Pince acier':        { type: 'direct_damage',     value: 2 },
+  'Garde de pierre':    { type: 'buff_def',          value: 2 },
+  'Coup bas':           { type: 'first_turn_damage', value: 3 },
+  'Filet marin':        { type: 'stun',              damage: 0 },
+};
+
+// ============================================
+// ITEM EFFECTS MAP (for objet cards in combat)
+// ============================================
+const ITEM_EFFECTS = {
+  'Soin mineur':     { target: 'ally',        type: 'heal',               value: 5 },
+  'Lancer':          { target: 'enemy',       type: 'damage',             value: 3 },
+  'Herboristerie':   { target: 'ally',        type: 'heal',               value: 3 },
+  'Premiers soins':  { target: 'ally',        type: 'heal',               value: 4 },
+  'Lancer precis':   { target: 'enemy',       type: 'damage_ignore_def',  value: 2 },
+  'Rage chimique':   { target: 'ally',        type: 'buff_atk',           value: 3 },
+  'Protection':      { target: 'ally',        type: 'shield',             value: 4 },
+  'Aveuglement':     { target: 'enemy',       type: 'stun' },
+  'Empoisonnement':  { target: 'enemy',       type: 'poison',             value: 2 },
+  'Soin de groupe':  { target: 'team',        type: 'team_heal',          value: 3 },
+  'Enchantement':    { target: 'ally',        type: 'buff_atk_permanent', value: 5 },
+  'Foudroiement':    { target: 'enemy',       type: 'damage',             value: 7 },
+  'Cri de guerre':   { target: 'team',        type: 'buff_team_atk',      value: 2 },
+  'Miracle':         { target: 'ally',        type: 'heal',               value: 12 },
+  'Destruction':     { target: 'all_enemies', type: 'aoe_damage',         value: 4 },
 };
 
 function getEffectiveStats(card) {
@@ -1532,6 +1854,424 @@ function aiTurn(battle) {
     }
 
     if (checkWin(battle)) return events;
+  }
+
+  return events;
+}
+
+// ============================================
+// DECK BATTLE ENGINE — deck/hand/field/energy
+// ============================================
+
+let deckHandIdCounter = 1;
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function makeHandCard(card) {
+  const id = deckHandIdCounter++;
+  const es = getEffectiveStats(card);
+  return {
+    handId: id,
+    cardId: card.id || null,
+    userCardId: card.user_card_id || null,
+    name: card.name,
+    emoji: card.emoji || '',
+    rarity: card.rarity,
+    type: card.type,
+    element: card.element,
+    attack: card.attack,
+    defense: card.defense,
+    hp: card.hp,
+    mana_cost: card.mana_cost,
+    is_fused: card.is_fused || 0,
+    is_shiny: card.is_shiny || 0,
+    ability_name: card.ability_name,
+    ability_desc: card.ability_desc,
+    effectiveStats: es,
+  };
+}
+
+function makeDeckFieldUnit(handCard, side) {
+  const es = { ...handCard.effectiveStats };
+  // Passif Guerrier : +10% PV max
+  if (handCard.type === 'guerrier') {
+    es.hp = Math.floor(es.hp * 1.1);
+  }
+  return {
+    handId: handCard.handId,
+    cardId: handCard.cardId,
+    userCardId: handCard.userCardId,
+    name: handCard.name,
+    emoji: handCard.emoji,
+    rarity: handCard.rarity,
+    type: handCard.type,
+    element: handCard.element,
+    attack: handCard.attack,
+    defense: handCard.defense,
+    hp: handCard.hp,
+    mana_cost: handCard.mana_cost,
+    is_fused: handCard.is_fused,
+    is_shiny: handCard.is_shiny,
+    ability_name: handCard.ability_name,
+    ability_desc: handCard.ability_desc,
+    effectiveStats: es,
+    side,
+    currentHp: es.hp,
+    maxHp: es.hp,
+    alive: true,
+    buffAtk: 0,
+    buffDef: 0,
+    stunned: false,
+    usedAbility: false,
+    hasAttacked: false,
+    canRevive: ABILITY_MAP[handCard.ability_name]?.type === 'revive',
+    shield: 0,
+    poisoned: 0,
+    marked: 0,
+    counterDamage: 0,
+    permanentBonusAtk: 0,
+    permanentBonusDef: 0,
+    lowHpDefTriggered: false,
+    graceUsed: false,
+    lifestealPercent: 0,
+  };
+}
+
+function createDeckBattleState(playerCards, enemyCards, battleType) {
+  const battleId = 'battle_' + (battleIdCounter++);
+
+  const pDeck = shuffleArray(playerCards.map(c => makeHandCard(c)));
+  const eDeck = shuffleArray(enemyCards.map(c => makeHandCard(c)));
+
+  const pHand = pDeck.splice(0, 5);
+  const eHand = eDeck.splice(0, 5);
+
+  const state = {
+    battleId,
+    battleType,
+    isDeckBattle: true,
+    turn: 1,
+    phase: 'player_turn',
+    maxTurns: 20,
+    playerDeck: pDeck,
+    playerHand: pHand,
+    playerField: [null, null, null],
+    playerEnergy: 2,
+    playerMaxEnergy: 2,
+    enemyDeck: eDeck,
+    enemyHand: eHand,
+    enemyField: [null, null, null],
+    enemyEnergy: 2,
+    enemyMaxEnergy: 2,
+    attackedThisTurn: [],
+    log: [],
+    result: null,
+    lastAction: Date.now(),
+  };
+
+  activeBattles.set(battleId, state);
+  return state;
+}
+
+function getDeckBattleSnapshot(battle) {
+  return {
+    battleId: battle.battleId,
+    turn: battle.turn,
+    phase: battle.phase,
+    result: battle.result,
+    playerHand: battle.playerHand,
+    playerField: battle.playerField,
+    playerEnergy: battle.playerEnergy,
+    playerMaxEnergy: battle.playerMaxEnergy,
+    playerDeckCount: battle.playerDeck.length,
+    enemyField: battle.enemyField,
+    enemyHandCount: battle.enemyHand.length,
+    enemyEnergy: battle.enemyEnergy,
+    enemyMaxEnergy: battle.enemyMaxEnergy,
+    enemyDeckCount: battle.enemyDeck.length,
+    attackedThisTurn: battle.attackedThisTurn || [],
+  };
+}
+
+function getFieldAlive(field) {
+  return field.filter(u => u !== null && u.alive);
+}
+
+function cleanDeadFromField(field) {
+  for (let i = 0; i < field.length; i++) {
+    if (field[i] && !field[i].alive) field[i] = null;
+  }
+}
+
+function getPackBonus(field, unit) {
+  if (unit.type !== 'bete') return 0;
+  const beteCount = field.filter(u => u && u.alive && u.type === 'bete').length;
+  return beteCount >= 2 ? 1 : 0;
+}
+
+function checkDeckWin(battle) {
+  const enemyFieldAlive = battle.enemyField.some(u => u !== null && u.alive);
+  const enemyHasCards = battle.enemyHand.length > 0 || battle.enemyDeck.length > 0;
+  if (!enemyFieldAlive && !enemyHasCards) {
+    battle.result = 'victory';
+    return 'victory';
+  }
+
+  const playerFieldAlive = battle.playerField.some(u => u !== null && u.alive);
+  const playerHasCards = battle.playerHand.length > 0 || battle.playerDeck.length > 0;
+  if (!playerFieldAlive && !playerHasCards) {
+    battle.result = 'defeat';
+    return 'defeat';
+  }
+
+  if (battle.turn > battle.maxTurns) {
+    const pHP = getFieldAlive(battle.playerField).reduce((s, u) => s + u.currentHp, 0);
+    const eHP = getFieldAlive(battle.enemyField).reduce((s, u) => s + u.currentHp, 0);
+    if (pHP > eHP) { battle.result = 'victory'; return 'victory'; }
+    if (eHP > pHP) { battle.result = 'defeat'; return 'defeat'; }
+    battle.result = 'draw';
+    return 'draw';
+  }
+
+  return null;
+}
+
+function resolveItemEffect(item, target, allAllies, allEnemies, events) {
+  const effect = ITEM_EFFECTS[item.ability_name];
+  if (!effect) return;
+
+  switch (effect.type) {
+    case 'heal':
+      if (target && target.alive) {
+        target.currentHp = Math.min(target.maxHp, target.currentHp + effect.value);
+        events.push({ type: 'item_heal', item: item.name, target: target.name, emoji: item.emoji, heal: effect.value });
+      }
+      break;
+    case 'damage':
+      if (target && target.alive) {
+        applyDamage(target, effect.value, events, null);
+        events.push({ type: 'item_damage', item: item.name, target: target.name, emoji: item.emoji, damage: effect.value });
+      }
+      break;
+    case 'damage_ignore_def':
+      if (target && target.alive) {
+        // Bypass shield for ignore def items
+        target.currentHp = Math.max(0, target.currentHp - effect.value);
+        if (target.currentHp <= 0) checkKO(target, events);
+        events.push({ type: 'item_damage', item: item.name, target: target.name, emoji: item.emoji, damage: effect.value, ignoreDef: true });
+      }
+      break;
+    case 'buff_atk':
+      if (target && target.alive) {
+        target.buffAtk += effect.value;
+        events.push({ type: 'item_buff', item: item.name, target: target.name, emoji: item.emoji, desc: `+${effect.value} ATK` });
+      }
+      break;
+    case 'buff_atk_permanent':
+      if (target && target.alive) {
+        target.permanentBonusAtk += effect.value;
+        events.push({ type: 'item_buff', item: item.name, target: target.name, emoji: item.emoji, desc: `+${effect.value} ATK permanent` });
+      }
+      break;
+    case 'shield':
+      if (target && target.alive) {
+        target.shield += effect.value;
+        events.push({ type: 'item_buff', item: item.name, target: target.name, emoji: item.emoji, desc: `+${effect.value} bouclier` });
+      }
+      break;
+    case 'stun':
+      if (target && target.alive) {
+        target.stunned = true;
+        events.push({ type: 'item_stun', item: item.name, target: target.name, emoji: item.emoji });
+      }
+      break;
+    case 'poison':
+      if (target && target.alive) {
+        target.poisoned = (target.poisoned || 0) + effect.value;
+        events.push({ type: 'item_poison', item: item.name, target: target.name, emoji: item.emoji, damage: effect.value });
+      }
+      break;
+    case 'team_heal':
+      allAllies.forEach(u => {
+        if (u && u.alive) u.currentHp = Math.min(u.maxHp, u.currentHp + effect.value);
+      });
+      events.push({ type: 'item_team_heal', item: item.name, emoji: item.emoji, heal: effect.value });
+      break;
+    case 'buff_team_atk':
+      allAllies.forEach(u => {
+        if (u && u.alive) u.buffAtk += effect.value;
+      });
+      events.push({ type: 'item_buff', item: item.name, emoji: item.emoji, desc: `+${effect.value} ATK equipe` });
+      break;
+    case 'aoe_damage':
+      allEnemies.forEach(u => {
+        if (u && u.alive) {
+          applyDamage(u, effect.value, events, null);
+          events.push({ type: 'item_aoe', item: item.name, target: u.name, emoji: item.emoji, damage: effect.value });
+        }
+      });
+      break;
+  }
+}
+
+function aiDeckTurn(battle) {
+  const events = [];
+
+  // Divin aura for enemy field
+  const divinCount = getFieldAlive(battle.enemyField).filter(u => u.type === 'divin').length;
+  if (divinCount > 0) {
+    getFieldAlive(battle.enemyField).forEach(u => {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + divinCount);
+    });
+    events.push({ type: 'type_passive', desc: `Aura divine ennemie : +${divinCount} PV` });
+  }
+
+  // 1. Deploy: play most expensive affordable creature to empty slots
+  let keepDeploying = true;
+  while (keepDeploying) {
+    keepDeploying = false;
+    const emptySlots = [];
+    for (let i = 0; i < 3; i++) {
+      if (!battle.enemyField[i] || !battle.enemyField[i].alive) {
+        battle.enemyField[i] = null;
+        emptySlots.push(i);
+      }
+    }
+    if (emptySlots.length === 0) break;
+
+    const creatures = battle.enemyHand
+      .filter(c => c.type !== 'objet' && c.mana_cost <= battle.enemyEnergy)
+      .sort((a, b) => b.mana_cost - a.mana_cost);
+
+    if (creatures.length > 0) {
+      const card = creatures[0];
+      const slot = emptySlots[0];
+      const handIdx = battle.enemyHand.indexOf(card);
+      battle.enemyHand.splice(handIdx, 1);
+
+      const unit = makeDeckFieldUnit(card, 'enemy');
+      battle.enemyField[slot] = unit;
+      battle.enemyEnergy -= card.mana_cost;
+
+      events.push({ type: 'enemy_deploy', slot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost });
+      keepDeploying = true;
+    }
+  }
+
+  // 2. Use abilities (costs ceil(mana_cost/2) energy)
+  for (let i = 0; i < 3; i++) {
+    const unit = battle.enemyField[i];
+    if (!unit || !unit.alive || unit.usedAbility || unit.stunned) continue;
+
+    const abilityCost = Math.ceil(unit.mana_cost / 2);
+    if (battle.enemyEnergy < abilityCost) continue;
+
+    const ability = ABILITY_MAP[unit.ability_name];
+    if (!ability) continue;
+
+    const playerAlive = getFieldAlive(battle.playerField);
+    const enemyAlive = getFieldAlive(battle.enemyField);
+
+    // Skip offensive abilities if no player targets
+    if (playerAlive.length === 0 && !['buff_atk', 'buff_def', 'buff_team_atk', 'buff_team_def', 'shield', 'heal_ally', 'counter', 'lifesteal_attack', 'revive'].includes(ability.type)) continue;
+
+    const abilityEvents = resolveAbility(unit, playerAlive, enemyAlive, playerAlive, battle);
+    events.push(...abilityEvents);
+    battle.enemyEnergy -= abilityCost;
+
+    cleanDeadFromField(battle.playerField);
+    if (checkDeckWin(battle)) return events;
+  }
+
+  // 3. Use items from hand (heal weakest ally, damage weakest enemy)
+  const itemsToPlay = [...battle.enemyHand.filter(c => c.type === 'objet')];
+  for (const item of itemsToPlay) {
+    if (item.mana_cost > battle.enemyEnergy) continue;
+    if (!battle.enemyHand.includes(item)) continue;
+
+    const effect = ITEM_EFFECTS[item.ability_name];
+    if (!effect) continue;
+
+    const playerAlive = getFieldAlive(battle.playerField);
+    const enemyAlive = getFieldAlive(battle.enemyField);
+
+    let target = null;
+    if (effect.target === 'ally') {
+      target = enemyAlive.length > 0 ? enemyAlive.reduce((a, b) => a.currentHp < b.currentHp ? a : b) : null;
+      if (!target || (effect.type === 'heal' && target.currentHp >= target.maxHp * 0.8)) continue;
+    } else if (effect.target === 'enemy') {
+      target = playerAlive.length > 0 ? playerAlive.reduce((a, b) => a.currentHp < b.currentHp ? a : b) : null;
+      if (!target) continue;
+    } else if (effect.target === 'team') {
+      if (enemyAlive.length === 0) continue;
+    } else if (effect.target === 'all_enemies') {
+      if (playerAlive.length === 0) continue;
+    }
+
+    resolveItemEffect(item, target, enemyAlive, playerAlive, events);
+
+    const idx = battle.enemyHand.indexOf(item);
+    if (idx >= 0) battle.enemyHand.splice(idx, 1);
+    battle.enemyEnergy -= item.mana_cost;
+
+    cleanDeadFromField(battle.playerField);
+    if (checkDeckWin(battle)) return events;
+  }
+
+  // 4. Attack with each field creature (target weakest player unit)
+  for (let i = 0; i < 3; i++) {
+    const unit = battle.enemyField[i];
+    if (!unit || !unit.alive) continue;
+
+    if (unit.stunned) {
+      unit.stunned = false;
+      events.push({ type: 'stunned', unit: unit.name });
+      continue;
+    }
+
+    // Fortification Guerrier
+    if (unit.type === 'guerrier' && !unit.lowHpDefTriggered && unit.currentHp / unit.maxHp < 0.3) {
+      unit.permanentBonusDef += 2;
+      unit.lowHpDefTriggered = true;
+      events.push({ type: 'type_passive', desc: `${unit.name} active Fortification ! +2 DEF` });
+    }
+
+    const playerAlive = getFieldAlive(battle.playerField);
+    if (playerAlive.length === 0) break;
+    const target = playerAlive.reduce((a, b) => a.currentHp < b.currentHp ? a : b);
+
+    const ignoreDef = ABILITY_MAP[unit.ability_name]?.type === 'ignore_def';
+
+    // Bete pack bonus (temp)
+    const packBonus = getPackBonus(battle.enemyField, unit);
+    unit.permanentBonusAtk += packBonus;
+    const dmg = calcDamage(unit, target, ignoreDef);
+    unit.permanentBonusAtk -= packBonus;
+
+    applyDamage(target, dmg, events, unit);
+    const targetSlot = battle.playerField.indexOf(target);
+    events.push({ type: 'attack', attacker: unit.name, attackerSlot: i, target: target.name, targetSlot, damage: dmg, side: 'enemy' });
+
+    // Lifesteal
+    if (unit.lifestealPercent > 0) {
+      const healed = Math.floor(dmg * unit.lifestealPercent / 100);
+      unit.currentHp = Math.min(unit.maxHp, unit.currentHp + healed);
+    }
+    // Feroce Bete
+    if (!target.alive && unit.type === 'bete') {
+      unit.permanentBonusAtk += 1;
+      events.push({ type: 'type_passive', desc: `${unit.name} gagne en feroce ! +1 ATK` });
+    }
+
+    cleanDeadFromField(battle.playerField);
+    if (checkDeckWin(battle)) return events;
   }
 
   return events;
@@ -2168,6 +2908,359 @@ app.post('/api/pvp/start', requireAuth, (req, res) => {
 });
 
 // ============================================
+// DECK BATTLE ROUTES (new system)
+// ============================================
+
+// Start a deck-based PvP battle
+app.post('/api/battle/start-deck', requireAuth, (req, res) => {
+  const { deckId } = req.body; // deckId: number or 'starter'
+
+  let playerCards;
+
+  if (deckId === 'starter') {
+    playerCards = STARTER_DECK.map(c => ({ ...c }));
+  } else {
+    const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(deckId, req.session.userId);
+    if (!deck) return res.status(404).json({ error: 'Deck introuvable' });
+
+    const cards = db.prepare(`
+      SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+      FROM deck_cards dc
+      JOIN user_cards uc ON dc.user_card_id = uc.id
+      JOIN cards c ON uc.card_id = c.id
+      WHERE dc.deck_id = ?
+      ORDER BY dc.position
+    `).all(deck.id);
+
+    if (cards.length !== 20) return res.status(400).json({ error: 'Deck incomplet' });
+    playerCards = cards;
+  }
+
+  // Find opponent PvP deck
+  let enemyCards;
+  let opponentName = 'Entraineur';
+
+  const pvpDeck = db.prepare(`
+    SELECT d.*, u.username FROM decks d
+    JOIN users u ON d.user_id = u.id
+    WHERE d.is_pvp_deck = 1 AND d.user_id != ?
+    ORDER BY RANDOM() LIMIT 1
+  `).get(req.session.userId);
+
+  if (pvpDeck) {
+    const oppCards = db.prepare(`
+      SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, c.*
+      FROM deck_cards dc
+      JOIN user_cards uc ON dc.user_card_id = uc.id
+      JOIN cards c ON uc.card_id = c.id
+      WHERE dc.deck_id = ?
+      ORDER BY dc.position
+    `).all(pvpDeck.id);
+
+    if (oppCards.length === 20) {
+      enemyCards = oppCards;
+      opponentName = pvpDeck.username;
+    }
+  }
+
+  // Fallback: use starter deck
+  if (!enemyCards) {
+    enemyCards = STARTER_DECK.map(c => ({ ...c }));
+  }
+
+  const battle = createDeckBattleState(playerCards, enemyCards, 'pvp');
+
+  res.json({
+    ...getDeckBattleSnapshot(battle),
+    opponentName,
+  });
+});
+
+// Deploy a creature from hand to field
+app.post('/api/battle/deploy', requireAuth, (req, res) => {
+  const { battleId, handIndex, fieldSlot } = req.body;
+
+  const battle = activeBattles.get(battleId);
+  if (!battle || !battle.isDeckBattle) return res.status(404).json({ error: 'Combat introuvable' });
+  if (battle.result) return res.status(400).json({ error: 'Combat termine' });
+  if (battle.phase !== 'player_turn') return res.status(400).json({ error: 'Pas votre tour' });
+
+  battle.lastAction = Date.now();
+
+  const card = battle.playerHand[handIndex];
+  if (!card) return res.status(400).json({ error: 'Carte introuvable en main' });
+  if (card.type === 'objet') return res.status(400).json({ error: 'Utilisez use-item pour les objets' });
+  if (fieldSlot < 0 || fieldSlot > 2) return res.status(400).json({ error: 'Slot invalide' });
+  if (battle.playerField[fieldSlot] && battle.playerField[fieldSlot].alive) {
+    return res.status(400).json({ error: 'Slot occupe' });
+  }
+  if (card.mana_cost > battle.playerEnergy) return res.status(400).json({ error: 'Pas assez d energie' });
+
+  // Deploy
+  battle.playerHand.splice(handIndex, 1);
+  battle.playerField[fieldSlot] = null; // clean dead
+  const unit = makeDeckFieldUnit(card, 'player');
+  battle.playerField[fieldSlot] = unit;
+  battle.playerEnergy -= card.mana_cost;
+
+  const events = [{ type: 'deploy', slot: fieldSlot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost }];
+
+  res.json({ events, ...getDeckBattleSnapshot(battle) });
+});
+
+// Attack with a field creature
+app.post('/api/battle/attack-card', requireAuth, (req, res) => {
+  const { battleId, fieldSlot, targetSlot } = req.body;
+
+  const battle = activeBattles.get(battleId);
+  if (!battle || !battle.isDeckBattle) return res.status(404).json({ error: 'Combat introuvable' });
+  if (battle.result) return res.status(400).json({ error: 'Combat termine' });
+  if (battle.phase !== 'player_turn') return res.status(400).json({ error: 'Pas votre tour' });
+
+  battle.lastAction = Date.now();
+
+  const attacker = battle.playerField[fieldSlot];
+  if (!attacker || !attacker.alive) return res.status(400).json({ error: 'Pas de carte dans ce slot' });
+  if (attacker.stunned) return res.status(400).json({ error: 'Carte etourdie' });
+  if (battle.attackedThisTurn.includes(fieldSlot)) return res.status(400).json({ error: 'Deja attaque ce tour' });
+
+  const target = battle.enemyField[targetSlot];
+  if (!target || !target.alive) return res.status(400).json({ error: 'Pas de cible dans ce slot' });
+
+  const events = [];
+
+  // Fortification Guerrier
+  if (attacker.type === 'guerrier' && !attacker.lowHpDefTriggered && attacker.currentHp / attacker.maxHp < 0.3) {
+    attacker.permanentBonusDef += 2;
+    attacker.lowHpDefTriggered = true;
+    events.push({ type: 'type_passive', desc: `${attacker.name} active Fortification ! +2 DEF` });
+  }
+
+  const ignoreDef = ABILITY_MAP[attacker.ability_name]?.type === 'ignore_def';
+
+  // Bete pack bonus
+  const packBonus = getPackBonus(battle.playerField, attacker);
+  attacker.permanentBonusAtk += packBonus;
+  const dmg = calcDamage(attacker, target, ignoreDef);
+  attacker.permanentBonusAtk -= packBonus;
+
+  applyDamage(target, dmg, events, attacker);
+  events.push({ type: 'attack', attacker: attacker.name, attackerSlot: fieldSlot, target: target.name, targetSlot, damage: dmg, side: 'player' });
+
+  battle.attackedThisTurn.push(fieldSlot);
+
+  // Lifesteal
+  if (attacker.lifestealPercent > 0) {
+    const healed = Math.floor(dmg * attacker.lifestealPercent / 100);
+    attacker.currentHp = Math.min(attacker.maxHp, attacker.currentHp + healed);
+    events.push({ type: 'ability_heal', unit: attacker.name, target: attacker.name, ability: 'Vampirisme', heal: healed });
+  }
+  // Feroce Bete
+  if (!target.alive && attacker.type === 'bete') {
+    attacker.permanentBonusAtk += 1;
+    events.push({ type: 'type_passive', desc: `${attacker.name} gagne en feroce ! +1 ATK` });
+  }
+
+  cleanDeadFromField(battle.enemyField);
+  checkDeckWin(battle);
+
+  res.json({ events, ...getDeckBattleSnapshot(battle) });
+});
+
+// Use ability of a field creature
+app.post('/api/battle/use-ability', requireAuth, (req, res) => {
+  const { battleId, fieldSlot, targetSlot } = req.body;
+
+  const battle = activeBattles.get(battleId);
+  if (!battle || !battle.isDeckBattle) return res.status(404).json({ error: 'Combat introuvable' });
+  if (battle.result) return res.status(400).json({ error: 'Combat termine' });
+  if (battle.phase !== 'player_turn') return res.status(400).json({ error: 'Pas votre tour' });
+
+  battle.lastAction = Date.now();
+
+  const unit = battle.playerField[fieldSlot];
+  if (!unit || !unit.alive) return res.status(400).json({ error: 'Pas de carte dans ce slot' });
+  if (unit.usedAbility) return res.status(400).json({ error: 'Ability deja utilisee ce combat' });
+  if (unit.stunned) return res.status(400).json({ error: 'Carte etourdie' });
+
+  const abilityCost = Math.ceil(unit.mana_cost / 2);
+  if (battle.playerEnergy < abilityCost) return res.status(400).json({ error: 'Pas assez d energie' });
+
+  const ability = ABILITY_MAP[unit.ability_name];
+  if (!ability) return res.status(400).json({ error: 'Pas d ability' });
+
+  const enemyAlive = getFieldAlive(battle.enemyField);
+  const playerAlive = getFieldAlive(battle.playerField);
+
+  let targets = enemyAlive;
+  if (targetSlot !== undefined && targetSlot !== null) {
+    const t = battle.enemyField[targetSlot];
+    if (t && t.alive) targets = [t];
+  }
+
+  const events = resolveAbility(unit, targets, playerAlive, enemyAlive, battle);
+  battle.playerEnergy -= abilityCost;
+
+  cleanDeadFromField(battle.enemyField);
+  cleanDeadFromField(battle.playerField);
+  checkDeckWin(battle);
+
+  res.json({ events, ...getDeckBattleSnapshot(battle) });
+});
+
+// Use an item from hand
+app.post('/api/battle/use-item', requireAuth, (req, res) => {
+  const { battleId, handIndex, targetSlot, targetSide } = req.body;
+
+  const battle = activeBattles.get(battleId);
+  if (!battle || !battle.isDeckBattle) return res.status(404).json({ error: 'Combat introuvable' });
+  if (battle.result) return res.status(400).json({ error: 'Combat termine' });
+  if (battle.phase !== 'player_turn') return res.status(400).json({ error: 'Pas votre tour' });
+
+  battle.lastAction = Date.now();
+
+  const item = battle.playerHand[handIndex];
+  if (!item) return res.status(400).json({ error: 'Carte introuvable en main' });
+  if (item.type !== 'objet') return res.status(400).json({ error: 'Ce n est pas un objet' });
+  if (item.mana_cost > battle.playerEnergy) return res.status(400).json({ error: 'Pas assez d energie' });
+
+  const effect = ITEM_EFFECTS[item.ability_name];
+  if (!effect) return res.status(400).json({ error: 'Effet inconnu' });
+
+  const playerAlive = getFieldAlive(battle.playerField);
+  const enemyAlive = getFieldAlive(battle.enemyField);
+
+  let target = null;
+  if (effect.target === 'ally' && targetSlot !== undefined) {
+    target = battle.playerField[targetSlot];
+    if (!target || !target.alive) return res.status(400).json({ error: 'Cible alliee invalide' });
+  } else if (effect.target === 'enemy' && targetSlot !== undefined) {
+    target = battle.enemyField[targetSlot];
+    if (!target || !target.alive) return res.status(400).json({ error: 'Cible ennemie invalide' });
+  }
+
+  const events = [];
+  resolveItemEffect(item, target, playerAlive, enemyAlive, events);
+
+  battle.playerHand.splice(handIndex, 1);
+  battle.playerEnergy -= item.mana_cost;
+
+  cleanDeadFromField(battle.enemyField);
+  cleanDeadFromField(battle.playerField);
+  checkDeckWin(battle);
+
+  res.json({ events, ...getDeckBattleSnapshot(battle) });
+});
+
+// End player turn — process effects + AI turn + new turn
+app.post('/api/battle/end-turn', requireAuth, (req, res) => {
+  const { battleId } = req.body;
+
+  const battle = activeBattles.get(battleId);
+  if (!battle || !battle.isDeckBattle) return res.status(404).json({ error: 'Combat introuvable' });
+  if (battle.result) return res.status(400).json({ error: 'Combat termine' });
+  if (battle.phase !== 'player_turn') return res.status(400).json({ error: 'Pas votre tour' });
+
+  battle.lastAction = Date.now();
+  const events = [];
+
+  // 1. Poison ticks on player field
+  for (const unit of getFieldAlive(battle.playerField)) {
+    if (unit.poisoned > 0) {
+      unit.currentHp = Math.max(1, unit.currentHp - unit.poisoned);
+      events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisoned });
+      unit.poisoned = 0;
+      if (unit.currentHp <= 0) checkKO(unit, events);
+    }
+  }
+  cleanDeadFromField(battle.playerField);
+
+  // 2. Reset temp buffs on player field
+  for (const unit of getFieldAlive(battle.playerField)) {
+    unit.buffAtk = 0; unit.buffDef = 0;
+    unit.marked = 0; unit.counterDamage = 0;
+    unit.lifestealPercent = 0; unit.hasAttacked = false;
+  }
+
+  if (checkDeckWin(battle)) {
+    return res.json({ events, ...getDeckBattleSnapshot(battle) });
+  }
+
+  // 3. Enemy turn
+  battle.phase = 'enemy_turn';
+
+  // Enemy energy for this turn
+  battle.enemyMaxEnergy = Math.min(battle.turn + 1, 10);
+  battle.enemyEnergy = battle.enemyMaxEnergy;
+
+  // Enemy draws 1 card
+  if (battle.enemyHand.length < 7 && battle.enemyDeck.length > 0) {
+    battle.enemyHand.push(battle.enemyDeck.shift());
+    events.push({ type: 'enemy_draw' });
+  }
+
+  // AI plays
+  const aiEvents = aiDeckTurn(battle);
+  events.push(...aiEvents);
+
+  if (checkDeckWin(battle)) {
+    return res.json({ events, ...getDeckBattleSnapshot(battle) });
+  }
+
+  // 4. Poison ticks on enemy field
+  for (const unit of getFieldAlive(battle.enemyField)) {
+    if (unit.poisoned > 0) {
+      unit.currentHp = Math.max(1, unit.currentHp - unit.poisoned);
+      events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisoned });
+      unit.poisoned = 0;
+      if (unit.currentHp <= 0) checkKO(unit, events);
+    }
+  }
+  cleanDeadFromField(battle.enemyField);
+
+  // 5. Reset temp buffs on enemy field
+  for (const unit of getFieldAlive(battle.enemyField)) {
+    unit.buffAtk = 0; unit.buffDef = 0;
+    unit.marked = 0; unit.counterDamage = 0;
+    unit.lifestealPercent = 0;
+  }
+
+  if (checkDeckWin(battle)) {
+    return res.json({ events, ...getDeckBattleSnapshot(battle) });
+  }
+
+  // 6. New turn
+  battle.turn++;
+  battle.phase = 'player_turn';
+  battle.attackedThisTurn = [];
+
+  // Player energy
+  battle.playerMaxEnergy = Math.min(battle.turn + 1, 10);
+  battle.playerEnergy = battle.playerMaxEnergy;
+
+  // Player draws 1 card
+  if (battle.playerHand.length < 7 && battle.playerDeck.length > 0) {
+    const drawn = battle.playerDeck.shift();
+    battle.playerHand.push(drawn);
+    events.push({ type: 'player_draw', card: drawn });
+  }
+
+  // Divin aura for player field
+  const divinCountP = getFieldAlive(battle.playerField).filter(u => u.type === 'divin').length;
+  if (divinCountP > 0) {
+    getFieldAlive(battle.playerField).forEach(u => {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + divinCountP);
+    });
+    events.push({ type: 'type_passive', desc: `Aura divine : +${divinCountP} PV` });
+  }
+
+  // Check turn limit
+  checkDeckWin(battle);
+
+  res.json({ events, ...getDeckBattleSnapshot(battle) });
+});
+
+// ============================================
 // ADMIN SYSTEM
 // ============================================
 function requireAdmin(req, res, next) {
@@ -2309,6 +3402,144 @@ app.post('/api/admin/set-credits', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// ============================================
+// DECK ROUTES
+// ============================================
+
+// Starter deck — cartes faibles pour tester sans collection
+const STARTER_DECK = [
+  { name:'Paysan',emoji:'👨‍🌾',rarity:'commune',type:'guerrier',element:'terre',attack:2,defense:2,hp:12,mana_cost:1,ability_name:'Coup de massue',ability_desc:'1 degat direct' },
+  { name:'Rat',emoji:'🐀',rarity:'commune',type:'bete',element:'terre',attack:2,defense:1,hp:10,mana_cost:1,ability_name:'Morsure de rat',ability_desc:'2 degats 1er tour' },
+  { name:'Fourmi',emoji:'🐜',rarity:'commune',type:'bete',element:'terre',attack:1,defense:3,hp:10,mana_cost:1,ability_name:'Nuee de mandibules',ability_desc:'1 degat x3' },
+  { name:'Poisson',emoji:'🐟',rarity:'commune',type:'bete',element:'eau',attack:2,defense:2,hp:12,mana_cost:1,ability_name:'Ecaille coupante',ability_desc:'1 degat direct' },
+  { name:'Crabe',emoji:'🦀',rarity:'commune',type:'bete',element:'eau',attack:3,defense:3,hp:14,mana_cost:1,ability_name:'Pince acier',ability_desc:'2 degats directs' },
+  { name:'Salamandre',emoji:'🦎',rarity:'commune',type:'bete',element:'feu',attack:3,defense:1,hp:10,mana_cost:1,ability_name:'Queue enflammee',ability_desc:'2 degats directs' },
+  { name:'Braise',emoji:'🔥',rarity:'commune',type:'bete',element:'feu',attack:2,defense:2,hp:10,mana_cost:1,ability_name:'Brulure soudaine',ability_desc:'3 degats 1er tour' },
+  { name:'Chauve-souris',emoji:'🦇',rarity:'commune',type:'bete',element:'ombre',attack:2,defense:1,hp:10,mana_cost:1,ability_name:'Cri ultrason',ability_desc:'-2 ATK ennemi' },
+  { name:'Araignee',emoji:'🕷️',rarity:'commune',type:'bete',element:'ombre',attack:3,defense:2,hp:12,mana_cost:1,ability_name:'Toile collante',ability_desc:'Stun 1 tour' },
+  { name:'Moineau celeste',emoji:'🐦',rarity:'commune',type:'bete',element:'lumiere',attack:2,defense:2,hp:12,mana_cost:1,ability_name:'Elan celeste',ability_desc:'+1 ATK ce tour' },
+  { name:'Papillon',emoji:'🦋',rarity:'commune',type:'bete',element:'lumiere',attack:1,defense:1,hp:10,mana_cost:1,ability_name:'Poussiere d or',ability_desc:'-2 ATK ennemi' },
+  { name:'Sentinelle',emoji:'💂',rarity:'commune',type:'guerrier',element:'lumiere',attack:2,defense:4,hp:14,mana_cost:2,ability_name:'Garde de pierre',ability_desc:'+2 DEF ce tour' },
+  { name:'Brigand',emoji:'🗡️',rarity:'commune',type:'guerrier',element:'ombre',attack:3,defense:1,hp:12,mana_cost:1,ability_name:'Coup bas',ability_desc:'3 degats 1er tour' },
+  { name:'Marin',emoji:'⚓',rarity:'commune',type:'guerrier',element:'eau',attack:2,defense:2,hp:12,mana_cost:1,ability_name:'Filet marin',ability_desc:'Stun 1 tour' },
+  { name:'Flambeau',emoji:'🕯️',rarity:'commune',type:'guerrier',element:'feu',attack:3,defense:1,hp:10,mana_cost:1,ability_name:'Torche vive',ability_desc:'1 degat direct' },
+  // Objets starter
+  { name:'Potion mineure',emoji:'🧪',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Soin mineur',ability_desc:'+5 PV a un allie' },
+  { name:'Pierre lancee',emoji:'🪨',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Lancer',ability_desc:'3 degats a un ennemi' },
+  { name:'Bandage',emoji:'🩹',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Premiers soins',ability_desc:'+4 PV a un allie' },
+  { name:'Herbe medicinale',emoji:'🌿',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Herboristerie',ability_desc:'+3 PV a un allie' },
+  { name:'Caillou pointu',emoji:'💎',rarity:'commune',type:'objet',element:'neutre',attack:0,defense:0,hp:0,mana_cost:1,ability_name:'Lancer precis',ability_desc:'2 degats (ignore DEF)' },
+];
+
+// GET /api/decks — Liste des decks du joueur
+app.get('/api/decks', requireAuth, (req, res) => {
+  const decks = db.prepare('SELECT * FROM decks WHERE user_id = ? ORDER BY created_at').all(req.session.userId);
+  const result = decks.map(deck => {
+    const cards = db.prepare(`
+      SELECT dc.position, dc.user_card_id, uc.is_shiny, uc.is_fused, c.*
+      FROM deck_cards dc
+      JOIN user_cards uc ON dc.user_card_id = uc.id
+      JOIN cards c ON uc.card_id = c.id
+      WHERE dc.deck_id = ?
+      ORDER BY dc.position
+    `).all(deck.id);
+    return { ...deck, cards };
+  });
+  res.json(result);
+});
+
+// POST /api/decks — Creer un deck
+app.post('/api/decks', requireAuth, (req, res) => {
+  const { name, cardIds } = req.body;
+  if (!cardIds || cardIds.length !== 20) return res.status(400).json({ error: '20 cartes requises' });
+
+  // Max 3 decks
+  const count = db.prepare('SELECT COUNT(*) as c FROM decks WHERE user_id = ?').get(req.session.userId).c;
+  if (count >= 3) return res.status(400).json({ error: 'Maximum 3 decks' });
+
+  // Check uniqueness
+  if (new Set(cardIds).size !== 20) return res.status(400).json({ error: 'Pas de doublons' });
+
+  // Validate ownership + count creatures/objets
+  let objCount = 0;
+  for (const ucId of cardIds) {
+    const uc = db.prepare(`
+      SELECT uc.id, c.type FROM user_cards uc JOIN cards c ON uc.card_id = c.id
+      WHERE uc.id = ? AND uc.user_id = ?
+    `).get(ucId, req.session.userId);
+    if (!uc) return res.status(400).json({ error: `Carte ${ucId} introuvable` });
+    if (uc.type === 'objet') objCount++;
+  }
+  if (objCount > 8) return res.status(400).json({ error: 'Maximum 8 objets par deck' });
+  if ((20 - objCount) < 12) return res.status(400).json({ error: 'Minimum 12 creatures par deck' });
+
+  const deckName = name || `Deck ${count + 1}`;
+  const result = db.prepare('INSERT INTO decks (user_id, name) VALUES (?, ?)').run(req.session.userId, deckName);
+  const deckId = result.lastInsertRowid;
+
+  const insertCard = db.prepare('INSERT INTO deck_cards (deck_id, user_card_id, position) VALUES (?, ?, ?)');
+  const addCards = db.transaction(() => {
+    cardIds.forEach((ucId, i) => insertCard.run(deckId, ucId, i));
+  });
+  addCards();
+
+  res.json({ success: true, deckId });
+});
+
+// PUT /api/decks/:id — Modifier un deck
+app.put('/api/decks/:id', requireAuth, (req, res) => {
+  const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(req.params.id, req.session.userId);
+  if (!deck) return res.status(404).json({ error: 'Deck introuvable' });
+
+  const { name, cardIds } = req.body;
+  if (name) db.prepare('UPDATE decks SET name = ? WHERE id = ?').run(name, deck.id);
+
+  if (cardIds) {
+    if (cardIds.length !== 20) return res.status(400).json({ error: '20 cartes requises' });
+    if (new Set(cardIds).size !== 20) return res.status(400).json({ error: 'Pas de doublons' });
+
+    let objCount = 0;
+    for (const ucId of cardIds) {
+      const uc = db.prepare(`
+        SELECT uc.id, c.type FROM user_cards uc JOIN cards c ON uc.card_id = c.id
+        WHERE uc.id = ? AND uc.user_id = ?
+      `).get(ucId, req.session.userId);
+      if (!uc) return res.status(400).json({ error: `Carte ${ucId} introuvable` });
+      if (uc.type === 'objet') objCount++;
+    }
+    if (objCount > 8) return res.status(400).json({ error: 'Maximum 8 objets par deck' });
+
+    db.prepare('DELETE FROM deck_cards WHERE deck_id = ?').run(deck.id);
+    const insertCard = db.prepare('INSERT INTO deck_cards (deck_id, user_card_id, position) VALUES (?, ?, ?)');
+    const addCards = db.transaction(() => {
+      cardIds.forEach((ucId, i) => insertCard.run(deck.id, ucId, i));
+    });
+    addCards();
+  }
+
+  res.json({ success: true });
+});
+
+// DELETE /api/decks/:id — Supprimer un deck
+app.delete('/api/decks/:id', requireAuth, (req, res) => {
+  const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(req.params.id, req.session.userId);
+  if (!deck) return res.status(404).json({ error: 'Deck introuvable' });
+
+  db.prepare('DELETE FROM deck_cards WHERE deck_id = ?').run(deck.id);
+  db.prepare('DELETE FROM decks WHERE id = ?').run(deck.id);
+  res.json({ success: true });
+});
+
+// POST /api/decks/:id/set-pvp — Definir comme deck PvP actif
+app.post('/api/decks/:id/set-pvp', requireAuth, (req, res) => {
+  const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(req.params.id, req.session.userId);
+  if (!deck) return res.status(404).json({ error: 'Deck introuvable' });
+
+  db.prepare('UPDATE decks SET is_pvp_deck = 0 WHERE user_id = ?').run(req.session.userId);
+  db.prepare('UPDATE decks SET is_pvp_deck = 1 WHERE id = ?').run(deck.id);
+  res.json({ success: true });
+});
+
 // --- User cards list (for team selection) ---
 app.get('/api/my-cards', requireAuth, (req, res) => {
   const cards = db.prepare(`
@@ -2332,7 +3563,9 @@ app.get('/combat', requireAuth, (req, res) => { res.sendFile(path.join(__dirname
 app.get('/campaign', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'campaign.html')); });
 app.get('/battle', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battle.html')); });
 app.get('/pvp', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'pvp.html')); });
+app.get('/decks', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'decks.html')); });
 app.get('/admin', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
+app.get('/wiki', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'wiki.html')); });
 
 app.get('/', (req, res) => {
   if (req.session.userId) return res.redirect('/menu');
