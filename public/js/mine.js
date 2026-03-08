@@ -4,6 +4,9 @@ let mineState = null;
 let currentCredits = 0;
 let currentEssence = 0;
 let isHitting = false;
+let cooldownInterval = null;
+let cooldownSecondsLeft = 0;
+const COOLDOWN_TOTAL = 240; // 4 minutes
 
 const RESOURCE_NAMES = {
   charbon: 'Charbon',
@@ -42,6 +45,11 @@ async function loadMineState() {
     renderInventory(mineState.inventory, mineState.maxSlots);
     renderHiddenResources(mineState.hiddenResources);
     updateButtons();
+
+    // Check cooldown on load
+    if (mineState.cooldownRemaining > 0) {
+      startCooldownTimer(mineState.cooldownRemaining);
+    }
   } catch (e) {
     console.error('Erreur chargement mine:', e);
   }
@@ -307,7 +315,7 @@ async function sellAll() {
     const data = await res.json();
 
     if (data.success) {
-      showNotification(`+${data.totalSold} CR (${data.itemsSold} minerais vendus) — Nouvelle mine !`, 'sell');
+      showNotification(`+${data.totalSold} CR (${data.itemsSold} minerais vendus)`, 'sell');
       currentCredits = data.credits;
       document.getElementById('nav-credits').textContent = currentCredits;
       mineState.inventory = [];
@@ -329,6 +337,9 @@ async function sellAll() {
       if (collecterGrid && !document.getElementById('tab-collecter').classList.contains('hidden')) {
         renderCollecterTab();
       }
+
+      // Lancer le cooldown de restock
+      startCooldownTimer(data.cooldownSeconds || COOLDOWN_TOTAL);
     }
   } catch (e) {
     console.error('Erreur sell-all:', e);
@@ -483,6 +494,40 @@ async function purchaseUpgrade(type) {
   } catch (e) {
     console.error('Erreur upgrade:', e);
   }
+}
+
+// === COOLDOWN ===
+function startCooldownTimer(seconds) {
+  cooldownSecondsLeft = seconds;
+  const overlay = document.getElementById('mine-cooldown-overlay');
+  const timerEl = document.getElementById('mine-cooldown-timer');
+  const barEl = document.getElementById('mine-cooldown-bar');
+
+  overlay.classList.remove('hidden');
+
+  if (cooldownInterval) clearInterval(cooldownInterval);
+
+  function updateDisplay() {
+    const mins = Math.floor(cooldownSecondsLeft / 60);
+    const secs = cooldownSecondsLeft % 60;
+    timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+    const progress = ((COOLDOWN_TOTAL - cooldownSecondsLeft) / COOLDOWN_TOTAL) * 100;
+    barEl.style.width = `${progress}%`;
+  }
+
+  updateDisplay();
+
+  cooldownInterval = setInterval(() => {
+    cooldownSecondsLeft--;
+    if (cooldownSecondsLeft <= 0) {
+      clearInterval(cooldownInterval);
+      cooldownInterval = null;
+      overlay.classList.add('hidden');
+      showNotification('Mine prete ! Bonne extraction !', 'reset');
+    } else {
+      updateDisplay();
+    }
+  }, 1000);
 }
 
 // === UI HELPERS ===

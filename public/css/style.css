@@ -6502,6 +6502,83 @@ body.mine-page {
   100% { opacity: 0; }
 }
 
+/* Cooldown overlay */
+.mine-cooldown-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+.mine-cooldown-overlay.hidden {
+  display: none;
+}
+.mine-cooldown-box {
+  text-align: center;
+  background: rgba(10, 10, 10, 0.95);
+  border: 2px solid #ffaa00;
+  border-radius: 16px;
+  padding: 40px 60px;
+  box-shadow: 0 0 40px rgba(255, 170, 0, 0.2), inset 0 0 30px rgba(255, 170, 0, 0.05);
+  animation: cooldownPulse 2s ease-in-out infinite;
+}
+@keyframes cooldownPulse {
+  0%, 100% { box-shadow: 0 0 40px rgba(255, 170, 0, 0.2), inset 0 0 30px rgba(255, 170, 0, 0.05); }
+  50% { box-shadow: 0 0 60px rgba(255, 170, 0, 0.35), inset 0 0 40px rgba(255, 170, 0, 0.1); }
+}
+.mine-cooldown-icon {
+  font-size: 48px;
+  margin-bottom: 10px;
+  animation: cooldownSpin 3s linear infinite;
+}
+@keyframes cooldownSpin {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(-15deg); }
+  50% { transform: rotate(15deg); }
+  75% { transform: rotate(-10deg); }
+  100% { transform: rotate(0deg); }
+}
+.mine-cooldown-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 18px;
+  color: #ffaa00;
+  margin-bottom: 20px;
+  letter-spacing: 2px;
+}
+.mine-cooldown-timer {
+  font-family: 'VT323', monospace;
+  font-size: 72px;
+  color: #fff;
+  text-shadow: 0 0 20px rgba(255, 170, 0, 0.5);
+  margin-bottom: 20px;
+  letter-spacing: 4px;
+}
+.mine-cooldown-bar-bg {
+  width: 300px;
+  height: 8px;
+  background: #222;
+  border-radius: 4px;
+  margin: 0 auto 16px;
+  overflow: hidden;
+  border: 1px solid #333;
+}
+.mine-cooldown-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ffaa00, #ff6600);
+  border-radius: 4px;
+  transition: width 1s linear;
+}
+.mine-cooldown-hint {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: #888;
+  letter-spacing: 1px;
+}
+
 /* Mine page responsive */
 @media (max-width: 900px) {
   .mine-content {

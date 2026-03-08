@@ -154,6 +154,14 @@ db.exec(`
   )
 `);
 
+// Migration: last_sell_at pour cooldown mine
+{
+  const cols = db.prepare("PRAGMA table_info(mine_state)").all().map(c => c.name);
+  if (!cols.includes('last_sell_at')) {
+    db.exec("ALTER TABLE mine_state ADD COLUMN last_sell_at DATETIME DEFAULT NULL");
+  }
+}
+
 // --- Seed compte admin ---
 {
   const adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
@@ -4258,6 +4266,17 @@ app.get('/api/mine/state', requireAuth, (req, res) => {
   const inventory = getMineInventory(userId);
   const user = db.prepare('SELECT credits, excavation_essence FROM users WHERE id = ?').get(userId);
 
+  // Cooldown restock (4 minutes)
+  let cooldownRemaining = 0;
+  if (mine.last_sell_at) {
+    const sellTime = new Date(mine.last_sell_at + 'Z').getTime();
+    const elapsed = Date.now() - sellTime;
+    const cooldownMs = 4 * 60 * 1000; // 4 minutes
+    if (elapsed < cooldownMs) {
+      cooldownRemaining = Math.ceil((cooldownMs - elapsed) / 1000);
+    }
+  }
+
   res.json({
     grid: clientGrid,
     hiddenResources: {
@@ -4270,7 +4289,8 @@ app.get('/api/mine/state', requireAuth, (req, res) => {
     maxSlots,
     upgrades: { mine_speed: upgrades.mine_speed, inventory_size: upgrades.inventory_size, luck: upgrades.luck },
     essence: user.excavation_essence || 0,
-    credits: user.credits
+    credits: user.credits,
+    cooldownRemaining
   });
 });
 
@@ -4278,6 +4298,15 @@ app.get('/api/mine/state', requireAuth, (req, res) => {
 app.post('/api/mine/hit', requireAuth, (req, res) => {
   const userId = req.session.userId;
   const { index } = req.body;
+
+  // Check cooldown
+  const mineCheck = db.prepare('SELECT last_sell_at FROM mine_state WHERE user_id = ?').get(userId);
+  if (mineCheck && mineCheck.last_sell_at) {
+    const elapsed = Date.now() - new Date(mineCheck.last_sell_at + 'Z').getTime();
+    if (elapsed < 4 * 60 * 1000) {
+      return res.json({ success: false, cooldown: true });
+    }
+  }
 
   if (index === undefined || index < 0 || index >= MINE_GRID_SIZE * MINE_GRID_SIZE) {
     return res.status(400).json({ error: 'Index invalide' });
@@ -4421,7 +4450,7 @@ app.post('/api/mine/sell-all', requireAuth, (req, res) => {
   const sellAllTx = db.transaction(() => {
     db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
     db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(totalPrice, userId);
-    db.prepare('UPDATE mine_state SET grid = ?, hidden_charbon = ?, hidden_fer = ?, hidden_or = ?, hidden_diamant = ?, created_at = CURRENT_TIMESTAMP WHERE user_id = ?')
+    db.prepare('UPDATE mine_state SET grid = ?, hidden_charbon = ?, hidden_fer = ?, hidden_or = ?, hidden_diamant = ?, created_at = CURRENT_TIMESTAMP, last_sell_at = CURRENT_TIMESTAMP WHERE user_id = ?')
       .run(JSON.stringify(grid), counts.charbon, counts.fer, counts.or, counts.diamant, userId);
   });
   sellAllTx();
@@ -4436,7 +4465,7 @@ app.post('/api/mine/sell-all', requireAuth, (req, res) => {
     resource: null
   }));
 
-  res.json({ success: true, credits, totalSold: totalPrice, itemsSold: items.length, grid: clientGrid, hiddenResources: counts });
+  res.json({ success: true, credits, totalSold: totalPrice, itemsSold: items.length, grid: clientGrid, hiddenResources: counts, cooldownSeconds: 240 });
 });
 
 // POST reset mine
