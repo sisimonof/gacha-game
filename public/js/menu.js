@@ -27,6 +27,14 @@ async function loadUser() {
     // Store for settings modal
     window._currentAvatar = data.avatar || '⚔';
     window._currentDisplayName = displayName;
+    window._unlockedAvatars = data.unlockedAvatars || ['⚔'];
+
+    // Apply username effect
+    if (data.usernameEffect) {
+      const usernameEl = document.getElementById('username-display');
+      if (usernameEl) usernameEl.classList.add(data.usernameEffect);
+      if (profileUser) profileUser.classList.add(data.usernameEffect);
+    }
 
     // Rang
     updateRank(data.cardCount);
@@ -73,16 +81,35 @@ const AVATAR_LIST = [
 
 let selectedAvatar = null;
 
+const BP_AVATARS = ['🎖','🐲','👁‍🗨','🐦‍🔥','🏴‍☠️','🔱','👾'];
+
 function initSettingsModal() {
   const grid = document.getElementById('avatar-grid');
   if (!grid) return;
 
   grid.innerHTML = '';
+  const unlockedAvatars = window._unlockedAvatars || ['⚔'];
+
+  // Free avatars
   AVATAR_LIST.forEach(emoji => {
     const btn = document.createElement('button');
     btn.className = 'avatar-option';
     btn.textContent = emoji;
     btn.addEventListener('click', () => selectAvatar(emoji));
+    grid.appendChild(btn);
+  });
+
+  // BP exclusive avatars
+  BP_AVATARS.forEach(emoji => {
+    const btn = document.createElement('button');
+    btn.className = 'avatar-option avatar-option--bp';
+    btn.textContent = emoji;
+    if (unlockedAvatars.includes(emoji)) {
+      btn.addEventListener('click', () => selectAvatar(emoji));
+    } else {
+      btn.classList.add('avatar-option--locked');
+      btn.title = 'Passe de Combat';
+    }
     grid.appendChild(btn);
   });
 }

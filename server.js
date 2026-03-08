@@ -163,6 +163,31 @@ db.exec(`
   }
 }
 
+// === BATTLE PASS ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS battle_pass (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE,
+    xp INTEGER DEFAULT 0,
+    current_tier INTEGER DEFAULT 0,
+    claimed_tiers TEXT DEFAULT '[]',
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+// Migration: unlocked_avatars + username_effect
+{
+  const userColsBP = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!userColsBP.includes('unlocked_avatars')) {
+    db.exec(`ALTER TABLE users ADD COLUMN unlocked_avatars TEXT DEFAULT '["⚔"]'`);
+    console.log('Migration: unlocked_avatars ajouté');
+  }
+  if (!userColsBP.includes('username_effect')) {
+    db.exec("ALTER TABLE users ADD COLUMN username_effect TEXT DEFAULT ''");
+    console.log('Migration: username_effect ajouté');
+  }
+}
+
 // === GIFT CODES ===
 db.exec(`
   CREATE TABLE IF NOT EXISTS gift_codes (
@@ -544,6 +569,90 @@ const MINE_UPGRADES_CONFIG = {
 
 const BASE_INVENTORY_SLOTS = 5;
 const MINE_GRID_SIZE = 20;
+
+// ============================================
+// PASSE DE COMBAT
+// ============================================
+const BATTLEPASS_TIERS = [
+  { tier: 1,  xp_required: 100,  reward_type: 'credits',  reward_value: 200,           label: '200 Credits',       emoji: '💰' },
+  { tier: 2,  xp_required: 120,  reward_type: 'avatar',   reward_value: '🎖',          label: 'Avatar: Medaille',  emoji: '🎖' },
+  { tier: 3,  xp_required: 140,  reward_type: 'credits',  reward_value: 300,           label: '300 Credits',       emoji: '💰' },
+  { tier: 4,  xp_required: 165,  reward_type: 'essence',  reward_value: 1,             label: '1 Essence',         emoji: '⛏' },
+  { tier: 5,  xp_required: 190,  reward_type: 'card',     reward_value: 'commune',     label: 'Carte Commune',     emoji: '🃏' },
+  { tier: 6,  xp_required: 220,  reward_type: 'credits',  reward_value: 400,           label: '400 Credits',       emoji: '💰' },
+  { tier: 7,  xp_required: 250,  reward_type: 'avatar',   reward_value: '🐲',          label: 'Avatar: Dragon',    emoji: '🐲' },
+  { tier: 8,  xp_required: 285,  reward_type: 'effect',   reward_value: 'matrix_green',label: 'Effet: Matrix',     emoji: '💚' },
+  { tier: 9,  xp_required: 320,  reward_type: 'credits',  reward_value: 500,           label: '500 Credits',       emoji: '💰' },
+  { tier: 10, xp_required: 360,  reward_type: 'essence',  reward_value: 2,             label: '2 Essences',        emoji: '⛏' },
+  { tier: 11, xp_required: 400,  reward_type: 'card',     reward_value: 'rare',        label: 'Carte Rare',        emoji: '🃏' },
+  { tier: 12, xp_required: 450,  reward_type: 'credits',  reward_value: 600,           label: '600 Credits',       emoji: '💰' },
+  { tier: 13, xp_required: 500,  reward_type: 'avatar',   reward_value: '👁‍🗨',         label: 'Avatar: Oracle',    emoji: '👁‍🗨' },
+  { tier: 14, xp_required: 550,  reward_type: 'credits',  reward_value: 700,           label: '700 Credits',       emoji: '💰' },
+  { tier: 15, xp_required: 610,  reward_type: 'effect',   reward_value: 'blood_red',   label: 'Effet: Sang',       emoji: '❤' },
+  { tier: 16, xp_required: 670,  reward_type: 'credits',  reward_value: 800,           label: '800 Credits',       emoji: '💰' },
+  { tier: 17, xp_required: 740,  reward_type: 'essence',  reward_value: 2,             label: '2 Essences',        emoji: '⛏' },
+  { tier: 18, xp_required: 810,  reward_type: 'avatar',   reward_value: '🐦‍🔥',         label: 'Avatar: Phoenix',   emoji: '🐦‍🔥' },
+  { tier: 19, xp_required: 890,  reward_type: 'credits',  reward_value: 900,           label: '900 Credits',       emoji: '💰' },
+  { tier: 20, xp_required: 970,  reward_type: 'card',     reward_value: 'epique',      label: 'Carte Epique',      emoji: '🃏' },
+  { tier: 21, xp_required: 1060, reward_type: 'effect',   reward_value: 'cyber_blue',  label: 'Effet: Cyber',      emoji: '💙' },
+  { tier: 22, xp_required: 1150, reward_type: 'credits',  reward_value: 1000,          label: '1000 Credits',      emoji: '💰' },
+  { tier: 23, xp_required: 1250, reward_type: 'avatar',   reward_value: '🏴‍☠️',         label: 'Avatar: Pirate',    emoji: '🏴‍☠️' },
+  { tier: 24, xp_required: 1350, reward_type: 'essence',  reward_value: 3,             label: '3 Essences',        emoji: '⛏' },
+  { tier: 25, xp_required: 1460, reward_type: 'credits',  reward_value: 1200,          label: '1200 Credits',      emoji: '💰' },
+  { tier: 26, xp_required: 1580, reward_type: 'card',     reward_value: 'legendaire',  label: 'Carte Legendaire',  emoji: '🃏' },
+  { tier: 27, xp_required: 1700, reward_type: 'avatar',   reward_value: '🔱',          label: 'Avatar: Trident',   emoji: '🔱' },
+  { tier: 28, xp_required: 1830, reward_type: 'effect',   reward_value: 'shadow_purple',label: 'Effet: Ombre',     emoji: '💜' },
+  { tier: 29, xp_required: 1970, reward_type: 'credits',  reward_value: 1500,          label: '1500 Credits',      emoji: '💰' },
+  { tier: 30, xp_required: 2100, reward_type: 'multi',    reward_value: { avatar: '👾', effect: 'rainbow_animated' }, label: 'Boss Final + Arc-en-ciel', emoji: '👾' },
+];
+
+const USERNAME_EFFECTS = {
+  matrix_green:    { name: 'Matrix',        css: 'effect-matrix-green',   desc: 'Vert lumineux digital' },
+  blood_red:       { name: 'Sang',          css: 'effect-blood-red',      desc: 'Rouge sang avec lueur sombre' },
+  cyber_blue:      { name: 'Cyber',         css: 'effect-cyber-blue',     desc: 'Bleu neon electrique' },
+  shadow_purple:   { name: 'Ombre',         css: 'effect-shadow-purple',  desc: 'Violet avec ombre profonde' },
+  rainbow_animated:{ name: 'Arc-en-ciel',   css: 'effect-rainbow',        desc: 'Couleurs changeantes animees' }
+};
+
+const BP_XP = {
+  booster_open:     25,
+  daily_login:      40,
+  campaign_win:     30,
+  campaign_lose:     5,
+  pvp_win:          35,
+  pvp_lose:         10,
+  pvp_realtime_win: 50,
+  pvp_realtime_lose:15,
+  mine_sell:        20,
+  fusion:           15
+};
+
+function getBattlePass(userId) {
+  let bp = db.prepare('SELECT * FROM battle_pass WHERE user_id = ?').get(userId);
+  if (!bp) {
+    db.prepare('INSERT INTO battle_pass (user_id, xp, current_tier) VALUES (?, 0, 0)').run(userId);
+    bp = { user_id: userId, xp: 0, current_tier: 0, claimed_tiers: '[]' };
+  }
+  return bp;
+}
+
+function addBattlePassXP(userId, amount) {
+  if (amount <= 0) return null;
+  const bp = getBattlePass(userId);
+  const newXP = bp.xp + amount;
+
+  let newTier = 0;
+  let cumXP = 0;
+  for (let i = 0; i < BATTLEPASS_TIERS.length; i++) {
+    cumXP += BATTLEPASS_TIERS[i].xp_required;
+    if (newXP >= cumXP) newTier = i + 1;
+    else break;
+  }
+
+  db.prepare('UPDATE battle_pass SET xp = ?, current_tier = ? WHERE user_id = ?')
+    .run(newXP, newTier, userId);
+  return { xp: newXP, tier: newTier, xpGained: amount };
+}
 
 function generateMineGrid(luckLevel = 0) {
   const grid = [];
@@ -2609,11 +2718,13 @@ app.post('/api/logout', (req, res) => {
 
 // --- Routes USER ---
 app.get('/api/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars FROM users WHERE id = ?').get(req.session.userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(req.session.userId).c;
 
   const today = new Date().toISOString().split('T')[0];
   const canClaimDaily = user.last_daily !== today;
+
+  const bp = db.prepare('SELECT xp, current_tier FROM battle_pass WHERE user_id = ?').get(req.session.userId);
 
   res.json({
     username: user.username,
@@ -2622,7 +2733,11 @@ app.get('/api/me', requireAuth, (req, res) => {
     credits: user.credits,
     essence: user.excavation_essence || 0,
     cardCount,
-    canClaimDaily
+    canClaimDaily,
+    usernameEffect: user.username_effect || '',
+    unlockedAvatars: JSON.parse(user.unlocked_avatars || '["⚔"]'),
+    battlePassTier: bp?.current_tier || 0,
+    battlePassXP: bp?.xp || 0
   });
 });
 
@@ -2639,8 +2754,11 @@ app.post('/api/settings', requireAuth, (req, res) => {
   const userId = req.session.userId;
 
   if (avatar !== undefined) {
-    if (!VALID_AVATARS.includes(avatar)) {
-      return res.status(400).json({ error: 'Avatar invalide' });
+    const u = db.prepare('SELECT unlocked_avatars FROM users WHERE id = ?').get(userId);
+    const unlockedAvatars = JSON.parse(u.unlocked_avatars || '["⚔"]');
+    const allAllowed = [...VALID_AVATARS, ...unlockedAvatars];
+    if (!allAllowed.includes(avatar)) {
+      return res.status(400).json({ error: 'Avatar non deverrouille' });
     }
     db.prepare('UPDATE users SET avatar = ? WHERE id = ?').run(avatar, userId);
   }
@@ -2676,6 +2794,7 @@ app.post('/api/daily', requireAuth, (req, res) => {
   const DAILY_AMOUNT = 200;
   db.prepare('UPDATE users SET credits = credits + ?, last_daily = ? WHERE id = ?')
     .run(DAILY_AMOUNT, today, req.session.userId);
+  addBattlePassXP(req.session.userId, BP_XP.daily_login);
 
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
   res.json({ success: true, amount: DAILY_AMOUNT, credits: newCredits });
@@ -2698,6 +2817,7 @@ app.post('/api/boosters/:id/open', requireAuth, (req, res) => {
   db.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').run(booster.price, req.session.userId);
   const cards = openBooster(booster.id, req.session.userId);
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
+  addBattlePassXP(req.session.userId, BP_XP.booster_open);
 
   res.json({ success: true, cards, credits: newCredits });
 });
@@ -2820,6 +2940,7 @@ app.post('/api/fusion', requireAuth, (req, res) => {
   } catch (e) {
     return res.status(500).json({ error: 'Erreur lors de la fusion' });
   }
+  addBattlePassXP(req.session.userId, BP_XP.fusion);
 
   res.json({ success: true, fused: success, card });
 });
@@ -3122,6 +3243,13 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
   // Log battle
   db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)')
     .run(req.session.userId, battle.battleType, battle.battleType === 'pvp' ? 'PvP' : `Node ${battle.nodeId}`, battle.result, reward);
+
+  // Battle Pass XP
+  if (battle.battleType === 'campaign') {
+    addBattlePassXP(req.session.userId, battle.result === 'victory' ? BP_XP.campaign_win : BP_XP.campaign_lose);
+  } else if (battle.battleType === 'pvp') {
+    addBattlePassXP(req.session.userId, battle.result === 'victory' ? BP_XP.pvp_win : BP_XP.pvp_lose);
+  }
 
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
 
@@ -4102,7 +4230,8 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
     db.prepare('DELETE FROM mine_state WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM mine_upgrades WHERE user_id = ?').run(userId);
-    db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0 WHERE id = ?').run(userId);
+    db.prepare('DELETE FROM battle_pass WHERE user_id = ?').run(userId);
+    db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0, unlocked_avatars = \'["⚔"]\', username_effect = \'\', avatar = \'⚔\' WHERE id = ?').run(userId);
   });
   resetTx();
   res.json({ success: true, username: user.username });
@@ -4577,6 +4706,7 @@ app.post('/api/mine/sell-all', requireAuth, (req, res) => {
       .run(JSON.stringify(grid), counts.charbon, counts.fer, counts.or, counts.diamant, userId);
   });
   sellAllTx();
+  addBattlePassXP(userId, BP_XP.mine_sell);
 
   const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
 
@@ -4670,6 +4800,136 @@ app.post('/api/mine/upgrade', requireAuth, (req, res) => {
 });
 
 // ============================================
+// BATTLE PASS ROUTES
+// ============================================
+app.get('/api/battlepass', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const bp = getBattlePass(userId);
+  const claimedTiers = JSON.parse(bp.claimed_tiers || '[]');
+
+  let cumXP = 0;
+  let currentTierXP = bp.xp;
+  let currentTierRequired = BATTLEPASS_TIERS[0].xp_required;
+  for (let i = 0; i < BATTLEPASS_TIERS.length; i++) {
+    if (bp.xp >= cumXP + BATTLEPASS_TIERS[i].xp_required) {
+      cumXP += BATTLEPASS_TIERS[i].xp_required;
+    } else {
+      currentTierXP = bp.xp - cumXP;
+      currentTierRequired = BATTLEPASS_TIERS[i].xp_required;
+      break;
+    }
+  }
+  if (bp.current_tier >= 30) { currentTierXP = currentTierRequired; }
+
+  res.json({
+    xp: bp.xp,
+    currentTier: bp.current_tier,
+    claimedTiers,
+    currentTierXP,
+    currentTierRequired,
+    tiers: BATTLEPASS_TIERS,
+    effects: USERNAME_EFFECTS
+  });
+});
+
+app.post('/api/battlepass/claim', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { tier } = req.body;
+
+  if (!tier || tier < 1 || tier > 30) return res.status(400).json({ error: 'Palier invalide' });
+
+  const bp = getBattlePass(userId);
+  if (bp.current_tier < tier) return res.status(400).json({ error: 'Palier non atteint' });
+
+  const claimedTiers = JSON.parse(bp.claimed_tiers || '[]');
+  if (claimedTiers.includes(tier)) return res.status(400).json({ error: 'Deja reclame' });
+
+  const tierData = BATTLEPASS_TIERS.find(t => t.tier === tier);
+  if (!tierData) return res.status(400).json({ error: 'Palier introuvable' });
+
+  let cardGiven = null;
+
+  const claimTx = db.transaction(() => {
+    switch (tierData.reward_type) {
+      case 'credits':
+        db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(tierData.reward_value, userId);
+        break;
+      case 'essence':
+        db.prepare('UPDATE users SET excavation_essence = excavation_essence + ? WHERE id = ?').run(tierData.reward_value, userId);
+        break;
+      case 'avatar': {
+        const u = db.prepare('SELECT unlocked_avatars FROM users WHERE id = ?').get(userId);
+        const unlocked = JSON.parse(u.unlocked_avatars || '["⚔"]');
+        if (!unlocked.includes(tierData.reward_value)) {
+          unlocked.push(tierData.reward_value);
+          db.prepare('UPDATE users SET unlocked_avatars = ? WHERE id = ?').run(JSON.stringify(unlocked), userId);
+        }
+        break;
+      }
+      case 'effect':
+        // Auto-equip l'effet
+        db.prepare('UPDATE users SET username_effect = ? WHERE id = ?').run(tierData.reward_value, userId);
+        break;
+      case 'card': {
+        const rarity = tierData.reward_value;
+        const pool = db.prepare('SELECT id, name, emoji, rarity FROM cards WHERE rarity = ?').all(rarity);
+        if (pool.length > 0) {
+          const picked = pool[Math.floor(Math.random() * pool.length)];
+          db.prepare('INSERT INTO user_cards (user_id, card_id, is_shiny) VALUES (?, ?, 0)').run(userId, picked.id);
+          cardGiven = picked;
+        }
+        break;
+      }
+      case 'multi': {
+        const val = tierData.reward_value;
+        if (val.avatar) {
+          const u = db.prepare('SELECT unlocked_avatars FROM users WHERE id = ?').get(userId);
+          const unlocked = JSON.parse(u.unlocked_avatars || '["⚔"]');
+          if (!unlocked.includes(val.avatar)) {
+            unlocked.push(val.avatar);
+            db.prepare('UPDATE users SET unlocked_avatars = ? WHERE id = ?').run(JSON.stringify(unlocked), userId);
+          }
+        }
+        if (val.effect) {
+          db.prepare('UPDATE users SET username_effect = ? WHERE id = ?').run(val.effect, userId);
+        }
+        break;
+      }
+    }
+    claimedTiers.push(tier);
+    db.prepare('UPDATE battle_pass SET claimed_tiers = ? WHERE user_id = ?').run(JSON.stringify(claimedTiers), userId);
+  });
+  claimTx();
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ success: true, tier, reward: { type: tierData.reward_type, label: tierData.label, emoji: tierData.emoji }, cardGiven, credits: newCredits });
+});
+
+app.post('/api/battlepass/set-effect', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { effect } = req.body;
+
+  if (!effect || effect === '') {
+    db.prepare('UPDATE users SET username_effect = "" WHERE id = ?').run(userId);
+    return res.json({ success: true, activeEffect: '' });
+  }
+
+  // Verifier que l'effet est deverrouille
+  const bp = getBattlePass(userId);
+  const claimed = JSON.parse(bp.claimed_tiers || '[]');
+  let isUnlocked = false;
+  for (const t of BATTLEPASS_TIERS) {
+    if (!claimed.includes(t.tier)) continue;
+    if (t.reward_type === 'effect' && t.reward_value === effect) { isUnlocked = true; break; }
+    if (t.reward_type === 'multi' && t.reward_value.effect === effect) { isUnlocked = true; break; }
+  }
+  if (!isUnlocked) return res.status(400).json({ error: 'Effet non deverrouille' });
+
+  db.prepare('UPDATE users SET username_effect = ? WHERE id = ?').run(effect, userId);
+  res.json({ success: true, activeEffect: effect });
+});
+
+// ============================================
 // PAGE ROUTES
 // ============================================
 app.get('/intro', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'intro.html')); });
@@ -4683,6 +4943,7 @@ app.get('/campaign', requireAuth, (req, res) => { res.sendFile(path.join(__dirna
 app.get('/battle', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battle.html')); });
 app.get('/pvp', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'pvp.html')); });
 app.get('/decks', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'decks.html')); });
+app.get('/battlepass', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battlepass.html')); });
 app.get('/admin', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.get('/wiki', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'wiki.html')); });
 
@@ -4927,6 +5188,7 @@ function finalizePvpBattle(battle) {
       db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(reward, player.userId);
       db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)')
         .run(player.userId, 'pvp_realtime', battle[oppSide].username, result, reward);
+      addBattlePassXP(player.userId, result === 'victory' ? BP_XP.pvp_realtime_win : result === 'defeat' ? BP_XP.pvp_realtime_lose : BP_XP.pvp_lose);
     } catch(e) { console.error('[PVP] DB error:', e.message); }
 
     const sock = userSocketMap.get(player.userId);
