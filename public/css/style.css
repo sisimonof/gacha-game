@@ -2250,7 +2250,7 @@ body.collection-page .screen-flash.flash-active {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
 }
 .boosters-shelf {
   display: flex;
@@ -2259,6 +2259,8 @@ body.collection-page .screen-flash.flash-active {
   align-items: stretch;
   flex: 1;
   min-height: 0;
+  max-height: 480px;
+  padding-top: 10px;
 }
 .booster-card {
   position: relative;
@@ -2269,7 +2271,7 @@ body.collection-page .screen-flash.flash-active {
   overflow: visible;
   transition: all 0.3s ease;
   flex: 1;
-  max-width: 320px;
+  max-width: 280px;
   display: flex;
   flex-direction: column;
 }
