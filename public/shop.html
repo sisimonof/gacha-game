@@ -11,38 +11,53 @@
   <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
   <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
 
-  <div class="crt-screen">
+  <div class="crt-screen shop-page">
 
     <!-- VUE BOUTIQUE -->
     <div class="shop-view" id="shop-view">
-      <div class="boosters-shelf" id="boosters-shelf">
-        <!-- Rempli par JS -->
+
+      <!-- TITRE -->
+      <div class="shop-title-bar">
+        <div class="shop-title-line"></div>
+        <h1 class="shop-title">⚔ BOUTIQUE ⚔</h1>
+        <div class="shop-title-line"></div>
       </div>
 
-      <!-- STREAK BONUS -->
-      <div class="shop-streak" id="shop-streak">
-        <div class="streak-header">
-          <div class="shop-daily-icon">&#127873;</div>
-          <div class="streak-info">
-            <h3 class="shop-daily-title">BONUS CONSECUTIF</h3>
-            <p class="streak-desc" id="streak-desc">Jour 0 / 7</p>
+      <!-- SECTION BOOSTERS -->
+      <div class="shop-section shop-boosters-section">
+        <div class="shop-section-label">BOOSTERS</div>
+        <div class="boosters-shelf" id="boosters-shelf">
+          <!-- Rempli par JS -->
+        </div>
+      </div>
+
+      <!-- ROW: STREAK + BOUTIQUE DU JOUR -->
+      <div class="shop-row">
+        <!-- STREAK BONUS -->
+        <div class="shop-section shop-streak-section">
+          <div class="streak-header">
+            <div class="shop-daily-icon">&#127873;</div>
+            <div class="streak-info">
+              <h3 class="shop-daily-title">BONUS CONSECUTIF</h3>
+              <p class="streak-desc" id="streak-desc">Jour 0 / 7</p>
+            </div>
+            <button class="shop-daily-btn" id="daily-btn" onclick="claimDaily()">RECUPERER</button>
           </div>
-          <button class="shop-daily-btn" id="daily-btn" onclick="claimDaily()">RECUPERER</button>
+          <div class="streak-progress" id="streak-progress"></div>
         </div>
-        <div class="streak-progress" id="streak-progress"></div>
-      </div>
 
-      <!-- BOUTIQUE DU JOUR -->
-      <div class="daily-shop-section" id="daily-shop-section">
-        <div class="daily-shop-header">
-          <h3 class="daily-shop-title">&#128302; BOUTIQUE DU JOUR</h3>
-          <span class="daily-shop-timer" id="daily-shop-timer">??:??:??</span>
+        <!-- BOUTIQUE DU JOUR -->
+        <div class="shop-section shop-daily-section">
+          <div class="daily-shop-header">
+            <h3 class="daily-shop-title">&#128302; BOUTIQUE DU JOUR</h3>
+            <span class="daily-shop-timer" id="daily-shop-timer">??:??:??</span>
+          </div>
+          <div class="daily-shop-cards" id="daily-shop-cards"></div>
         </div>
-        <div class="daily-shop-cards" id="daily-shop-cards"></div>
       </div>
 
       <!-- CODE CADEAU -->
-      <div class="shop-giftcode">
+      <div class="shop-section shop-giftcode-section">
         <div class="shop-giftcode-icon">🎟</div>
         <div class="shop-giftcode-form">
           <h3 class="shop-giftcode-title">CODE CADEAU</h3>
@@ -53,6 +68,7 @@
           <p class="shop-giftcode-msg hidden" id="giftcode-msg"></p>
         </div>
       </div>
+
     </div>
 
     <!-- VUE OUVERTURE -->
@@ -80,7 +96,7 @@
   <!-- Flash ecran -->
   <div class="screen-flash hidden" id="screen-flash"></div>
 
-  <div class="version-tag">v1.2.0</div>
+  <div class="version-tag">v1.5.0</div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/toast.js"></script>
   <script src="/js/friends.js"></script>

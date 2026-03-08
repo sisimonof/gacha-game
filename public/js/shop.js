@@ -131,23 +131,41 @@ function startDailyShopTimer(seconds) {
   }, 1000);
 }
 
+const BOOSTER_BADGES = {
+  rift: { label: '★ BEST SELLER', cls: 'badge-best' },
+  avance: { label: 'PREMIUM', cls: 'badge-premium' }
+};
+
+const BOOSTER_CARD_COUNT = { origines: 5, rift: 7, avance: 8 };
+
 async function loadBoosters() {
   const res = await fetch('/api/boosters');
   const boosters = await res.json();
   const shelf = document.getElementById('boosters-shelf');
 
-  shelf.innerHTML = boosters.map(b => `
-    <div class="booster-full" data-id="${b.id}" data-price="${b.price}" onclick="buyBooster('${b.id}', ${b.price})">
-      <img src="${BOOSTER_IMAGES[b.id] || '/img/booster-origines.png'}" alt="${b.name}" class="booster-full-img" draggable="false">
-      <div class="booster-price-tag">${b.price} CR</div>
-    </div>
-  `).join('');
+  shelf.innerHTML = boosters.map(b => {
+    const badge = BOOSTER_BADGES[b.id];
+    const cardCount = BOOSTER_CARD_COUNT[b.id] || '?';
+    return `
+      <div class="booster-card" data-id="${b.id}" data-price="${b.price}" onclick="buyBooster('${b.id}', ${b.price})">
+        ${badge ? `<div class="booster-badge ${badge.cls}">${badge.label}</div>` : ''}
+        <div class="booster-img-wrap">
+          <img src="${BOOSTER_IMAGES[b.id] || '/img/booster-origines.png'}" alt="${b.name}" class="booster-card-img" draggable="false">
+        </div>
+        <div class="booster-card-info">
+          <span class="booster-card-name">${b.name}</span>
+          <span class="booster-card-count">${cardCount} cartes</span>
+        </div>
+        <div class="booster-card-price">${b.price} CR</div>
+      </div>
+    `;
+  }).join('');
 }
 
 async function buyBooster(id, price) {
   if (currentCredits < price) { screenShake(); return; }
 
-  document.querySelectorAll('.booster-full').forEach(b => b.style.pointerEvents = 'none');
+  document.querySelectorAll('.booster-card').forEach(b => b.style.pointerEvents = 'none');
 
   try {
     const res = await fetch(`/api/boosters/${id}/open`, { method: 'POST' });
@@ -155,7 +173,7 @@ async function buyBooster(id, price) {
 
     if (!data.success) {
       alert(data.error);
-      document.querySelectorAll('.booster-full').forEach(b => b.style.pointerEvents = '');
+      document.querySelectorAll('.booster-card').forEach(b => b.style.pointerEvents = '');
       return;
     }
 
@@ -164,7 +182,7 @@ async function buyBooster(id, price) {
     startTearAnimation(id, data.cards);
   } catch {
     alert('Erreur serveur');
-    document.querySelectorAll('.booster-full').forEach(b => b.style.pointerEvents = '');
+    document.querySelectorAll('.booster-card').forEach(b => b.style.pointerEvents = '');
   }
 }
 
@@ -403,7 +421,7 @@ document.getElementById('done-btn').addEventListener('click', () => {
   document.getElementById('reveal-scene').classList.add('hidden');
   document.getElementById('tear-container').classList.add('hidden');
   document.getElementById('shop-view').classList.remove('hidden');
-  document.querySelectorAll('.booster-full').forEach(b => b.style.pointerEvents = '');
+  document.querySelectorAll('.booster-card').forEach(b => b.style.pointerEvents = '');
 });
 
 // ==========================================

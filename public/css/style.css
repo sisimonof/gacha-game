@@ -2178,120 +2178,296 @@ body.collection-page .screen-flash.flash-active {
    PAGE BOUTIQUE - PLEIN ECRAN
    ============================== */
 
+/* ==============================
+   SHOP PAGE — COMPACT LAYOUT
+   ============================== */
+.shop-page {
+  height: 100vh;
+  overflow: hidden;
+}
 .shop-view {
-  display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 24px;
-  min-height: calc(100vh - 60px); padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 10px);
+  padding: 4px 24px 6px;
+  gap: 8px;
+  max-width: 1100px;
+  margin: 0 auto;
+  box-sizing: border-box;
 }
-.boosters-shelf { display: flex; gap: 30px; justify-content: center; align-items: center; }
 
-/* Bonus du jour - boutique */
-.shop-daily {
-  display: flex; align-items: center; gap: 16px;
-  background: rgba(0, 20, 0, 0.7); border: 1px solid var(--primary-border);
-  border-radius: 8px; padding: 14px 24px; max-width: 500px; width: 100%;
+/* Title bar */
+.shop-title-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 4px 0;
+  flex-shrink: 0;
+}
+.shop-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--primary);
+  text-shadow: 0 0 20px rgba(var(--primary-rgb), 0.5);
+  white-space: nowrap;
+  margin: 0;
+}
+.shop-title-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--primary-border), transparent);
+}
+
+/* Shared section style */
+.shop-section {
+  background: rgba(var(--primary-rgb), 0.03);
+  border: 1px solid var(--primary-border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  transition: border-color 0.3s;
+}
+.shop-section:hover {
+  border-color: rgba(var(--primary-rgb), 0.3);
+}
+.shop-section-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: var(--primary);
+  text-shadow: 0 0 8px rgba(var(--primary-rgb), 0.4);
+  margin-bottom: 6px;
+  letter-spacing: 2px;
+  flex-shrink: 0;
+}
+
+/* === BOOSTERS SECTION === */
+.shop-boosters-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.boosters-shelf {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+}
+.booster-card {
+  position: relative;
+  cursor: pointer;
+  background: #0d0d0d;
+  border: 2px solid var(--primary-border);
+  border-radius: 10px;
+  overflow: visible;
   transition: all 0.3s ease;
+  flex: 1;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
 }
-.shop-daily:not(.daily-claimed):hover {
-  border-color: var(--primary); box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.15);
+.booster-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--primary);
+  box-shadow: 0 8px 30px rgba(var(--primary-rgb), 0.25), 0 0 60px rgba(var(--primary-rgb), 0.1);
 }
-.shop-daily.daily-claimed { opacity: 0.4; }
-.shop-daily-icon { font-size: 32px; flex-shrink: 0; }
-.shop-daily-info { flex: 1; }
-.shop-daily-title {
-  font-family: 'Press Start 2P', monospace; font-size: 11px;
-  color: #ffaa00; margin: 0 0 4px;
+.booster-card:active {
+  transform: scale(0.97);
 }
-.shop-daily-desc {
-  font-family: 'VT323', monospace; font-size: 16px; color: #888; margin: 0;
+.booster-card[data-id="rift"] {
+  border-color: rgba(200, 200, 200, 0.3);
 }
-.shop-daily-btn {
-  font-family: 'Press Start 2P', monospace; font-size: 9px;
-  color: var(--primary); background: rgba(var(--primary-rgb), 0.1);
-  border: 1px solid var(--primary); border-radius: 4px;
-  padding: 8px 14px; cursor: pointer; transition: all 0.2s;
-  white-space: nowrap;
+.booster-card[data-id="rift"]:hover {
+  border-color: #ccc;
+  box-shadow: 0 8px 30px rgba(200, 200, 200, 0.2), 0 0 60px rgba(200, 200, 200, 0.08);
 }
-.shop-daily-btn:hover:not(:disabled) {
-  background: rgba(var(--primary-rgb), 0.2); box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.2);
+.booster-card[data-id="avance"] {
+  border-color: rgba(255, 170, 0, 0.3);
 }
-.shop-daily-btn.daily-claimed {
-  color: #444; border-color: #333; background: transparent; cursor: default;
+.booster-card[data-id="avance"]:hover {
+  border-color: #ffaa00;
+  box-shadow: 0 8px 30px rgba(255, 170, 0, 0.2), 0 0 60px rgba(255, 170, 0, 0.08);
 }
 
-/* Gift Code Section */
-.shop-giftcode {
-  display: flex; align-items: center; gap: 16px;
-  background: rgba(0, 20, 0, 0.7); border: 1px solid var(--primary-border);
-  border-radius: 8px; padding: 14px 24px; max-width: 500px; width: 100%;
-  margin-top: 12px; transition: all 0.3s ease;
+/* Booster badge */
+.booster-badge {
+  position: absolute;
+  top: 10px;
+  right: -24px;
+  transform: rotate(35deg);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  padding: 3px 28px;
+  z-index: 3;
+  letter-spacing: 1px;
+  text-align: center;
+  pointer-events: none;
 }
-.shop-giftcode:hover {
-  border-color: #ffaa00; box-shadow: 0 0 15px rgba(255, 170, 0, 0.1);
+.badge-best {
+  background: linear-gradient(135deg, #ff6600, #ff3300);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(255, 51, 0, 0.5);
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  animation: badgePulse 2s ease infinite;
 }
-.shop-giftcode-icon { font-size: 32px; flex-shrink: 0; }
-.shop-giftcode-form { flex: 1; }
-.shop-giftcode-title {
-  font-family: 'Press Start 2P', monospace; font-size: 11px;
-  color: #ffaa00; margin: 0 0 8px;
+.badge-premium {
+  background: linear-gradient(135deg, #ffaa00, #ff8800);
+  color: #1a1a00;
+  box-shadow: 0 2px 10px rgba(255, 170, 0, 0.4);
 }
-.shop-giftcode-input-row {
-  display: flex; gap: 8px; align-items: center;
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 2px 10px rgba(255, 51, 0, 0.5); }
+  50% { box-shadow: 0 2px 18px rgba(255, 51, 0, 0.8), 0 0 30px rgba(255, 51, 0, 0.3); }
 }
-.shop-giftcode-input {
-  flex: 1; padding: 8px 12px; background: rgba(0, 40, 0, 0.6);
-  border: 1px solid #336633; border-radius: 4px;
-  color: var(--primary); font-family: 'VT323', monospace; font-size: 20px;
-  letter-spacing: 2px; text-transform: uppercase; outline: none;
+
+/* Booster image */
+.booster-img-wrap {
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  max-height: 100%;
+  border-radius: 8px 8px 0 0;
 }
-.shop-giftcode-input:focus {
-  border-color: #ffaa00; box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+.booster-card-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: transform 0.4s ease;
 }
-.shop-giftcode-input::placeholder {
-  color: #336633; letter-spacing: 2px;
+.booster-card:hover .booster-card-img {
+  transform: scale(1.05);
 }
-.shop-giftcode-btn {
-  font-family: 'Press Start 2P', monospace; font-size: 9px;
-  color: #ffaa00; background: rgba(255, 170, 0, 0.1);
-  border: 1px solid #ffaa00; border-radius: 4px;
-  padding: 8px 14px; cursor: pointer; transition: all 0.2s;
+
+/* Booster info bar */
+.booster-card-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px 2px;
+  background: rgba(0, 0, 0, 0.8);
+}
+.booster-card-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #ccc;
+  text-transform: uppercase;
+}
+.booster-card-count {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #888;
+}
+
+/* Booster price */
+.booster-card-price {
+  text-align: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--primary);
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.9);
+  text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.4);
+  border-top: 1px solid var(--primary-border);
+  transition: all 0.3s;
+}
+.booster-card:hover .booster-card-price {
+  color: #fff;
+  text-shadow: 0 0 15px var(--primary);
+  background: rgba(var(--primary-rgb), 0.15);
+}
+.booster-card[data-id="avance"] .booster-card-price { color: #ffaa00; text-shadow: 0 0 10px rgba(255, 170, 0, 0.4); }
+.booster-card[data-id="avance"]:hover .booster-card-price { background: rgba(255, 170, 0, 0.1); }
+.booster-card[data-id="rift"] .booster-card-price { color: #ccc; text-shadow: 0 0 10px rgba(200, 200, 200, 0.3); }
+.booster-card[data-id="rift"]:hover .booster-card-price { background: rgba(200, 200, 200, 0.08); }
+
+/* === SHOP ROW (streak + daily shop) === */
+.shop-row {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+.shop-streak-section {
+  flex: 1;
+  min-width: 0;
+}
+.shop-daily-section {
+  flex: 1.4;
+  min-width: 0;
+}
+
+/* === GIFT CODE SECTION === */
+.shop-giftcode-section {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+.shop-giftcode-section .shop-giftcode-icon { font-size: 28px; flex-shrink: 0; }
+.shop-giftcode-section .shop-giftcode-form { flex: 1; }
+.shop-giftcode-section .shop-giftcode-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--primary);
+  margin-bottom: 6px;
+}
+.shop-giftcode-section .shop-giftcode-input-row {
+  display: flex;
+  gap: 8px;
+}
+.shop-giftcode-section .shop-giftcode-input {
+  flex: 1;
+  background: #0a0a0a;
+  border: 1px solid var(--primary-border);
+  color: var(--primary);
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  outline: none;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+.shop-giftcode-section .shop-giftcode-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 8px rgba(var(--primary-rgb), 0.2);
+}
+.shop-giftcode-section .shop-giftcode-input::placeholder {
+  color: #333;
+  letter-spacing: 2px;
+}
+.shop-giftcode-section .shop-giftcode-btn {
+  background: rgba(var(--primary-rgb), 0.1);
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
   white-space: nowrap;
 }
-.shop-giftcode-btn:hover:not(:disabled) {
-  background: rgba(255, 170, 0, 0.25); box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+.shop-giftcode-section .shop-giftcode-btn:hover:not(:disabled) {
+  background: rgba(var(--primary-rgb), 0.25);
+  box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.3);
 }
-.shop-giftcode-btn:disabled {
-  opacity: 0.5; cursor: default;
+.shop-giftcode-section .shop-giftcode-msg {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  margin-top: 4px;
 }
-.shop-giftcode-msg {
-  font-family: 'VT323', monospace; font-size: 16px; margin: 6px 0 0;
-  transition: opacity 0.3s;
-}
-.shop-giftcode-msg.gift-success { color: #44dd44; }
+.shop-giftcode-msg.gift-success { color: var(--primary); }
 .shop-giftcode-msg.gift-error { color: #ff4444; }
 .shop-giftcode-msg.hidden { display: none; }
-
-.booster-full {
-  position: relative; cursor: pointer; transition: all 0.3s ease;
-  border-radius: 10px; overflow: hidden;
-  box-shadow: 0 0 30px rgba(var(--primary-rgb), 0.15);
-}
-.booster-full:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 50px rgba(var(--primary-rgb), 0.4), 0 0 100px rgba(var(--primary-rgb), 0.15);
-}
-.booster-full:active { transform: scale(0.97); }
-
-.booster-full-img {
-  display: block; height: 70vh; max-height: 550px; width: auto;
-  border-radius: 10px; user-select: none; -webkit-user-drag: none;
-}
-
-.booster-price-tag {
-  position: absolute; bottom: 0; left: 0; right: 0; text-align: center;
-  font-family: 'Press Start 2P', monospace; font-size: 14px; color: var(--primary);
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.9) 40%);
-  padding: 20px 0 12px; text-shadow: 0 0 15px var(--primary);
-}
 
 /* ==============================
    ANIMATION DECHIRURE
@@ -7607,48 +7783,42 @@ body.casino-page {
 .toast--chat { border-left-color: #66aaff; color: #66aaff; }
 
 /* =======================================
-   STREAK PROGRESS (shop)
+   STREAK PROGRESS — COMPACT (shop)
    ======================================= */
-.shop-streak {
-  background: rgba(var(--primary-rgb), 0.05);
-  border: 1px solid var(--primary-border);
-  border-radius: 8px;
-  padding: 16px;
-  margin-top: 16px;
-}
 .streak-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 10px;
+  margin-bottom: 8px;
 }
 .shop-daily-icon {
-  font-size: 36px;
+  font-size: 28px;
   line-height: 1;
 }
 .streak-info { flex: 1; }
 .shop-daily-title {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 11px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
   color: var(--primary);
   text-shadow: 0 0 8px rgba(var(--primary-rgb), 0.4);
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .streak-desc {
   font-family: 'VT323', monospace;
-  font-size: 18px;
+  font-size: 16px;
   color: #888;
 }
 .shop-daily-btn {
   background: rgba(var(--primary-rgb), 0.1);
   border: 2px solid var(--primary);
   color: var(--primary);
-  font-family: 'Press Start 2P', cursive;
-  font-size: 10px;
-  padding: 10px 16px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 8px 12px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 .shop-daily-btn:hover:not(:disabled) {
   background: rgba(var(--primary-rgb), 0.25);
@@ -7663,28 +7833,28 @@ body.casino-page {
 }
 .streak-progress {
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 .streak-day {
   flex: 1;
   background: rgba(var(--primary-rgb), 0.05);
   border: 1px solid var(--primary-border);
   border-radius: 4px;
-  padding: 8px 4px;
+  padding: 5px 2px;
   text-align: center;
   transition: all 0.3s;
 }
 .streak-day-num {
   display: block;
-  font-family: 'Press Start 2P', cursive;
-  font-size: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
   color: #666;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 }
 .streak-day-reward {
   display: block;
   font-family: 'VT323', monospace;
-  font-size: 14px;
+  font-size: 12px;
   color: #888;
 }
 .streak-day.streak-claimed {
@@ -7706,94 +7876,83 @@ body.casino-page {
 }
 
 /* =======================================
-   DAILY SHOP (shop)
+   DAILY SHOP — COMPACT (shop)
    ======================================= */
-.daily-shop-section {
-  margin-top: 20px;
-  padding: 16px;
-  background: rgba(var(--primary-rgb), 0.03);
-  border: 1px solid var(--primary-border);
-  border-radius: 8px;
-}
 .daily-shop-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 .daily-shop-title {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 11px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
   color: var(--primary);
   text-shadow: 0 0 8px rgba(var(--primary-rgb), 0.4);
 }
 .daily-shop-timer {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 10px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
   color: #ff4444;
   text-shadow: 0 0 6px rgba(255, 68, 68, 0.3);
 }
 .daily-shop-cards {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   justify-content: center;
-  flex-wrap: wrap;
 }
 .daily-shop-card {
-  background: #111;
+  background: #0d0d0d;
   border: 2px solid #333;
   border-radius: 8px;
-  padding: 14px;
-  width: 160px;
+  padding: 10px;
+  flex: 1;
   text-align: center;
   cursor: pointer;
   transition: all 0.3s;
   position: relative;
 }
 .daily-shop-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
-.daily-shop-card[data-rarity="rare"] { border-color: #4488ff; }
-.daily-shop-card[data-rarity="epique"] { border-color: #cc44ff; }
-.daily-shop-card[data-rarity="legendaire"] { border-color: #ffaa00; }
-.daily-card-emoji {
-  font-size: 48px;
-  margin-bottom: 8px;
-}
-.daily-card-name {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 8px;
-  color: #ddd;
+.daily-shop-card-visual {
+  font-size: 36px;
   margin-bottom: 6px;
-  min-height: 24px;
 }
-.daily-card-rarity {
-  font-family: 'VT323', monospace;
-  font-size: 16px;
-  text-transform: uppercase;
+.daily-shop-card-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ddd;
   margin-bottom: 4px;
+  min-height: 20px;
+  line-height: 1.3;
 }
-.daily-card-rarity[data-rarity="rare"] { color: #4488ff; }
-.daily-card-rarity[data-rarity="epique"] { color: #cc44ff; }
-.daily-card-rarity[data-rarity="legendaire"] { color: #ffaa00; }
-.daily-card-stats {
+.daily-shop-card-rarity {
   font-family: 'VT323', monospace;
   font-size: 14px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+.daily-shop-card-stats {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
   color: #888;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
-.daily-card-price {
-  font-family: 'Press Start 2P', cursive;
-  font-size: 10px;
+.daily-shop-buy-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
   color: #ffcc00;
-  background: rgba(255, 204, 0, 0.1);
+  background: rgba(255, 204, 0, 0.08);
   border: 1px solid rgba(255, 204, 0, 0.3);
-  padding: 6px 10px;
+  padding: 5px 8px;
   border-radius: 4px;
+  cursor: pointer;
   transition: all 0.2s;
+  width: 100%;
 }
-.daily-shop-card:hover .daily-card-price {
+.daily-shop-buy-btn:hover {
   background: rgba(255, 204, 0, 0.2);
   box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
 }
@@ -7801,37 +7960,11 @@ body.casino-page {
   opacity: 0.4;
   pointer-events: none;
 }
-.daily-card-sold-tag {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) rotate(-15deg);
-  font-family: 'Press Start 2P', cursive;
-  font-size: 10px;
-  color: #ff4444;
-  background: rgba(0,0,0,0.8);
-  padding: 6px 14px;
-  border: 2px solid #ff4444;
-  border-radius: 4px;
-}
 
-/* =======================================
-   GIFT CODE (shop)
-   ======================================= */
-.shop-giftcode {
-  margin-top: 16px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background: rgba(var(--primary-rgb), 0.03);
-  border: 1px solid var(--primary-border);
-  border-radius: 8px;
-  padding: 14px 18px;
-}
-.shop-giftcode-icon { font-size: 32px; }
-.shop-giftcode-form { flex: 1; }
+/* Gift code — kept via .shop-giftcode-section in main CSS above
+   Legacy .shop-giftcode rules below for compatibility */
 .shop-giftcode-title {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', monospace;
   font-size: 10px;
   color: var(--primary);
   margin-bottom: 8px;
