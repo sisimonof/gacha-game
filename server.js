@@ -592,6 +592,44 @@ function getManaForTurn(turn) {
   }
 }
 
+// --- Migration : 11 nouvelles cartes v1.4.0 ---
+{
+  const newCards = [
+    // COMMUNES (3)
+    ['Sentinelle de Pierre', 'commune', 'guerrier', 'terre', 1, 4, 4, 3, 'Mur infranchissable', '+2 DEF ce tour, les ennemis doivent l attaquer en priorite (taunt)', '🗿', '', 1.0],
+    ['Louveteau Sauvage', 'commune', 'bete', 'terre', 3, 0, 2, 1, 'Aucun', 'Aucun', '🐺', 'Peut attaquer immediatement. +1 ATK si un autre allie Bete est sur le terrain', 1.0],
+    ['Acolyte de l Ombre', 'commune', 'mage', 'ombre', 1, 1, 3, 2, 'Malediction mineure', '-1 ATK a un ennemi (permanent)', '🦇', '', 1.0],
+    // RARES (3)
+    ['Chaman des Cendres', 'rare', 'mage', 'feu', 2, 1, 4, 3, 'Brasier guerisseur', 'Inflige 2 degats a un ennemi, soigne 2 HP a un allie', '🧙', '', 1.0],
+    ['Spectre Glacial', 'rare', 'creature', 'eau', 2, 2, 3, 3, 'Toucher givre', 'Stun un ennemi pour 1 tour + inflige 1 degat', '👻', 'Ne peut pas etre cible par des attaques le tour apres son invocation', 1.0],
+    ['Assassin Nocturne', 'rare', 'guerrier', 'ombre', 3, 1, 3, 3, 'Frappe fatale', 'Inflige degats x2 aux cibles avec 50% HP ou moins', '🗡️', '+1 ATK si l ennemi n a qu une seule carte sur le terrain', 1.0],
+    // EPIQUES (2)
+    ['Dragon des Abysses', 'epique', 'bete', 'eau', 4, 3, 6, 5, 'Tsunami devastateur', '2 degats a tous les ennemis + -1 DEF aux survivants', '🐲', 'Les allies Eau gagnent +1 ATK', 1.5],
+    ['Paladin Sacre', 'epique', 'divin', 'lumiere', 3, 4, 7, 5, 'Aegis divin', 'Soigne 2 HP a tous les allies + bouclier de 2 a lui-meme', '⚜️', 'En mourant, confere +2 DEF permanent a l allie le plus faible', 1.5],
+    // LEGENDAIRE (1)
+    ['Izanami', 'legendaire', 'divin', 'ombre', 5, 3, 7, 6, 'Souffle du Yomi', 'Maudit tous les ennemis : -1 ATK et -1 DEF permanent. Si un ennemi a 2 HP ou moins il meurt instantanement', '👁️', 'Chaque ennemi qui meurt lui rend 2 HP et +1 ATK permanent', 2.0],
+    // CHAOS (1)
+    ['Le Neant Originel', 'chaos', 'creature', 'neutre', 0, 0, 12, 8, 'Effondrement cosmique', 'Detruit TOUTES les cartes sur le terrain (allies ET ennemis) puis inflige X degats directs a l adversaire (X = cartes detruites x2)', '🕳️', 'Ne peut ni attaquer ni etre attaque. Recoit +1 ATK chaque debut de tour. A 5 ATK l ability se declenche automatiquement. Max 1 sur le terrain', 1.0],
+    // SECRET (1)
+    ['Lumis', 'secret', 'creature', 'lumiere', 0, 10, 7, 5, 'Sacrifice radieux', 'Active le pouvoir : la carte se suicide au tour suivant et retire 5 PV directement au joueur adverse', '✨', '', 2.0],
+  ];
+
+  const insertCard = db.prepare(`
+    INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  let addedCount = 0;
+  for (const card of newCards) {
+    const exists = db.prepare("SELECT id FROM cards WHERE name = ?").get(card[0]);
+    if (!exists) {
+      insertCard.run(...card);
+      addedCount++;
+    }
+  }
+  if (addedCount > 0) console.log('Migration: ' + addedCount + ' nouvelles cartes v1.4.0 ajoutees');
+}
+
 // --- Tables Decks ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS decks (
@@ -1397,6 +1435,18 @@ const ABILITY_MAP = {
 
   // ===== CARTES SECRET =====
   'Action de Moderation': { type: 'silence' },                          // Koteons (supprime l'ability d'un ennemi)
+
+  // ===== NOUVELLES CARTES v1.4.0 =====
+  'Mur infranchissable':  { type: 'buff_def_lasting', value: 2, taunt: true },  // Sentinelle de Pierre
+  'Malediction mineure':  { type: 'debuff_atk',       value: 1 },               // Acolyte de l Ombre
+  'Brasier guerisseur':   { type: 'combo',  effects: [{ type: 'direct_damage', value: 2 }, { type: 'heal_ally', value: 2 }] },  // Chaman des Cendres
+  'Toucher givre':        { type: 'combo',  effects: [{ type: 'stun', duration: 1 }, { type: 'direct_damage', value: 1 }] },     // Spectre Glacial
+  'Frappe fatale':        { type: 'execute_pct',       threshold: 50 },          // Assassin Nocturne (x2 si <= 50% HP)
+  'Tsunami devastateur':  { type: 'combo',  effects: [{ type: 'aoe_damage', value: 2 }, { type: 'debuff_def_all', value: 1 }] }, // Dragon des Abysses
+  'Aegis divin':          { type: 'combo',  effects: [{ type: 'team_heal', value: 2 }, { type: 'shield', value: 2, target: 'self' }] }, // Paladin Sacre
+  'Souffle du Yomi':      { type: 'combo',  effects: [{ type: 'debuff_atk_all', value: 1 }, { type: 'debuff_def_all', value: 1 }, { type: 'reap', threshold: 2 }] }, // Izanami
+  'Effondrement cosmique': { type: 'apocalypse' },                              // Le Neant Originel (detruit tout + degats directs)
+  'Sacrifice radieux':    { type: 'delayed_sacrifice', directDamage: 5 },       // Lumis (suicide + 5 degats joueur)
 };
 
 // ============================================
