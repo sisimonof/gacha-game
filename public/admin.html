@@ -28,6 +28,7 @@
         <button class="admin-tab" onclick="showTab('create')">CREER CARTE</button>
         <button class="admin-tab" onclick="showTab('giftcodes')">CODES</button>
         <button class="admin-tab" onclick="showTab('backups')">BACKUPS</button>
+        <button class="admin-tab admin-tab--test" onclick="showTab('test')">TEST</button>
       </div>
 
       <!-- Tab: Users -->
@@ -214,6 +215,64 @@
           </thead>
           <tbody id="backups-body"></tbody>
         </table>
+      </div>
+
+      <!-- Tab: Test Battle -->
+      <div class="admin-panel hidden" id="tab-test">
+        <h3 class="admin-section-title" style="margin-bottom:12px">MODE TEST COMBAT</h3>
+        <p style="color:#888;margin-bottom:12px;font-family:VT323,monospace;font-size:14px">
+          Selectionnez les cartes pour le joueur et l'adversaire, puis lancez un combat en mode test (energie et crystal illimites, pas de sommeil d'invocation).
+        </p>
+
+        <!-- Filtres -->
+        <div class="test-filters">
+          <input type="text" id="test-filter-name" placeholder="Rechercher..." class="test-filter-input" oninput="filterTestCards()">
+          <select id="test-filter-element" class="test-filter-select" onchange="filterTestCards()">
+            <option value="">Tout element</option>
+            <option value="feu">Feu</option>
+            <option value="eau">Eau</option>
+            <option value="terre">Terre</option>
+            <option value="lumiere">Lumiere</option>
+            <option value="ombre">Ombre</option>
+            <option value="neutre">Neutre</option>
+          </select>
+          <select id="test-filter-rarity" class="test-filter-select" onchange="filterTestCards()">
+            <option value="">Toute rarete</option>
+            <option value="commune">Commune</option>
+            <option value="rare">Rare</option>
+            <option value="epique">Epique</option>
+            <option value="legendaire">Legendaire</option>
+            <option value="chaos">Chaos</option>
+            <option value="secret">Secret</option>
+          </select>
+        </div>
+
+        <!-- Selecteur joueur/adversaire -->
+        <div class="test-side-toggle">
+          <button class="test-side-btn test-side-btn--active" id="test-side-player" onclick="setTestSide('player')">JOUEUR</button>
+          <button class="test-side-btn" id="test-side-enemy" onclick="setTestSide('enemy')">ADVERSAIRE</button>
+        </div>
+
+        <!-- Selections -->
+        <div class="test-selections">
+          <div class="test-selection-box">
+            <div class="test-selection-label">JOUEUR (main de depart)</div>
+            <div class="test-selection-cards" id="test-player-cards"></div>
+          </div>
+          <div class="test-selection-box test-selection-box--enemy">
+            <div class="test-selection-label">ADVERSAIRE</div>
+            <div class="test-selection-cards" id="test-enemy-cards"></div>
+          </div>
+        </div>
+
+        <!-- Boutons -->
+        <div style="display:flex;gap:10px;margin:16px 0">
+          <button class="submit-btn" onclick="startTestBattle()">LANCER LE TEST</button>
+          <button class="submit-btn admin-small-btn" style="background:rgba(255,68,68,0.15);border-color:#662222" onclick="resetTestSelection()">RESET</button>
+        </div>
+
+        <!-- Grille de toutes les cartes -->
+        <div class="test-card-grid" id="test-card-grid"></div>
       </div>
 
       <!-- Feedback -->

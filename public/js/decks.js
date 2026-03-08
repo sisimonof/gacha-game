@@ -29,10 +29,9 @@ function renderDeckList() {
   }
 
   list.innerHTML = allDecks.map(deck => {
-    const pvpBadge = deck.is_pvp_deck ? '<span class="deck-pvp-badge">PVP</span>' : '';
     return `
-      <div class="deck-item ${deck.is_pvp_deck ? 'deck-item-pvp' : ''}" onclick="editDeck(${deck.id})">
-        <div class="deck-item-name">${deck.name} ${pvpBadge}</div>
+      <div class="deck-item" onclick="editDeck(${deck.id})">
+        <div class="deck-item-name">${deck.name}</div>
         <div class="deck-item-count">${deck.cards.length}/20 cartes</div>
         <div class="deck-item-preview">
           ${deck.cards.slice(0, 8).map(c => `<span class="deck-preview-emoji" title="${c.name}">${c.emoji || ELEMENT_ICONS[c.element] || '?'}</span>`).join('')}
@@ -51,7 +50,6 @@ function createNewDeck() {
   selectedCards = [];
   document.getElementById('deck-name').value = `Deck ${allDecks.length + 1}`;
   document.getElementById('delete-deck-btn').classList.add('hidden');
-  document.getElementById('pvp-deck-btn').classList.add('hidden');
   openEditor();
 }
 
@@ -62,7 +60,6 @@ function editDeck(deckId) {
   selectedCards = deck.cards.map(c => c.user_card_id);
   document.getElementById('deck-name').value = deck.name;
   document.getElementById('delete-deck-btn').classList.remove('hidden');
-  document.getElementById('pvp-deck-btn').classList.remove('hidden');
   openEditor();
 }
 
@@ -247,18 +244,6 @@ async function deleteDeck() {
     if (!res.ok) { alert('Erreur'); return; }
     closeEditor();
     await loadDecks();
-  } catch {
-    alert('Erreur reseau');
-  }
-}
-
-async function setPvpDeck() {
-  if (!currentDeckId) return;
-  try {
-    const res = await fetch(`/api/decks/${currentDeckId}/set-pvp`, { method: 'POST' });
-    if (!res.ok) { alert('Erreur'); return; }
-    await loadDecks();
-    alert('Deck defini comme deck PvP !');
   } catch {
     alert('Erreur reseau');
   }

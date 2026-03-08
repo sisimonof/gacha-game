@@ -25,7 +25,6 @@ async function loadStats() {
     <div class="stat-box"><span class="stat-num" style="color:#ffcc00">${data.totalShinyCards}</span><span class="stat-label">Cartes Shiny</span></div>
     <div class="stat-box"><span class="stat-num" style="color:#ff3333">${data.totalTempCards}</span><span class="stat-label">Cartes Temp</span></div>
     <div class="stat-box"><span class="stat-num">${data.totalBattles}</span><span class="stat-label">Combats joues</span></div>
-    <div class="stat-box"><span class="stat-num">${data.totalPvpTeams}</span><span class="stat-label">Equipes PvP</span></div>
   `;
 }
 
@@ -339,6 +338,7 @@ function showTab(tabName) {
   event.target.classList.add('active');
   if (tabName === 'backups') loadBackups();
   if (tabName === 'giftcodes') loadGiftCodes();
+  if (tabName === 'test') loadTestCards();
 }
 
 // === ACTIONS ===
@@ -568,6 +568,121 @@ function generateRandomCode() {
   code += '-';
   for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
   document.getElementById('gc-code').value = code;
+}
+
+// ==========================================
+//  TEST BATTLE MODE
+// ==========================================
+
+let testSide = 'player';
+let testPlayerCards = [];
+let testEnemyCards = [];
+let testCardsLoaded = false;
+
+function loadTestCards() {
+  if (testCardsLoaded && allCards.length > 0) { renderTestGrid(); return; }
+  // allCards is loaded by loadCards() on init
+  if (allCards.length > 0) { testCardsLoaded = true; renderTestGrid(); return; }
+  // Fallback: load cards if not yet loaded
+  fetch('/api/admin/cards').then(r => r.json()).then(cards => {
+    allCards = cards;
+    testCardsLoaded = true;
+    renderTestGrid();
+  });
+}
+
+const ELEM_ICONS = { feu: '🔥', eau: '💧', terre: '🌿', lumiere: '✨', ombre: '🌑', neutre: '⚪' };
+const RARITY_BORDER = { commune: '#888', rare: '#4488ff', epique: '#cc44ff', legendaire: '#ffaa00', chaos: '#ff4444', secret: '#ff66ff' };
+
+function renderTestGrid() {
+  const grid = document.getElementById('test-card-grid');
+  if (!grid) return;
+  const nameFilter = (document.getElementById('test-filter-name')?.value || '').toLowerCase();
+  const elemFilter = document.getElementById('test-filter-element')?.value || '';
+  const rarityFilter = document.getElementById('test-filter-rarity')?.value || '';
+
+  const filtered = allCards.filter(c => {
+    if (nameFilter && !c.name.toLowerCase().includes(nameFilter) && !(c.ability_name || '').toLowerCase().includes(nameFilter)) return false;
+    if (elemFilter && c.element !== elemFilter) return false;
+    if (rarityFilter && c.rarity !== rarityFilter) return false;
+    return true;
+  });
+
+  grid.innerHTML = filtered.map(c => {
+    const borderColor = RARITY_BORDER[c.rarity] || '#444';
+    return `<div class="test-card" onclick="addTestCard(${c.id})" style="border-color:${borderColor}" title="${c.ability_name}: ${c.ability_desc || ''}${c.passive_desc ? '\nPassif: '+c.passive_desc : ''}">
+      <div class="test-card-emoji">${c.emoji || '?'}</div>
+      <div class="test-card-name">${c.name}</div>
+      <div class="test-card-stats">${ELEM_ICONS[c.element] || ''} ${c.attack}/${c.defense}/${c.hp}</div>
+      <div class="test-card-cost">⚡${c.mana_cost} 💎${c.crystal_cost || 1}</div>
+    </div>`;
+  }).join('');
+}
+
+function filterTestCards() {
+  renderTestGrid();
+}
+
+function setTestSide(side) {
+  testSide = side;
+  document.getElementById('test-side-player').classList.toggle('test-side-btn--active', side === 'player');
+  document.getElementById('test-side-enemy').classList.toggle('test-side-btn--active', side === 'enemy');
+}
+
+function addTestCard(cardId) {
+  const card = allCards.find(c => c.id === cardId);
+  if (!card) return;
+  const list = testSide === 'player' ? testPlayerCards : testEnemyCards;
+  if (list.length >= 10) { showFeedback('Max 10 cartes par cote', true); return; }
+  list.push(card);
+  renderTestSelections();
+}
+
+function removeTestCard(index, side) {
+  if (side === 'player') testPlayerCards.splice(index, 1);
+  else testEnemyCards.splice(index, 1);
+  renderTestSelections();
+}
+
+function renderTestSelections() {
+  const renderSide = (cards, containerId, side) => {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    if (cards.length === 0) {
+      el.innerHTML = '<span style="color:#555;font-family:VT323,monospace;font-size:14px">Cliquez sur une carte pour l\'ajouter (ou Deck Starter par defaut)</span>';
+      return;
+    }
+    el.innerHTML = cards.map((c, i) => `<div class="test-selected-card" onclick="removeTestCard(${i}, '${side}')" title="Cliquer pour retirer">
+      <span class="test-selected-emoji">${c.emoji || '?'}</span>
+      <span class="test-selected-name">${c.name}</span>
+      <span class="test-selected-x">&times;</span>
+    </div>`).join('');
+  };
+  renderSide(testPlayerCards, 'test-player-cards', 'player');
+  renderSide(testEnemyCards, 'test-enemy-cards', 'enemy');
+}
+
+function resetTestSelection() {
+  testPlayerCards = [];
+  testEnemyCards = [];
+  renderTestSelections();
+}
+
+async function startTestBattle() {
+  const playerCardIds = testPlayerCards.map(c => c.id);
+  const enemyCardIds = testEnemyCards.map(c => c.id);
+
+  const res = await fetch('/api/admin/battle/test-start', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ playerCardIds, enemyCardIds })
+  });
+  const data = await res.json();
+  if (!res.ok) { showFeedback(data.error || 'Erreur', true); return; }
+
+  // Store battle data and redirect
+  sessionStorage.setItem('testBattle', JSON.stringify(data));
+  window.location.href = '/battle';
 }
 
 checkAdmin();

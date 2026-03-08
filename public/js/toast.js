@@ -51,13 +51,8 @@
     setTimeout(() => {
       if (window._toastSocket) return;
 
-      let sock;
-      if (window.pvpSocket) {
-        sock = window.pvpSocket;
-      } else {
-        sock = io();
-        window._toastSocket = sock;
-      }
+      let sock = io();
+      window._toastSocket = sock;
 
       sock.on('notification', function(data) {
         showToast(data.message, data.type || 'info');

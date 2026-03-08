@@ -15,61 +15,88 @@
   <div class="bt-topbar">
     <div class="bt-topbar-left">
       <span class="bt-opponent" id="opponent-name">VS ???</span>
-      <span class="bt-info-chip bt-info-deck">🃏 <span id="enemy-deck-count">0</span></span>
-      <span class="bt-info-chip bt-info-hand">✋ <span id="enemy-hand-count">0</span></span>
-      <span class="bt-info-chip bt-energy-enemy">⚡<span id="enemy-energy">0</span>/<span id="enemy-max-energy">0</span></span>
-      <span class="bt-crystal-chip bt-crystal-enemy" title="Crystal ennemi">
-        💎<span id="enemy-crystal-text">0</span>
-        <span class="bt-crystal-bar"><span class="bt-crystal-fill" id="enemy-crystal-fill"></span></span>
-      </span>
+      <span class="bt-info-chip bt-info-deck">&#x1F0CF; <span id="enemy-deck-count">0</span></span>
     </div>
     <div class="bt-topbar-center">
       <span class="bt-turn" id="battle-turn">TOUR 1</span>
+      <span class="bt-mana-carry hidden" id="mana-carry-indicator" title="Mana conserve du tour precedent">&#x1F504; +<span id="mana-carry-count">0</span></span>
     </div>
     <div class="bt-topbar-right">
-      <span class="bt-crystal-chip bt-crystal-player" title="Crystal joueur">
-        💎<span id="player-crystal-text">0</span>
-        <span class="bt-crystal-bar"><span class="bt-crystal-fill" id="player-crystal-fill"></span></span>
-      </span>
-      <span class="bt-info-chip bt-energy-player">⚡<span id="player-energy">1</span>/<span id="player-max-energy">1</span></span>
-      <span class="bt-info-chip bt-info-deck">🃏 <span id="player-deck-count">0</span></span>
+      <span class="bt-info-chip bt-info-deck">&#x1F0CF; <span id="player-deck-count">0</span></span>
     </div>
   </div>
 
+  <!-- ===== MAIN ENNEMIE (cartes face cachee) ===== -->
+  <div class="bt-enemy-hand" id="enemy-hand-row"></div>
+
   <!-- ===== ZONE PRINCIPALE ===== -->
   <div class="bt-arena">
+
+    <!-- Jauges ennemi (gauche) -->
+    <div class="bt-side-gauges bt-side-gauges--left">
+      <div class="bt-battery bt-battery--energy" id="enemy-energy-battery">
+        <div class="bt-battery-label">NRJ</div>
+        <div class="bt-battery-cap"></div>
+        <div class="bt-battery-body" id="enemy-energy-body"></div>
+        <div class="bt-battery-value" id="enemy-energy-value">0/0</div>
+      </div>
+      <div class="bt-battery bt-battery--crystal" id="enemy-crystal-battery">
+        <div class="bt-battery-label">CRYS</div>
+        <div class="bt-battery-cap"></div>
+        <div class="bt-battery-body" id="enemy-crystal-body"></div>
+        <div class="bt-battery-value" id="enemy-crystal-value">0</div>
+      </div>
+    </div>
 
     <!-- Champs de bataille -->
     <div class="bt-fields">
       <!-- Avatar ennemi (PV adversaire) -->
       <div class="bt-avatar-row bt-avatar-row--enemy" id="enemy-avatar-hp"></div>
 
-      <!-- Zone ennemie -->
+      <!-- Zone ennemie avec labels de rang -->
       <div class="bt-field bt-field--enemy" id="enemy-field">
-        <div class="bt-slot" data-slot="0" data-side="enemy" onclick="clickFieldSlot('enemy', 0)">
-          <div class="bt-slot-empty">VIDE</div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label bt-rank-label--enemy">FLANC G</div>
+          <div class="bt-slot" data-slot="0" data-side="enemy" onclick="clickFieldSlot('enemy', 0)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
         </div>
-        <div class="bt-slot" data-slot="1" data-side="enemy" onclick="clickFieldSlot('enemy', 1)">
-          <div class="bt-slot-empty">VIDE</div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label bt-rank-label--enemy">CENTRE</div>
+          <div class="bt-slot" data-slot="1" data-side="enemy" onclick="clickFieldSlot('enemy', 1)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
         </div>
-        <div class="bt-slot" data-slot="2" data-side="enemy" onclick="clickFieldSlot('enemy', 2)">
-          <div class="bt-slot-empty">VIDE</div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label bt-rank-label--enemy">FLANC D</div>
+          <div class="bt-slot" data-slot="2" data-side="enemy" onclick="clickFieldSlot('enemy', 2)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
         </div>
       </div>
 
       <!-- Separateur -->
       <div class="bt-midline"></div>
 
-      <!-- Zone joueur -->
+      <!-- Zone joueur avec labels de rang -->
       <div class="bt-field bt-field--player" id="player-field">
-        <div class="bt-slot" data-slot="0" data-side="player" onclick="clickFieldSlot('player', 0)">
-          <div class="bt-slot-empty">VIDE</div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label">FLANC G <span class="bt-rank-bonus">+1 ATK</span></div>
+          <div class="bt-slot" data-slot="0" data-side="player" onclick="clickFieldSlot('player', 0)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
         </div>
-        <div class="bt-slot" data-slot="1" data-side="player" onclick="clickFieldSlot('player', 1)">
-          <div class="bt-slot-empty">VIDE</div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label">CENTRE <span class="bt-rank-bonus bt-rank-bonus--def">+1 DEF</span></div>
+          <div class="bt-slot" data-slot="1" data-side="player" onclick="clickFieldSlot('player', 1)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
         </div>
-        <div class="bt-slot" data-slot="2" data-side="player" onclick="clickFieldSlot('player', 2)">
-          <div class="bt-slot-empty">VIDE</div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label">FLANC D <span class="bt-rank-bonus">+1 ATK</span></div>
+          <div class="bt-slot" data-slot="2" data-side="player" onclick="clickFieldSlot('player', 2)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
         </div>
       </div>
 
@@ -77,9 +104,28 @@
       <div class="bt-avatar-row bt-avatar-row--player" id="player-avatar-hp"></div>
     </div>
 
-    <!-- Panneau d'actions (droite) -->
-    <div class="bt-actions hidden" id="bt-actions">
-      <div class="bt-actions-title">ACTIONS</div>
+    <!-- Jauges joueur (droite) -->
+    <div class="bt-side-gauges bt-side-gauges--right">
+      <div class="bt-battery bt-battery--energy" id="player-energy-battery">
+        <div class="bt-battery-label">NRJ</div>
+        <div class="bt-battery-cap"></div>
+        <div class="bt-battery-body" id="player-energy-body"></div>
+        <div class="bt-battery-value" id="player-energy-value">1/1</div>
+      </div>
+      <div class="bt-battery bt-battery--crystal" id="player-crystal-battery">
+        <div class="bt-battery-label">CRYS</div>
+        <div class="bt-battery-cap"></div>
+        <div class="bt-battery-body" id="player-crystal-body"></div>
+        <div class="bt-battery-value" id="player-crystal-value">0</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Popup d'actions (overlay) -->
+  <div class="bt-actions-overlay hidden" id="bt-actions" onclick="if(event.target===this){hideActionPanel();cancelAction()}">
+    <div class="bt-actions-popup">
+      <button class="bt-actions-close" onclick="hideActionPanel()">&times;</button>
       <div class="bt-actions-unit" id="bt-actions-unit"></div>
       <div class="bt-actions-buttons" id="bt-actions-buttons"></div>
     </div>
@@ -88,9 +134,8 @@
   <!-- ===== MAIN DU JOUEUR ===== -->
   <div class="bt-hand-bar">
     <div class="bt-hand" id="player-hand"></div>
-    <button class="bt-end-turn" id="end-turn-btn" onclick="endTurn()">FIN DU TOUR ⏩</button>
+    <button class="bt-end-turn" id="end-turn-btn" onclick="endTurn()">FIN DU TOUR &#x23E9;</button>
   </div>
-
 
   <!-- ===== OVERLAYS ===== -->
   <div class="battle-result-overlay hidden" id="battle-result">
@@ -104,13 +149,9 @@
   <div class="battle-anim-overlay" id="battle-anim-overlay"></div>
   <div class="screen-flash hidden" id="screen-flash"></div>
 
-  <!-- PVP: Indicateur de tour -->
-  <div class="pvp-turn-banner hidden" id="pvp-turn-banner"></div>
+  <!-- Combo Kill banner -->
+  <div class="combo-kill-banner hidden" id="combo-kill-banner">COMBO KILL!</div>
 
-  <!-- PVP: Bouton abandonner -->
-  <button class="bt-surrender hidden" id="surrender-btn" onclick="surrender()">🏳 ABANDON</button>
-
-  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/toast.js"></script>
   <script src="/js/friends.js"></script>
   <script src="/js/card-renderer.js"></script>

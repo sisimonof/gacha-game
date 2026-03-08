@@ -27,15 +27,15 @@ const RARITY_COLORS_STAT = {
 };
 
 function renderStats(s) {
-  // PVP
-  document.getElementById('pvp-wins').textContent = s.pvp.wins;
-  document.getElementById('pvp-losses').textContent = s.pvp.losses;
-  document.getElementById('pvp-rate').textContent = s.pvp.winRate + '%';
-  const totalPvp = s.pvp.wins + s.pvp.losses;
-  if (totalPvp > 0) {
-    renderBarChart('pvp-chart', [
-      { label: 'Victoires', value: s.pvp.wins, pct: (s.pvp.wins / totalPvp) * 100, color: '#00ff41' },
-      { label: 'Defaites', value: s.pvp.losses, pct: (s.pvp.losses / totalPvp) * 100, color: '#ff4444' }
+  // Combat
+  document.getElementById('combat-wins').textContent = s.combat.wins;
+  document.getElementById('combat-losses').textContent = s.combat.losses;
+  document.getElementById('combat-rate').textContent = s.combat.winRate + '%';
+  const totalCombat = s.combat.wins + s.combat.losses;
+  if (totalCombat > 0) {
+    renderBarChart('combat-chart', [
+      { label: 'Victoires', value: s.combat.wins, pct: (s.combat.wins / totalCombat) * 100, color: '#00ff41' },
+      { label: 'Defaites', value: s.combat.losses, pct: (s.combat.losses / totalCombat) * 100, color: '#ff4444' }
     ]);
   }
 

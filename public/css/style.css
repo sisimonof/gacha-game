@@ -2033,13 +2033,9 @@ body.collection-page .screen-flash.flash-active {
   display: flex; flex-direction: column; gap: 6px;
 }
 .deck-item:hover { border-color: var(--primary); box-shadow: 0 0 15px rgba(var(--primary-rgb),0.2); }
-.deck-item-pvp { border-color: #ffaa00; }
 .deck-item-name {
   font-family: 'Press Start 2P', monospace; font-size: 12px; color: var(--primary);
   display: flex; align-items: center; gap: 8px;
-}
-.deck-pvp-badge {
-  font-size: 8px; background: #ffaa00; color: #000; padding: 2px 6px; border-radius: 3px;
 }
 .deck-item-count { font-family: 'VT323', monospace; font-size: 16px; color: #006b1f; }
 .deck-item-preview { font-size: 18px; letter-spacing: 4px; }
@@ -2146,8 +2142,6 @@ body.collection-page .screen-flash.flash-active {
 
 /* Actions */
 .deck-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-.deck-pvp-btn { background: rgba(255, 170, 0, 0.1); border-color: #ffaa00; color: #ffaa00; }
-.deck-pvp-btn:hover { background: rgba(255, 170, 0, 0.2); }
 .deck-delete-btn { border-color: #ff4444; color: #ff4444; background: rgba(255, 68, 68, 0.05); }
 .deck-delete-btn:hover { background: rgba(255, 68, 68, 0.15); }
 .deck-cancel-btn { border-color: #666; color: #666; }
@@ -3827,8 +3821,6 @@ body.collection-page .screen-flash.flash-active {
   box-shadow: 0 0 25px rgba(var(--primary-rgb), 0.3);
   transform: translateY(-3px);
 }
-.combat-mode-pvp { border-color: #ff4444; color: #ff6644; }
-.combat-mode-pvp:hover { box-shadow: 0 0 25px rgba(255,68,68,0.3); background: rgba(40,0,0,0.8); }
 .combat-starter-btn { border-color: #ffaa00; color: #ffcc00; margin-top: 12px; }
 .combat-starter-btn:hover { box-shadow: 0 0 25px rgba(255,170,0,0.3); background: rgba(40,25,0,0.8); }
 
@@ -3875,12 +3867,6 @@ body.collection-page .screen-flash.flash-active {
 }
 .deck-select-info { font-size: 14px; color: #888; margin-bottom: 4px; }
 .deck-select-preview { font-size: 16px; letter-spacing: 2px; }
-.deck-pvp-tag {
-  font-family: 'Press Start 2P', monospace; font-size: 7px;
-  color: #ff4444; background: rgba(255,68,68,0.15);
-  padding: 2px 4px; border-radius: 3px;
-}
-
 .deck-select-or {
   font-family: 'VT323', monospace; font-size: 16px;
   color: #555; margin: 16px 0 4px;
@@ -3909,78 +3895,6 @@ body.collection-page .screen-flash.flash-active {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
-
-/* ==============================
-   CAMPAIGN MAP
-   ============================== */
-
-.campaign-wrapper {
-  text-align: center; width: 800px; max-width: 95vw;
-  max-height: 90vh; overflow-y: auto;
-}
-
-.campaign-map {
-  display: flex; flex-direction: column; align-items: center;
-  gap: 0; padding: 20px 0;
-}
-
-.campaign-node {
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 20px; border: 2px solid; border-radius: 8px;
-  width: 300px; cursor: pointer; transition: all 0.3s;
-  background: rgba(0, 8, 0, 0.8);
-}
-
-.campaign-node.node-locked {
-  border-color: #333; color: #444; cursor: not-allowed;
-  opacity: 0.5;
-}
-.campaign-node.node-completed {
-  border-color: #22cc44; color: #22cc44;
-}
-.campaign-node.node-available {
-  border-color: var(--primary); color: var(--primary);
-  animation: nodePulse 2s ease-in-out infinite;
-}
-.campaign-node.node-available:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 20px rgba(var(--primary-rgb), 0.4);
-}
-
-@keyframes nodePulse {
-  0%, 100% { box-shadow: 0 0 8px rgba(var(--primary-rgb),0.2); }
-  50% { box-shadow: 0 0 20px rgba(var(--primary-rgb),0.5); }
-}
-
-.campaign-node-marker {
-  font-family: 'Press Start 2P', monospace; font-size: 14px;
-  width: 30px; height: 30px; border-radius: 50%;
-  display: flex; align-items: center; justify-content: center;
-  border: 2px solid currentColor; flex-shrink: 0;
-}
-.campaign-node-label { font-size: 18px; }
-
-.campaign-line {
-  width: 3px; height: 20px; background: #333;
-  margin: 0 auto;
-}
-.campaign-line.line-active { background: var(--primary); }
-
-/* Campaign detail */
-.campaign-detail {
-  border: 2px solid var(--primary); border-radius: 8px;
-  padding: 20px; margin-top: 20px;
-  background: rgba(0, 20, 0, 0.6);
-}
-
-.campaign-node-name {
-  font-family: 'Press Start 2P', monospace; font-size: 14px;
-  color: var(--primary); margin-bottom: 10px;
-}
-.campaign-node-info { font-size: 18px; color: var(--primary-dim); margin-bottom: 6px; }
-.campaign-node-reward { font-size: 18px; color: #ffaa00; margin-bottom: 16px; }
-
-.campaign-fight-btn { max-width: 300px; margin: 16px auto 0; }
 
 /* ==============================
    TEAM SELECTION
@@ -4512,98 +4426,121 @@ body.battle-page {
   box-shadow: 0 0 6px rgba(var(--primary-rgb), 0.2);
 }
 
-/* ===== PANNEAU D'ACTIONS ===== */
-.bt-actions {
-  width: 220px;
-  min-width: 220px;
-  background: rgba(0, 8, 0, 0.95);
-  border-left: 1px solid var(--primary-border);
+/* ===== POPUP D'ACTIONS (overlay) ===== */
+.bt-actions-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-  overflow-y: auto;
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(3px);
+  animation: btActionsIn 0.15s ease-out;
 }
 
-.bt-actions.hidden {
+.bt-actions-overlay.hidden {
   display: none;
 }
 
-.bt-actions-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  color: var(--primary);
-  letter-spacing: 2px;
-  text-align: center;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--primary-border);
+@keyframes btActionsIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* Unit info in action panel */
-.bt-actions-unit {
-  text-align: center;
-  padding: 8px;
+.bt-actions-popup {
+  position: relative;
+  width: 320px;
+  max-width: 92vw;
+  background: rgba(0, 8, 0, 0.97);
+  border: 2px solid var(--primary-border);
+  border-radius: 12px;
+  padding: 20px 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 15px rgba(var(--primary-rgb), 0.15);
+  animation: btPopupSlide 0.2s ease-out;
+}
+
+@keyframes btPopupSlide {
+  from { transform: translateY(20px) scale(0.95); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.bt-actions-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 22px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  transition: color 0.15s;
+}
+.bt-actions-close:hover {
+  color: #ff4444;
+}
+
+/* Header with emoji + name + stats */
+.bt-actions-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
   background: rgba(0, 20, 0, 0.5);
   border: 1px solid var(--primary-border);
-  border-radius: 6px;
+  border-radius: 8px;
 }
 
 .bt-actions-unit-emoji {
-  font-size: 32px;
-  line-height: 1.1;
+  font-size: 36px;
+  line-height: 1;
+}
+
+.bt-actions-header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .bt-actions-unit-name {
   font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
+  font-size: 10px;
   color: var(--primary);
-  margin: 4px 0;
-}
-
-.bt-actions-unit-hp {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.bt-actions-unit-hp .bt-unit-hpbar {
-  flex: 1;
-}
-
-.bt-actions-unit-hp .bt-unit-hp-text {
-  font-size: 7px;
 }
 
 .bt-actions-unit-stats {
   font-family: 'VT323', monospace;
-  font-size: 16px;
+  font-size: 18px;
+  color: #aaa;
   display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: 4px;
+  gap: 10px;
 }
 
-/* Action buttons */
+/* Action buttons container */
 .bt-actions-buttons {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
 }
 
+/* Action button — horizontal layout: icon | info */
 .bt-action-btn {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  padding: 10px 12px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
   border: 1px solid #004d15;
-  border-radius: 6px;
+  border-radius: 8px;
   background: rgba(0, 20, 0, 0.6);
   cursor: pointer;
   transition: all 0.15s;
   width: 100%;
+  text-align: left;
 }
 
 .bt-action-btn:hover:not(:disabled) {
@@ -4611,54 +4548,90 @@ body.battle-page {
 }
 
 .bt-action-btn:disabled {
-  opacity: 0.2;
+  opacity: 0.25;
   cursor: not-allowed;
+}
+
+.bt-action-icon {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 36px;
+  text-align: center;
+}
+
+.bt-action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
 }
 
 .bt-action-label {
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
+  font-size: 9px;
 }
 
-.bt-action-sub {
+.bt-action-cost {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #888;
+}
+
+.bt-action-desc {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #bba0dd;
+  line-height: 1.2;
+}
+
+.bt-action-status {
   font-family: 'VT323', monospace;
   font-size: 13px;
-  color: #555;
+  color: #ff6644;
+  font-style: italic;
 }
 
-.bt-action-btn:disabled .bt-action-sub {
-  color: #333;
+.bt-action-btn:disabled .bt-action-cost,
+.bt-action-btn:disabled .bt-action-desc {
+  color: #444;
 }
 
+/* Attack button — red theme */
 .bt-action-btn--attack {
-  border-color: #441100;
+  border-color: #552200;
   color: #ff6644;
 }
-
 .bt-action-btn--attack:hover:not(:disabled) {
   background: rgba(255, 68, 68, 0.1);
   border-color: #ff4444;
-  box-shadow: 0 0 8px rgba(255, 68, 68, 0.15);
+  box-shadow: 0 0 12px rgba(255, 68, 68, 0.2);
 }
+.bt-action-btn--attack .bt-action-cost { color: #cc8866; }
 
+/* Ability button — purple theme */
 .bt-action-btn--ability {
-  border-color: #330066;
+  border-color: #440088;
   color: #cc44ff;
+  background: rgba(40, 0, 60, 0.5);
 }
-
 .bt-action-btn--ability:hover:not(:disabled) {
-  background: rgba(204, 68, 255, 0.1);
+  background: rgba(100, 20, 160, 0.2);
   border-color: #cc44ff;
-  box-shadow: 0 0 8px rgba(204, 68, 255, 0.15);
+  box-shadow: 0 0 12px rgba(204, 68, 255, 0.25);
 }
+.bt-action-btn--ability .bt-action-cost { color: #aa88cc; }
 
-.bt-actions-ability-name {
+/* Passive info at bottom */
+.bt-actions-passive {
   font-family: 'VT323', monospace;
   font-size: 14px;
-  color: #cc44ff;
-  text-align: center;
-  padding-top: 6px;
-  border-top: 1px dashed #2a1a3a;
+  color: #ffaa44;
+  padding: 8px 10px;
+  background: rgba(255, 170, 68, 0.06);
+  border: 1px dashed rgba(255, 170, 68, 0.25);
+  border-radius: 6px;
+  line-height: 1.3;
 }
 
 /* ===== MAIN DU JOUEUR ===== */
@@ -4728,8 +4701,8 @@ body.battle-page {
 
 /* ===== CARTES EN MAIN (flottantes) ===== */
 .bt-card {
-  width: 115px;
-  padding: 8px 6px;
+  width: 165px;
+  padding: 10px 8px;
   background: rgba(0, 8, 0, 0.95);
   border: 2px solid;
   border-radius: 8px;
@@ -4737,11 +4710,11 @@ body.battle-page {
   text-align: center;
   position: relative;
   pointer-events: auto;
-  transform: translateY(75px);
+  transform: translateY(95px);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s ease;
-  margin-left: -12px;
-  margin-right: -12px;
+  margin-left: -20px;
+  margin-right: -20px;
   z-index: 1;
 }
 
@@ -4749,14 +4722,14 @@ body.battle-page {
 .bt-card:last-child { margin-right: 0; }
 
 .bt-card:hover {
-  transform: translateY(-10px) scale(1.08);
+  transform: translateY(-20px) scale(1.08);
   z-index: 50;
   box-shadow: 0 -8px 25px rgba(var(--primary-rgb), 0.25),
               0 0 15px rgba(var(--primary-rgb), 0.1);
 }
 
 .bt-card--selected {
-  transform: translateY(-15px) scale(1.1);
+  transform: translateY(-25px) scale(1.1);
   outline: 3px solid #ffcc00;
   outline-offset: 2px;
   box-shadow: 0 -10px 30px rgba(255, 204, 0, 0.3);
@@ -4774,7 +4747,7 @@ body.battle-page {
 
 .bt-card--dragging {
   opacity: 0.4;
-  transform: translateY(75px) scale(0.95) !important;
+  transform: translateY(95px) scale(0.95) !important;
   box-shadow: none !important;
 }
 
@@ -4814,7 +4787,7 @@ body.battle-page {
   top: 3px;
   left: 4px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 4px;
+  font-size: 5px;
   color: #aaa;
   text-transform: uppercase;
   line-height: 1;
@@ -4825,7 +4798,7 @@ body.battle-page {
   top: 3px;
   right: 4px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
+  font-size: 8px;
   color: #ffcc00;
   background: rgba(0, 0, 0, 0.5);
   padding: 1px 3px;
@@ -4833,13 +4806,13 @@ body.battle-page {
 }
 
 .bt-card-emoji {
-  font-size: 32px;
+  font-size: 40px;
   margin: 2px 0;
 }
 
 .bt-card-name {
   font-family: 'Press Start 2P', monospace;
-  font-size: 6px;
+  font-size: 8px;
   color: var(--primary);
   margin: 3px 0;
   white-space: nowrap;
@@ -4849,10 +4822,10 @@ body.battle-page {
 
 .bt-card-stats {
   font-family: 'VT323', monospace;
-  font-size: 13px;
+  font-size: 16px;
   display: flex;
   flex-direction: row;
-  gap: 4px;
+  gap: 6px;
   justify-content: center;
   padding: 2px 0;
 }
@@ -4863,11 +4836,11 @@ body.battle-page {
 
 .bt-card-ability {
   font-family: 'VT323', monospace;
-  font-size: 10px;
+  font-size: 13px;
   color: #cc44ff;
   margin-top: 2px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.2;
@@ -4875,11 +4848,11 @@ body.battle-page {
 
 .bt-card-passive {
   font-family: 'VT323', monospace;
-  font-size: 9px;
+  font-size: 12px;
   color: #ffaa44;
   margin-top: 2px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.2;
@@ -4894,11 +4867,11 @@ body.battle-page {
 
 .bt-card-obj-desc {
   font-family: 'VT323', monospace;
-  font-size: 11px;
+  font-size: 13px;
   color: #888;
   margin-top: 2px;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.2;
@@ -5107,6 +5080,11 @@ body.battle-page {
   }
   .bt-slot { width: 180px; min-height: 170px; }
   .bt-slot-empty { min-height: 170px; }
+  .bt-card { width: 140px; margin-left: -16px; margin-right: -16px; }
+  .bt-side-gauges { padding: 4px; }
+  .bt-battery { width: 28px; }
+  .bt-battery-body { width: 24px; }
+  .bt-battery-seg { height: 10px; }
 }
 
 @media (max-width: 700px) {
@@ -5116,11 +5094,20 @@ body.battle-page {
   .bt-unit-name { font-size: 7px; }
   .bt-unit-stats { font-size: 15px; gap: 8px; }
   .bt-unit-ability .bt-ability-desc { display: none; }
-  .bt-card { width: 90px; padding: 5px; transform: translateY(60px); margin-left: -8px; margin-right: -8px; }
-  .bt-card:hover { transform: translateY(-8px) scale(1.06); }
-  .bt-card-emoji { font-size: 26px; }
-  .bt-card-name { font-size: 5px; }
-  .bt-card-ability { display: none; }
+  .bt-card { width: 100px; padding: 6px; transform: translateY(70px); margin-left: -10px; margin-right: -10px; }
+  .bt-card:hover { transform: translateY(-10px) scale(1.06); }
+  .bt-card-emoji { font-size: 28px; }
+  .bt-card-name { font-size: 6px; }
+  .bt-card-ability { font-size: 10px; -webkit-line-clamp: 2; }
+  .bt-card-passive { font-size: 10px; -webkit-line-clamp: 2; }
+  .bt-enemy-card-back { width: 28px; height: 40px; margin-left: -6px; }
+  .bt-enemy-hand { min-height: 32px; padding: 2px 8px; }
+  .bt-side-gauges { padding: 2px; gap: 4px; }
+  .bt-battery { width: 24px; }
+  .bt-battery-body { width: 20px; padding: 2px; }
+  .bt-battery-seg { height: 8px; }
+  .bt-battery-label { font-size: 4px; }
+  .bt-battery-value { font-size: 11px; }
   .bt-topbar { flex-wrap: wrap; height: auto; padding: 4px 8px; gap: 4px; }
   .bt-turn { font-size: 10px; }
   .bt-topbar-center { position: static; transform: none; }
@@ -5130,77 +5117,324 @@ body.battle-page {
 }
 
 /* ==============================
-   PVP PAGE
+   ENEMY HAND (face-down cards)
+   ============================== */
+.bt-enemy-hand {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 16px;
+  min-height: 44px;
+  gap: 0;
+  overflow: hidden;
+  background: rgba(0, 4, 0, 0.4);
+  border-bottom: 1px solid rgba(255, 68, 68, 0.1);
+  margin-top: 50px;
+}
+
+.bt-enemy-card-back {
+  width: 36px;
+  height: 50px;
+  background: linear-gradient(135deg, #1a0a0a, #2a1010 40%, #1a0a0a);
+  border: 1.5px solid rgba(255, 68, 68, 0.35);
+  border-radius: 4px;
+  margin-left: -8px;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: transform 0.2s;
+  animation: enemyCardAppear 0.3s ease-out backwards;
+}
+.bt-enemy-card-back:first-child { margin-left: 0; }
+
+.bt-enemy-card-back::after {
+  content: '?';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: rgba(255, 68, 68, 0.3);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 3px,
+    rgba(255, 68, 68, 0.04) 3px,
+    rgba(255, 68, 68, 0.04) 6px
+  );
+  border-radius: 3px;
+}
+
+.bt-enemy-card-back:hover { transform: translateY(2px); }
+
+@keyframes enemyCardAppear {
+  0% { transform: translateY(-20px) scale(0.7); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+/* ==============================
+   SIDE BATTERY GAUGES
+   ============================== */
+.bt-side-gauges {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 6px;
+  z-index: 5;
+  flex-shrink: 0;
+}
+.bt-side-gauges--left {
+  border-right: 1px solid rgba(255, 68, 68, 0.1);
+}
+.bt-side-gauges--right {
+  border-left: 1px solid rgba(var(--primary-rgb), 0.1);
+}
+
+.bt-battery {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 32px;
+}
+
+.bt-battery-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  color: #555;
+  letter-spacing: 1px;
+}
+
+.bt-battery-cap {
+  width: 14px;
+  height: 5px;
+  background: rgba(100, 100, 100, 0.3);
+  border: 1px solid rgba(100, 100, 100, 0.4);
+  border-bottom: none;
+  border-radius: 2px 2px 0 0;
+}
+
+.bt-battery-body {
+  width: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 3px;
+  border: 2px solid rgba(100, 100, 100, 0.4);
+  border-radius: 2px 2px 4px 4px;
+  background: rgba(0, 5, 0, 0.6);
+}
+
+.bt-battery-seg {
+  width: 100%;
+  height: 12px;
+  background: rgba(30, 30, 30, 0.5);
+  border-radius: 1px;
+  transition: background 0.4s ease, box-shadow 0.4s ease;
+  position: relative;
+}
+
+/* Energy segments — yellow/orange */
+.bt-battery--energy .bt-battery-seg--filled {
+  background: linear-gradient(180deg, #ffcc00, #ff9900);
+  box-shadow: 0 0 6px rgba(255, 204, 0, 0.5);
+}
+.bt-battery--energy .bt-battery-seg--locked {
+  background: rgba(20, 20, 20, 0.3);
+  border: 1px dashed rgba(50, 50, 50, 0.3);
+}
+
+/* Crystal segments — purple */
+.bt-battery--crystal .bt-battery-seg--filled {
+  background: linear-gradient(180deg, #cc44ff, #9922cc);
+  box-shadow: 0 0 6px rgba(204, 68, 255, 0.5);
+}
+.bt-battery--crystal .bt-battery-seg--partial {
+  background: linear-gradient(
+    to top,
+    rgba(204, 68, 255, 0.6) var(--partial, 0%),
+    rgba(30, 30, 30, 0.5) var(--partial, 0%)
+  );
+  box-shadow: 0 0 3px rgba(204, 68, 255, 0.3);
+}
+
+.bt-battery-value {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  text-align: center;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+}
+.bt-battery--energy .bt-battery-value { color: #ffcc00; }
+.bt-battery--crystal .bt-battery-value { color: #cc88ff; }
+
+/* Side colors */
+.bt-side-gauges--left .bt-battery-body { border-color: rgba(255, 68, 68, 0.25); }
+.bt-side-gauges--left .bt-battery-cap { border-color: rgba(255, 68, 68, 0.25); }
+.bt-side-gauges--right .bt-battery-body { border-color: rgba(var(--primary-rgb), 0.25); }
+.bt-side-gauges--right .bt-battery-cap { border-color: rgba(var(--primary-rgb), 0.25); }
+
+/* ==============================
+   RANK SYNERGY / COMBAT MECHANICS
    ============================== */
 
-.pvp-wrapper {
-  text-align: center; width: 800px; max-width: 95vw;
-  max-height: 90vh; overflow-y: auto;
+/* Slot wrapper with rank labels */
+.bt-slot-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
 }
 
-.pvp-section {
-  border: 1px solid #004d15; border-radius: 8px;
-  padding: 20px; margin: 16px 0;
-  background: rgba(0, 10, 0, 0.4);
+.bt-rank-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+}
+.bt-rank-label--enemy {
+  order: 1;
 }
 
-.pvp-section-title {
-  font-family: 'Press Start 2P', monospace; font-size: 12px;
-  color: var(--primary-dim); margin-bottom: 12px;
+.bt-rank-bonus {
+  color: #ff6644;
+  font-size: 6px;
+}
+.bt-rank-bonus--def {
+  color: #4488ff;
 }
 
-.pvp-defense-team {
-  display: flex; gap: 12px; justify-content: center;
-  flex-wrap: wrap; margin-bottom: 12px;
+/* Rank synergy badges on field units */
+.bt-rank-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  z-index: 5;
+  text-shadow: none;
+  pointer-events: none;
+}
+.bt-rank-badge--atk {
+  background: rgba(255, 68, 68, 0.9);
+  color: #fff;
+  border: 1px solid #ff4444;
+  box-shadow: 0 0 6px rgba(255, 68, 68, 0.4);
+}
+.bt-rank-badge--def {
+  background: rgba(68, 136, 255, 0.9);
+  color: #fff;
+  border: 1px solid #4488ff;
+  box-shadow: 0 0 6px rgba(68, 136, 255, 0.4);
 }
 
-.pvp-no-team { color: #444; font-size: 18px; }
-
-.pvp-defense-card {
-  width: 100px; background: rgba(0, 8, 0, 0.9);
-  border: 2px solid; border-radius: 6px;
-  padding: 6px; text-align: center;
-}
-.pvp-defense-img { width: 100%; height: 60px; object-fit: cover; border-radius: 4px; }
-.pvp-defense-name { font-family: 'Press Start 2P', monospace; font-size: 7px; color: var(--primary); margin: 4px 0; }
-.pvp-defense-stats { font-family: 'Press Start 2P', monospace; font-size: 7px; }
-
-.pvp-edit-btn { max-width: 200px; margin: 0 auto; }
-.pvp-find-btn { max-width: 300px; margin: 0 auto; }
-.pvp-attack-btn { max-width: 200px; margin: 16px auto 0; }
-
-.pvp-opponent { margin-top: 20px; }
-.pvp-opponent h3 {
-  font-family: 'Press Start 2P', monospace; font-size: 12px;
-  color: #ff6644; margin-bottom: 10px;
+/* Combo Kill badge on units */
+.bt-combo-badge {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px;
+  padding: 1px 4px;
+  background: rgba(255, 170, 0, 0.9);
+  color: #fff;
+  border: 1px solid #ffaa00;
+  border-radius: 3px;
+  z-index: 5;
+  box-shadow: 0 0 8px rgba(255, 170, 0, 0.5);
+  pointer-events: none;
+  white-space: nowrap;
 }
 
-.pvp-opponent-team {
-  display: flex; gap: 12px; justify-content: center;
-  flex-wrap: wrap; margin-bottom: 16px;
+/* Combo Kill banner overlay */
+.combo-kill-banner {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.5);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 24px;
+  color: #ffaa00;
+  text-shadow:
+    0 0 20px rgba(255, 170, 0, 0.8),
+    0 0 40px rgba(255, 170, 0, 0.4),
+    0 0 60px rgba(255, 68, 0, 0.3);
+  background: rgba(0, 0, 0, 0.85);
+  padding: 16px 40px;
+  border: 2px solid #ffaa00;
+  border-radius: 4px;
+  z-index: 200;
+  pointer-events: none;
+  opacity: 0;
+  transition: none;
+}
+.combo-kill-banner.combo-kill-active {
+  animation: comboKillPop 1.5s ease-out forwards;
+}
+@keyframes comboKillPop {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  15%  { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  30%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  80%  { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.1); opacity: 0; }
 }
 
-/* Editor overlay */
-.pvp-editor-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.9); z-index: 2000;
-  display: flex; justify-content: center; align-items: center;
+/* Mana carry indicator */
+.bt-mana-carry {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #44ddff;
+  background: rgba(68, 221, 255, 0.1);
+  border: 1px solid rgba(68, 221, 255, 0.3);
+  border-radius: 4px;
+  padding: 2px 8px;
+  margin-left: 8px;
 }
-.pvp-editor-overlay.hidden { display: none; }
+.bt-mana-carry.hidden { display: none; }
+.mana-carry-pulse {
+  animation: manaCarryPulse 0.6s ease-out;
+}
+@keyframes manaCarryPulse {
+  0%   { transform: scale(1); box-shadow: 0 0 0 rgba(68, 221, 255, 0); }
+  50%  { transform: scale(1.15); box-shadow: 0 0 12px rgba(68, 221, 255, 0.5); }
+  100% { transform: scale(1); box-shadow: 0 0 0 rgba(68, 221, 255, 0); }
+}
 
-.pvp-editor {
-  background: rgba(0, 15, 0, 0.95); border: 2px solid var(--primary);
-  border-radius: 10px; padding: 24px; width: 600px; max-width: 90vw;
-  max-height: 80vh; overflow-y: auto;
+/* Combat mechanics info chips (hub page) */
+.combat-mechanics-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  margin-top: 20px;
+  max-width: 500px;
 }
-.pvp-editor h2 {
-  font-family: 'Press Start 2P', monospace; font-size: 12px;
-  color: var(--primary); margin-bottom: 16px;
+.mechanic-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #aaa;
+  background: rgba(0, 10, 0, 0.5);
+  border: 1px solid #004d15;
+  border-radius: 6px;
+  padding: 6px 14px;
+  width: 100%;
 }
-.pvp-editor-actions {
-  display: flex; gap: 10px; justify-content: center; margin-top: 16px;
+.mechanic-icon {
+  font-size: 16px;
 }
-.pvp-editor-actions .submit-btn { width: auto; padding: 10px 20px; }
 
 /* ==============================
    ADMIN PANEL
@@ -5441,6 +5675,194 @@ body.battle-page {
 .admin-edit-actions { display: flex; gap: 8px; align-items: center; }
 
 /* ==============================
+   ADMIN: TEST BATTLE MODE
+   ============================== */
+
+.admin-tab--test {
+  color: #cc44ff !important;
+}
+.admin-tab--test.active {
+  color: #cc44ff !important;
+  border-bottom-color: #cc44ff !important;
+  text-shadow: 0 0 10px rgba(204, 68, 255, 0.4) !important;
+}
+
+.test-filters {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.test-filter-input {
+  flex: 1;
+  min-width: 150px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #ddd;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+}
+.test-filter-select {
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #ddd;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+}
+
+.test-side-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.test-side-btn {
+  padding: 6px 16px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #888;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.test-side-btn--active {
+  border-color: #cc44ff;
+  color: #cc44ff;
+  background: rgba(204, 68, 255, 0.1);
+  box-shadow: 0 0 8px rgba(204, 68, 255, 0.2);
+}
+
+.test-selections {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.test-selection-box {
+  flex: 1;
+  min-width: 250px;
+  background: rgba(0, 20, 0, 0.3);
+  border: 1px solid #004d15;
+  border-radius: 6px;
+  padding: 10px;
+}
+.test-selection-box--enemy {
+  background: rgba(20, 0, 0, 0.3);
+  border-color: #4d0000;
+}
+.test-selection-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #888;
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+}
+.test-selection-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 32px;
+}
+.test-selected-card {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #444;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.test-selected-card:hover {
+  border-color: #ff4444;
+  background: rgba(255, 0, 0, 0.1);
+}
+.test-selected-emoji {
+  font-size: 16px;
+}
+.test-selected-name {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #ccc;
+}
+.test-selected-x {
+  font-size: 14px;
+  color: #ff4444;
+  margin-left: 2px;
+}
+
+.test-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
+}
+.test-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 6px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.test-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.7);
+}
+.test-card-emoji {
+  font-size: 28px;
+  line-height: 1.1;
+}
+.test-card-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  color: #ddd;
+  text-align: center;
+  line-height: 1.3;
+}
+.test-card-stats {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: #aaa;
+}
+.test-card-cost {
+  font-family: 'VT323', monospace;
+  font-size: 12px;
+  color: #888;
+}
+
+/* Badge MODE TEST in battle */
+.bt-test-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #cc44ff;
+  background: rgba(204, 68, 255, 0.15);
+  border: 1px solid #cc44ff;
+  border-radius: 4px;
+  padding: 2px 8px;
+  animation: testBadgePulse 1.5s infinite;
+}
+@keyframes testBadgePulse {
+  0%, 100% { box-shadow: 0 0 4px rgba(204, 68, 255, 0.3); }
+  50% { box-shadow: 0 0 12px rgba(204, 68, 255, 0.6); }
+}
+
+/* ==============================
    WIKI PAGE
    ============================== */
 
@@ -5616,121 +6038,6 @@ body.battle-page {
   .wiki-element-row { font-size: 8px; }
 }
 
-/* ========================
-   PVP STYLES
-   ======================== */
-
-/* PVP Searching overlay */
-.pvp-searching-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 200;
-}
-.pvp-searching-content {
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-.pvp-searching-spinner {
-  width: 60px;
-  height: 60px;
-  border: 4px solid rgba(var(--primary-rgb), 0.2);
-  border-top: 4px solid var(--primary);
-  border-radius: 50%;
-  animation: pvp-spin 1s linear infinite;
-}
-@keyframes pvp-spin {
-  to { transform: rotate(360deg); }
-}
-.pvp-searching-title {
-  font-family: 'Courier New', monospace;
-  font-size: 20px;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 3px;
-  text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.5);
-}
-.pvp-searching-text {
-  font-family: 'Courier New', monospace;
-  font-size: 12px;
-  color: #aaa;
-}
-.pvp-searching-timer {
-  font-family: 'Courier New', monospace;
-  font-size: 24px;
-  color: var(--primary);
-  text-shadow: 0 0 8px rgba(var(--primary-rgb), 0.4);
-}
-
-/* PVP Turn banner */
-.pvp-turn-banner {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: 'Courier New', monospace;
-  font-size: 28px;
-  font-weight: bold;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 4px;
-  text-shadow: 0 0 20px rgba(var(--primary-rgb), 0.6), 0 0 40px rgba(var(--primary-rgb), 0.3);
-  background: rgba(0, 0, 0, 0.8);
-  padding: 16px 40px;
-  border: 2px solid var(--primary);
-  z-index: 150;
-  animation: pvp-banner-in 0.3s ease-out, pvp-banner-out 0.5s ease-in 1.5s forwards;
-  pointer-events: none;
-}
-@keyframes pvp-banner-in {
-  from { transform: translate(-50%, -50%) scale(1.5); opacity: 0; }
-  to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-}
-@keyframes pvp-banner-out {
-  from { opacity: 1; }
-  to { opacity: 0; }
-}
-
-/* PVP Surrender button */
-.bt-surrender {
-  position: fixed;
-  top: 44px;
-  left: 12px;
-  z-index: 100;
-  font-family: 'Courier New', monospace;
-  font-size: 10px;
-  padding: 6px 12px;
-  background: rgba(20, 0, 0, 0.8);
-  color: #cc4444;
-  border: 1px solid #cc4444;
-  cursor: pointer;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  transition: all 0.2s;
-}
-.bt-surrender:hover {
-  background: rgba(204, 68, 68, 0.2);
-  box-shadow: 0 0 12px rgba(204, 68, 68, 0.4);
-  color: #ff6666;
-}
-
-/* PVP disabled state (opponent's turn) */
-.pvp-disabled {
-  opacity: 0.5;
-  pointer-events: none;
-  filter: grayscale(0.3);
-}
-.bt-end-turn.pvp-disabled {
-  opacity: 0.4;
-  pointer-events: none;
-  cursor: not-allowed;
-}
 
 /* Combat hub mode buttons */
 .combat-hub {
@@ -5784,13 +6091,6 @@ body.battle-page {
   box-shadow: 0 0 30px rgba(var(--primary-rgb), 0.3);
   background: rgba(0, 20, 5, 0.8);
 }
-.combat-mode-pvp {
-  border-color: #ff4444;
-}
-.combat-mode-pvp:hover {
-  box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
-  background: rgba(20, 0, 0, 0.8);
-}
 .combat-starter-btn {
   border-color: #888;
   min-width: auto;
@@ -5799,15 +6099,6 @@ body.battle-page {
 .combat-starter-btn:hover {
   border-color: var(--primary);
 }
-.deck-pvp-tag {
-  font-size: 8px;
-  color: #ff4444;
-  border: 1px solid #ff4444;
-  padding: 1px 4px;
-  border-radius: 3px;
-  margin-left: 6px;
-}
-
 /* ==============================
    AUTH TERMINAL (Login/Register)
 ============================== */

@@ -359,27 +359,6 @@ db.exec(`
 
 // --- Nouvelles tables ---
 db.exec(`
-  CREATE TABLE IF NOT EXISTS campaign_progress (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL UNIQUE,
-    current_node INTEGER DEFAULT 0,
-    completed_nodes TEXT DEFAULT '[]',
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  )
-`);
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS pvp_teams (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL UNIQUE,
-    card1_id INTEGER,
-    card2_id INTEGER,
-    card3_id INTEGER,
-    FOREIGN KEY (user_id) REFERENCES users(id)
-  )
-`);
-
-db.exec(`
   CREATE TABLE IF NOT EXISTS battle_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -825,12 +804,8 @@ const USERNAME_EFFECTS = {
 const BP_XP = {
   booster_open:     25,
   daily_login:      40,
-  campaign_win:     30,
-  campaign_lose:     5,
-  pvp_win:          35,
-  pvp_lose:         10,
-  pvp_realtime_win: 50,
-  pvp_realtime_lose:15,
+  combat_win:       35,
+  combat_lose:      10,
   mine_sell:        20,
   fusion:           15
 };
@@ -841,7 +816,7 @@ const BP_XP = {
 const QUEST_POOL = {
   daily: [
     { key: 'open_boosters',  label: 'Ouvre {goal} booster(s)',        goal: [1,2,3], credits: 150, xp: 30, track: 'booster_open' },
-    { key: 'win_pvp',        label: 'Gagne {goal} combat(s) PVP',    goal: [1,2],   credits: 200, xp: 40, track: 'pvp_win' },
+    { key: 'win_combat',     label: 'Gagne {goal} combat(s)',         goal: [1,2],   credits: 200, xp: 40, track: 'combat_win' },
     { key: 'mine_diamonds',  label: 'Mine {goal} diamant(s)',         goal: [3,5,8], credits: 150, xp: 25, track: 'diamond_mine' },
     { key: 'do_fusions',     label: 'Fais {goal} fusion(s)',          goal: [1,2],   credits: 100, xp: 20, track: 'fusion' },
     { key: 'earn_credits',   label: 'Gagne {goal} credits',          goal: [500,1000], credits: 200, xp: 35, track: 'credits_earned' },
@@ -850,7 +825,7 @@ const QUEST_POOL = {
   ],
   weekly: [
     { key: 'open_boosters_w', label: 'Ouvre {goal} boosters',        goal: [10,15], credits: 500, xp: 100, track: 'booster_open' },
-    { key: 'win_pvp_w',       label: 'Gagne {goal} PVP',            goal: [5,10],  credits: 600, xp: 120, track: 'pvp_win' },
+    { key: 'win_combat_w',    label: 'Gagne {goal} combats',         goal: [5,10],  credits: 600, xp: 120, track: 'combat_win' },
     { key: 'mine_diamonds_w', label: 'Mine {goal} diamants',        goal: [20,30], credits: 400, xp: 80,  track: 'diamond_mine' },
     { key: 'spend_credits_w', label: 'Depense {goal} credits',      goal: [2000,5000], credits: 500, xp: 90, track: 'credits_spent' },
     { key: 'casino_spins_w',  label: 'Joue {goal} fois au casino',  goal: [10,15], credits: 400, xp: 70,  track: 'casino_spin' },
@@ -866,9 +841,9 @@ const ACHIEVEMENTS = [
   { key: 'collector_50',   label: 'Collectionneur Avance',   desc: '50 cartes',           icon: '📚', check: (s) => s.cardCount >= 50,       credits: 500 },
   { key: 'collector_100',  label: 'Maitre Collectionneur',   desc: '100 cartes',          icon: '👑', check: (s) => s.cardCount >= 100,      credits: 1000 },
   // Combat
-  { key: 'first_pvp_win',  label: 'Premiere Victoire',       desc: '1 victoire PVP',      icon: '⚔',  check: (s) => s.pvpWins >= 1,         credits: 100 },
-  { key: 'pvp_10',         label: 'Gladiateur',              desc: '10 victoires PVP',    icon: '🏆', check: (s) => s.pvpWins >= 10,        credits: 500 },
-  { key: 'pvp_50',         label: 'Champion',                desc: '50 victoires PVP',    icon: '🥇', check: (s) => s.pvpWins >= 50,        credits: 1500 },
+  { key: 'first_combat_win', label: 'Premiere Victoire',     desc: '1 victoire combat',   icon: '⚔',  check: (s) => s.pvpWins >= 1,         credits: 100 },
+  { key: 'combat_10',       label: 'Gladiateur',             desc: '10 victoires combat', icon: '🏆', check: (s) => s.pvpWins >= 10,        credits: 500 },
+  { key: 'combat_50',       label: 'Champion',               desc: '50 victoires combat', icon: '🥇', check: (s) => s.pvpWins >= 50,        credits: 1500 },
   // Mine
   { key: 'diamonds_10',    label: 'Chercheur',               desc: '10 diamants mines',   icon: '⛏',  check: (s) => s.diamondsMined >= 10,  credits: 200 },
   { key: 'diamonds_50',    label: 'Mineur Expert',           desc: '50 diamants mines',   icon: '💎', check: (s) => s.diamondsMined >= 50,  credits: 600 },
@@ -1680,7 +1655,7 @@ setInterval(() => {
 
 let battleIdCounter = 1;
 
-function createBattleState(playerCards, enemyCards, battleType, nodeId) {
+function createBattleState(playerCards, enemyCards, battleType) {
   const battleId = 'battle_' + (battleIdCounter++);
 
   const makeUnit = (card, index, side) => {
@@ -1754,7 +1729,6 @@ function createBattleState(playerCards, enemyCards, battleType, nodeId) {
   const state = {
     battleId,
     battleType,
-    nodeId: nodeId || null,
     turn: 1,
     phase: 'player_turn',
     playerTeam: pTeam,
@@ -2611,6 +2585,11 @@ function makeDeckFieldUnit(handCard, side) {
     poisonDot: 0,
     poisonDotTurns: 0,
     ralliement: false,
+    // Rank synergy
+    rankBonus: null, // 'left', 'center', 'right' — set on deployment
+    rankBonusAtk: 0,
+    rankBonusDef: 0,
+    comboKillBonusAtk: 0, // Combo kill temp bonus
   };
 }
 
@@ -2655,6 +2634,12 @@ function createDeckBattleState(playerCards, enemyCards, battleType) {
     result: null,
     lastAction: Date.now(),
     deadTempCards: [],
+    // New mechanics
+    playerBonusMana: 0,   // Unspent mana carry-over (max 2)
+    enemyBonusMana: 0,
+    playerKillsThisTurn: 0, // Combo kill tracking
+    enemyKillsThisTurn: 0,
+    comboKillActive: false, // Whether combo kill bonus is active this turn
   };
 
   activeBattles.set(battleId, state);
@@ -2686,6 +2671,12 @@ function getDeckBattleSnapshot(battle) {
     enemyHp: battle.enemyHp,
     enemyMaxHp: battle.enemyMaxHp,
     attackedThisTurn: battle.attackedThisTurn || [],
+    // New mechanics
+    playerBonusMana: battle.playerBonusMana || 0,
+    enemyBonusMana: battle.enemyBonusMana || 0,
+    playerKillsThisTurn: battle.playerKillsThisTurn || 0,
+    comboKillActive: battle.comboKillActive || false,
+    testMode: battle.testMode || false,
   };
 }
 
@@ -2867,7 +2858,18 @@ function aiDeckTurn(battle) {
       battle.enemyField[slot] = unit;
       battle.enemyEnergy -= card.mana_cost;
 
-      events.push({ type: 'enemy_deploy', slot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost });
+      // Rank Synergy for enemy
+      const eRankName = slot === 0 ? 'left' : slot === 1 ? 'center' : 'right';
+      unit.rankBonus = eRankName;
+      if (slot === 1) {
+        unit.rankBonusDef = 1;
+        unit.permanentBonusDef += 1;
+      } else {
+        unit.rankBonusAtk = 1;
+        unit.permanentBonusAtk += 1;
+      }
+
+      events.push({ type: 'enemy_deploy', slot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost, rankBonus: eRankName });
 
       // Passif Tortue : unites Eau invoquees +1 PV
       if (unit.element === 'eau') {
@@ -3062,46 +3064,6 @@ function aiDeckTurn(battle) {
   }
 
   return events;
-}
-
-// ============================================
-// CAMPAGNE - 15 noeuds
-// ============================================
-const CAMPAIGN_NODES = [
-  { id: 0,  name: 'Foret des Debutants',  reward: 50,  dropChance: 0.10, enemies: [{ rarity: 'commune', count: 3 }], statMult: 1.0 },
-  { id: 1,  name: 'Plaines Brumeuses',    reward: 75,  dropChance: 0.11, enemies: [{ rarity: 'commune', count: 3 }], statMult: 1.2 },
-  { id: 2,  name: 'Marais Sombres',       reward: 80,  dropChance: 0.13, enemies: [{ rarity: 'commune', count: 3 }], statMult: 1.4 },
-  { id: 3,  name: 'Collines Ventees',     reward: 100, dropChance: 0.14, enemies: [{ rarity: 'commune', count: 2 }, { rarity: 'rare', count: 1 }], statMult: 1.6 },
-  { id: 4,  name: 'Village Abandonne',    reward: 120, dropChance: 0.16, enemies: [{ rarity: 'commune', count: 2 }, { rarity: 'rare', count: 1 }], statMult: 1.8 },
-  { id: 5,  name: 'Caverne des Echos',    reward: 150, dropChance: 0.17, enemies: [{ rarity: 'commune', count: 1 }, { rarity: 'rare', count: 2 }], statMult: 2.0 },
-  { id: 6,  name: 'Riviere Gelee',        reward: 175, dropChance: 0.19, enemies: [{ rarity: 'rare', count: 3 }], statMult: 2.2 },
-  { id: 7,  name: 'Tour de Garde',        reward: 200, dropChance: 0.20, enemies: [{ rarity: 'rare', count: 2 }, { rarity: 'epique', count: 1 }], statMult: 2.4 },
-  { id: 8,  name: 'Desert de Cendres',    reward: 225, dropChance: 0.21, enemies: [{ rarity: 'rare', count: 2 }, { rarity: 'epique', count: 1 }], statMult: 2.6 },
-  { id: 9,  name: 'Foret Maudite',        reward: 250, dropChance: 0.23, enemies: [{ rarity: 'rare', count: 1 }, { rarity: 'epique', count: 2 }], statMult: 2.8 },
-  { id: 10, name: 'Citadelle Noire',      reward: 300, dropChance: 0.24, enemies: [{ rarity: 'epique', count: 3 }], statMult: 3.0 },
-  { id: 11, name: 'Pic des Tempetes',     reward: 350, dropChance: 0.26, enemies: [{ rarity: 'epique', count: 2 }, { rarity: 'legendaire', count: 1 }], statMult: 3.2 },
-  { id: 12, name: 'Abime des Ombres',     reward: 400, dropChance: 0.27, enemies: [{ rarity: 'epique', count: 2 }, { rarity: 'legendaire', count: 1 }], statMult: 3.4 },
-  { id: 13, name: 'Volcan Ancien',        reward: 450, dropChance: 0.29, enemies: [{ rarity: 'epique', count: 1 }, { rarity: 'legendaire', count: 2 }], statMult: 3.6 },
-  { id: 14, name: 'Sanctuaire Celeste',   reward: 500, dropChance: 0.30, enemies: [{ rarity: 'legendaire', count: 3 }], statMult: 3.6 },
-];
-
-function generateEnemies(node) {
-  const enemies = [];
-  for (const group of node.enemies) {
-    const pool = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(group.rarity);
-    for (let i = 0; i < group.count; i++) {
-      const card = pool[Math.floor(Math.random() * pool.length)];
-      enemies.push({
-        ...card,
-        is_fused: 0,
-        is_shiny: 0,
-        attack: Math.round(card.attack * node.statMult),
-        defense: Math.round(card.defense * node.statMult),
-        hp: Math.round(card.hp * node.statMult),
-      });
-    }
-  }
-  return enemies;
 }
 
 // --- Middleware ---
@@ -3467,75 +3429,7 @@ app.post('/api/fusion', requireAuth, (req, res) => {
 });
 
 // ============================================
-// CAMPAIGN ROUTES
-// ============================================
-app.get('/api/campaign/progress', requireAuth, (req, res) => {
-  let progress = db.prepare('SELECT * FROM campaign_progress WHERE user_id = ?').get(req.session.userId);
-  if (!progress) {
-    db.prepare('INSERT INTO campaign_progress (user_id) VALUES (?)').run(req.session.userId);
-    progress = { current_node: 0, completed_nodes: '[]' };
-  }
-  const completed = JSON.parse(progress.completed_nodes || '[]');
-  res.json({
-    currentNode: progress.current_node,
-    completedNodes: completed,
-    nodes: CAMPAIGN_NODES.map(n => ({
-      id: n.id,
-      name: n.name,
-      reward: n.reward,
-      enemies: n.enemies,
-      locked: n.id > 0 && !completed.includes(n.id - 1) && n.id !== progress.current_node,
-      completed: completed.includes(n.id),
-    }))
-  });
-});
-
-app.post('/api/campaign/start', requireAuth, (req, res) => {
-  const { nodeId, team } = req.body;
-  if (nodeId === undefined || !team || team.length !== 3) {
-    return res.status(400).json({ error: 'nodeId et team (3 cartes) requis' });
-  }
-
-  const node = CAMPAIGN_NODES[nodeId];
-  if (!node) return res.status(404).json({ error: 'Noeud introuvable' });
-
-  let progress = db.prepare('SELECT * FROM campaign_progress WHERE user_id = ?').get(req.session.userId);
-  if (!progress) {
-    db.prepare('INSERT INTO campaign_progress (user_id) VALUES (?)').run(req.session.userId);
-    progress = { current_node: 0, completed_nodes: '[]' };
-  }
-  const completed = JSON.parse(progress.completed_nodes || '[]');
-
-  if (nodeId > 0 && !completed.includes(nodeId - 1) && nodeId !== progress.current_node) {
-    return res.status(400).json({ error: 'Noeud verrouille' });
-  }
-
-  // Load player cards
-  const playerCards = [];
-  for (const ucId of team) {
-    const uc = db.prepare(`
-      SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
-      FROM user_cards uc JOIN cards c ON uc.card_id = c.id
-      WHERE uc.id = ? AND uc.user_id = ?
-    `).get(ucId, req.session.userId);
-    if (!uc) return res.status(400).json({ error: `Carte ${ucId} introuvable` });
-    playerCards.push(uc);
-  }
-
-  const enemies = generateEnemies(node);
-  const battle = createBattleState(playerCards, enemies, 'campaign', nodeId);
-
-  res.json({
-    battleId: battle.battleId,
-    playerTeam: battle.playerTeam,
-    enemyTeam: battle.enemyTeam,
-    turn: battle.turn,
-    phase: battle.phase,
-  });
-});
-
-// ============================================
-// BATTLE ACTION (shared campaign + pvp)
+// BATTLE ACTION
 // ============================================
 app.post('/api/battle/action', requireAuth, (req, res) => {
   const { battleId, attackerIndex, targetIndex } = req.body;
@@ -3724,36 +3618,8 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
   let droppedCard = null;
 
   if (battle.result === 'victory') {
-    if (battle.battleType === 'campaign') {
-      const node = CAMPAIGN_NODES[battle.nodeId];
-      if (node) {
-        reward = node.reward;
-
-        // Update progress
-        let progress = db.prepare('SELECT * FROM campaign_progress WHERE user_id = ?').get(req.session.userId);
-        const completed = JSON.parse(progress.completed_nodes || '[]');
-        if (!completed.includes(battle.nodeId)) {
-          completed.push(battle.nodeId);
-        }
-        const nextNode = Math.max(progress.current_node, battle.nodeId + 1);
-        db.prepare('UPDATE campaign_progress SET completed_nodes = ?, current_node = ? WHERE user_id = ?')
-          .run(JSON.stringify(completed), Math.min(nextNode, 14), req.session.userId);
-
-        // Card drop
-        if (Math.random() < node.dropChance) {
-          const rarities = node.enemies.map(e => e.rarity);
-          const dropRarity = rarities[Math.floor(Math.random() * rarities.length)];
-          const pool = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(dropRarity);
-          if (pool.length > 0) {
-            droppedCard = pool[Math.floor(Math.random() * pool.length)];
-            db.prepare('INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)').run(req.session.userId, droppedCard.id);
-          }
-        }
-      }
-    } else if (battle.battleType === 'pvp') {
-      reward = 150;
-    }
-  } else if (battle.result === 'defeat' && battle.battleType === 'pvp') {
+    reward = 150;
+  } else if (battle.result === 'defeat') {
     reward = 25;
   }
 
@@ -3763,18 +3629,15 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
 
   // Log battle
   db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)')
-    .run(req.session.userId, battle.battleType, battle.battleType === 'pvp' ? 'PvP' : `Node ${battle.nodeId}`, battle.result, reward);
+    .run(req.session.userId, battle.battleType || 'ia', 'IA', battle.result, reward);
 
   // Battle Pass XP
-  if (battle.battleType === 'campaign') {
-    addBattlePassXP(req.session.userId, battle.result === 'victory' ? BP_XP.campaign_win : BP_XP.campaign_lose);
-  } else if (battle.battleType === 'pvp') {
-    addBattlePassXP(req.session.userId, battle.result === 'victory' ? BP_XP.pvp_win : BP_XP.pvp_lose);
-  }
+  addBattlePassXP(req.session.userId, battle.result === 'victory' ? BP_XP.combat_win : BP_XP.combat_lose);
+
   // Quest/achievement hooks
-  if (battle.result === 'victory' && (battle.battleType === 'pvp')) {
+  if (battle.result === 'victory') {
     db.prepare('UPDATE users SET stat_pvp_wins = stat_pvp_wins + 1 WHERE id = ?').run(req.session.userId);
-    updateQuestProgress(req.session.userId, 'pvp_win', 1);
+    updateQuestProgress(req.session.userId, 'combat_win', 1);
   }
   if (reward > 0) {
     updateQuestProgress(req.session.userId, 'credits_earned', reward);
@@ -3807,129 +3670,10 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
 });
 
 // ============================================
-// PVP ROUTES
-// ============================================
-app.post('/api/pvp/set-team', requireAuth, (req, res) => {
-  const { cardIds } = req.body;
-  if (!cardIds || cardIds.length !== 3) return res.status(400).json({ error: '3 cartes requises' });
-
-  for (const ucId of cardIds) {
-    const uc = db.prepare('SELECT id FROM user_cards WHERE id = ? AND user_id = ?').get(ucId, req.session.userId);
-    if (!uc) return res.status(400).json({ error: `Carte ${ucId} introuvable` });
-  }
-
-  const existing = db.prepare('SELECT id FROM pvp_teams WHERE user_id = ?').get(req.session.userId);
-  if (existing) {
-    db.prepare('UPDATE pvp_teams SET card1_id = ?, card2_id = ?, card3_id = ? WHERE user_id = ?')
-      .run(cardIds[0], cardIds[1], cardIds[2], req.session.userId);
-  } else {
-    db.prepare('INSERT INTO pvp_teams (user_id, card1_id, card2_id, card3_id) VALUES (?, ?, ?, ?)')
-      .run(req.session.userId, cardIds[0], cardIds[1], cardIds[2]);
-  }
-
-  res.json({ success: true });
-});
-
-app.get('/api/pvp/team', requireAuth, (req, res) => {
-  const team = db.prepare('SELECT * FROM pvp_teams WHERE user_id = ?').get(req.session.userId);
-  if (!team) return res.json({ team: null });
-
-  const cards = [];
-  for (const colName of ['card1_id', 'card2_id', 'card3_id']) {
-    if (team[colName]) {
-      const uc = db.prepare(`
-        SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
-        FROM user_cards uc JOIN cards c ON uc.card_id = c.id
-        WHERE uc.id = ?
-      `).get(team[colName]);
-      if (uc) cards.push(uc);
-    }
-  }
-
-  res.json({ team: cards });
-});
-
-app.post('/api/pvp/find-opponent', requireAuth, (req, res) => {
-  const opponent = db.prepare(`
-    SELECT pt.*, u.username FROM pvp_teams pt
-    JOIN users u ON pt.user_id = u.id
-    WHERE pt.user_id != ?
-    ORDER BY RANDOM() LIMIT 1
-  `).get(req.session.userId);
-
-  if (!opponent) return res.status(404).json({ error: 'Aucun adversaire disponible' });
-
-  const cards = [];
-  for (const colName of ['card1_id', 'card2_id', 'card3_id']) {
-    if (opponent[colName]) {
-      const uc = db.prepare(`
-        SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
-        FROM user_cards uc JOIN cards c ON uc.card_id = c.id
-        WHERE uc.id = ?
-      `).get(opponent[colName]);
-      if (uc) cards.push(uc);
-    }
-  }
-
-  res.json({
-    opponentUserId: opponent.user_id,
-    opponentName: opponent.username,
-    opponentTeam: cards,
-  });
-});
-
-app.post('/api/pvp/start', requireAuth, (req, res) => {
-  const { opponentUserId, team } = req.body;
-  if (!opponentUserId || !team || team.length !== 3) {
-    return res.status(400).json({ error: 'opponentUserId et team (3 cartes) requis' });
-  }
-
-  // Load player cards
-  const playerCards = [];
-  for (const ucId of team) {
-    const uc = db.prepare(`
-      SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
-      FROM user_cards uc JOIN cards c ON uc.card_id = c.id
-      WHERE uc.id = ? AND uc.user_id = ?
-    `).get(ucId, req.session.userId);
-    if (!uc) return res.status(400).json({ error: `Carte ${ucId} introuvable` });
-    playerCards.push(uc);
-  }
-
-  // Load opponent cards
-  const oppTeam = db.prepare('SELECT * FROM pvp_teams WHERE user_id = ?').get(opponentUserId);
-  if (!oppTeam) return res.status(404).json({ error: 'Adversaire sans equipe' });
-
-  const enemyCards = [];
-  for (const colName of ['card1_id', 'card2_id', 'card3_id']) {
-    if (oppTeam[colName]) {
-      const uc = db.prepare(`
-        SELECT uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
-        FROM user_cards uc JOIN cards c ON uc.card_id = c.id
-        WHERE uc.id = ?
-      `).get(oppTeam[colName]);
-      if (uc) enemyCards.push(uc);
-    }
-  }
-
-  if (enemyCards.length === 0) return res.status(400).json({ error: 'Equipe adverse invalide' });
-
-  const battle = createBattleState(playerCards, enemyCards, 'pvp', null);
-
-  res.json({
-    battleId: battle.battleId,
-    playerTeam: battle.playerTeam,
-    enemyTeam: battle.enemyTeam,
-    turn: battle.turn,
-    phase: battle.phase,
-  });
-});
-
-// ============================================
-// DECK BATTLE ROUTES (new system)
+// DECK BATTLE ROUTES
 // ============================================
 
-// Start a deck-based PvP battle
+// Start a deck-based IA battle
 app.post('/api/battle/start-deck', requireAuth, (req, res) => {
   const { deckId } = req.body; // deckId: number or 'starter'
 
@@ -3954,39 +3698,14 @@ app.post('/api/battle/start-deck', requireAuth, (req, res) => {
     playerCards = cards;
   }
 
-  // Find opponent PvP deck
+  // Generate AI opponent deck
   let enemyCards;
-  let opponentName = 'Entraineur';
+  let opponentName = 'Entraineur IA';
 
-  const pvpDeck = db.prepare(`
-    SELECT d.*, u.username FROM decks d
-    JOIN users u ON d.user_id = u.id
-    WHERE d.is_pvp_deck = 1 AND d.user_id != ?
-    ORDER BY RANDOM() LIMIT 1
-  `).get(req.session.userId);
+  // Use starter deck as AI opponent
+  enemyCards = STARTER_DECK.map(c => ({ ...c }));
 
-  if (pvpDeck) {
-    const oppCards = db.prepare(`
-      SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
-      FROM deck_cards dc
-      JOIN user_cards uc ON dc.user_card_id = uc.id
-      JOIN cards c ON uc.card_id = c.id
-      WHERE dc.deck_id = ?
-      ORDER BY dc.position
-    `).all(pvpDeck.id);
-
-    if (oppCards.length === 20) {
-      enemyCards = oppCards;
-      opponentName = pvpDeck.username;
-    }
-  }
-
-  // Fallback: use starter deck
-  if (!enemyCards) {
-    enemyCards = STARTER_DECK.map(c => ({ ...c }));
-  }
-
-  const battle = createDeckBattleState(playerCards, enemyCards, 'pvp');
+  const battle = createDeckBattleState(playerCards, enemyCards, 'ia');
 
   res.json({
     ...getDeckBattleSnapshot(battle),
@@ -4018,11 +3737,22 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
   battle.playerHand.splice(handIndex, 1);
   battle.playerField[fieldSlot] = null; // clean dead
   const unit = makeDeckFieldUnit(card, 'player');
-  unit.justDeployed = true; // summoning sickness
+  unit.justDeployed = battle.testMode ? false : true; // summoning sickness (disabled in test mode)
   battle.playerField[fieldSlot] = unit;
-  battle.playerEnergy -= card.mana_cost;
+  if (!battle.testMode) battle.playerEnergy -= card.mana_cost;
 
-  const events = [{ type: 'deploy', slot: fieldSlot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost }];
+  // Rank Synergy: LEFT/RIGHT = +1 ATK, CENTER = +1 DEF
+  const rankName = fieldSlot === 0 ? 'left' : fieldSlot === 1 ? 'center' : 'right';
+  unit.rankBonus = rankName;
+  if (fieldSlot === 1) {
+    unit.rankBonusDef = 1;
+    unit.permanentBonusDef += 1;
+  } else {
+    unit.rankBonusAtk = 1;
+    unit.permanentBonusAtk += 1;
+  }
+
+  const events = [{ type: 'deploy', slot: fieldSlot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost, rankBonus: rankName }];
 
   // Passif Tortue des Rivieres : unites Eau invoquees gagnent +1 PV
   if (unit.element === 'eau') {
@@ -4073,7 +3803,7 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
   if (!target || !target.alive) return res.status(400).json({ error: 'Pas de cible dans ce slot' });
 
   // Attacks cost 1 energy
-  battle.playerEnergy -= 1;
+  if (!battle.testMode) battle.playerEnergy -= 1;
 
   const events = [];
 
@@ -4125,6 +3855,19 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
     });
   }
 
+  // Combo Kill tracking
+  if (!target.alive) {
+    battle.playerKillsThisTurn = (battle.playerKillsThisTurn || 0) + 1;
+    if (battle.playerKillsThisTurn >= 3 && !battle.comboKillActive) {
+      battle.comboKillActive = true;
+      getFieldAlive(battle.playerField).forEach(u => {
+        u.comboKillBonusAtk = 1;
+        u.buffAtk += 1;
+      });
+      events.push({ type: 'combo_kill', side: 'player', kills: battle.playerKillsThisTurn });
+    }
+  }
+
   // Passif Requin des Profondeurs : peut attaquer une 2e fois apres un kill
   if (!target.alive && attacker.name === 'Requin des Profondeurs' && attacker.alive) {
     const idx = battle.attackedThisTurn.indexOf(fieldSlot);
@@ -4173,7 +3916,7 @@ app.post('/api/battle/use-ability', requireAuth, (req, res) => {
   }
 
   const events = resolveAbility(unit, targets, playerAlive, enemyAlive, battle);
-  battle.playerCrystal -= crystalCost;
+  if (!battle.testMode) battle.playerCrystal -= crystalCost;
 
   cleanDeadFromField(battle.enemyField);
   cleanDeadFromField(battle.playerField);
@@ -4302,13 +4045,13 @@ app.post('/api/battle/use-ability-avatar', requireAuth, (req, res) => {
     // Buff/heal/etc abilities - just resolve normally on allies
     const playerAlive = getFieldAlive(battle.playerField);
     const events = resolveAbility(unit, [], playerAlive, [], battle);
-    battle.playerCrystal -= crystalCost;
+    if (!battle.testMode) battle.playerCrystal -= crystalCost;
     checkDeckWin(battle);
     return res.json({ events, ...getDeckBattleSnapshot(battle) });
   }
 
   battle.enemyHp = Math.max(0, battle.enemyHp - dmg);
-  battle.playerCrystal -= crystalCost;
+  if (!battle.testMode) battle.playerCrystal -= crystalCost;
   unit.usedAbility = true;
 
   const events = [
@@ -4507,16 +4250,45 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   battle.phase = 'player_turn';
   battle.attackedThisTurn = [];
 
+  // Reset combo kill bonus from previous turn
+  if (battle.comboKillActive) {
+    for (const unit of getFieldAlive(battle.playerField)) {
+      if (unit.comboKillBonusAtk > 0) {
+        unit.buffAtk = Math.max(0, unit.buffAtk - unit.comboKillBonusAtk);
+        unit.comboKillBonusAtk = 0;
+      }
+    }
+    battle.comboKillActive = false;
+  }
+  battle.playerKillsThisTurn = 0;
+  battle.enemyKillsThisTurn = 0;
+
   // Clear summoning sickness on player units
   for (const unit of getFieldAlive(battle.playerField)) {
     unit.justDeployed = false;
   }
 
-  // Player energy (new mana progression)
+  // Unspent Mana Carry-Over: carry 1 mana if player has leftover, max +2 stored
+  if (battle.playerEnergy > 0) {
+    battle.playerBonusMana = Math.min(2, (battle.playerBonusMana || 0) + 1);
+    events.push({ type: 'mana_carry', side: 'player', stored: battle.playerBonusMana });
+  }
+
+  // Player energy (new mana progression) + bonus mana
   battle.playerMaxEnergy = getManaForTurn(battle.turn);
-  battle.playerEnergy = battle.playerMaxEnergy;
+  battle.playerEnergy = battle.playerMaxEnergy + (battle.playerBonusMana || 0);
   // Player crystal fills
   battle.playerCrystal = Math.min(battle.playerMaxCrystal, (battle.playerCrystal || 0) + (battle.playerCrystalRate || 0.3));
+
+  // Test mode: reset unlimited resources + reset usedAbility
+  if (battle.testMode) {
+    battle.playerEnergy = 99; battle.playerMaxEnergy = 99;
+    battle.playerCrystal = 99; battle.playerMaxCrystal = 99;
+    battle.enemyEnergy = 99; battle.enemyMaxEnergy = 99;
+    battle.enemyCrystal = 99; battle.enemyMaxCrystal = 99;
+    for (const u of getFieldAlive(battle.playerField)) { u.usedAbility = false; }
+    for (const u of getFieldAlive(battle.enemyField)) { u.usedAbility = false; }
+  }
 
   // Player draws 1 card
   if (battle.playerHand.length < 7 && battle.playerDeck.length > 0) {
@@ -4611,10 +4383,9 @@ app.get('/api/admin/stats', requireAdmin, (req, res) => {
   const totalCards = db.prepare('SELECT COUNT(*) as c FROM user_cards').get().c;
   const totalCardTypes = db.prepare('SELECT COUNT(*) as c FROM cards').get().c;
   const totalBattles = db.prepare('SELECT COUNT(*) as c FROM battle_log').get().c;
-  const totalPvpTeams = db.prepare('SELECT COUNT(*) as c FROM pvp_teams').get().c;
   const totalTempCards = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE is_temp = 1').get().c;
   const totalShinyCards = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE is_shiny = 1').get().c;
-  res.json({ totalUsers, totalCards, totalCardTypes, totalBattles, totalPvpTeams, totalTempCards, totalShinyCards });
+  res.json({ totalUsers, totalCards, totalCardTypes, totalBattles, totalTempCards, totalShinyCards });
 });
 
 // List all users
@@ -4739,7 +4510,7 @@ app.post('/api/admin/delete-card', requireAdmin, (req, res) => {
   res.json({ success: true, deletedCard: card.name });
 });
 
-// Reset a user (delete all cards, reset credits, reset campaign)
+// Reset a user (delete all cards, reset credits)
 app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
   const { userId } = req.body;
   if (!userId) return res.status(400).json({ error: 'userId requis' });
@@ -4754,8 +4525,6 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
     }
     db.prepare('DELETE FROM decks WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM user_cards WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM campaign_progress WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM pvp_teams WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM battle_log WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM mine_state WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
@@ -4822,6 +4591,67 @@ app.post('/api/admin/delete-gift-code', requireAdmin, (req, res) => {
   res.json({ success: true });
 });
 
+// ============================================
+// ADMIN: TEST BATTLE
+// ============================================
+app.post('/api/admin/battle/test-start', requireAdmin, (req, res) => {
+  const { playerCardIds, enemyCardIds } = req.body;
+
+  // Build player cards
+  let playerCards;
+  if (playerCardIds && playerCardIds.length > 0) {
+    const placeholders = playerCardIds.map(() => '?').join(',');
+    const dbCards = db.prepare(`SELECT * FROM cards WHERE id IN (${placeholders})`).all(...playerCardIds);
+    const cardMap = {};
+    dbCards.forEach(c => { cardMap[c.id] = c; });
+    // Preserve order and duplicates from selection
+    playerCards = playerCardIds.map(id => cardMap[id]).filter(Boolean);
+    // Pad to 20 by cycling
+    const base = [...playerCards];
+    while (playerCards.length < 20) {
+      playerCards.push({ ...base[playerCards.length % base.length] });
+    }
+  } else {
+    playerCards = STARTER_DECK.map(c => ({ ...c }));
+  }
+
+  // Build enemy cards
+  let enemyCards;
+  if (enemyCardIds && enemyCardIds.length > 0) {
+    const placeholders = enemyCardIds.map(() => '?').join(',');
+    const dbCards = db.prepare(`SELECT * FROM cards WHERE id IN (${placeholders})`).all(...enemyCardIds);
+    const cardMap = {};
+    dbCards.forEach(c => { cardMap[c.id] = c; });
+    enemyCards = enemyCardIds.map(id => cardMap[id]).filter(Boolean);
+    const base = [...enemyCards];
+    while (enemyCards.length < 20) {
+      enemyCards.push({ ...base[enemyCards.length % base.length] });
+    }
+  } else {
+    enemyCards = STARTER_DECK.map(c => ({ ...c }));
+  }
+
+  const battle = createDeckBattleState(playerCards, enemyCards, 'test');
+
+  // Override for test mode: unlimited resources
+  battle.testMode = true;
+  battle.playerEnergy = 99;
+  battle.playerMaxEnergy = 99;
+  battle.playerCrystal = 99;
+  battle.playerMaxCrystal = 99;
+  battle.enemyEnergy = 99;
+  battle.enemyMaxEnergy = 99;
+  battle.enemyCrystal = 99;
+  battle.enemyMaxCrystal = 99;
+
+  // Remove summoning sickness from initial hand
+  battle.playerHand.forEach(c => { c.noSickness = true; });
+
+  const snap = getDeckBattleSnapshot(battle);
+  snap.opponentName = 'MODE TEST';
+  res.json(snap);
+});
+
 // Player: redeem a gift code
 app.post('/api/redeem-code', requireAuth, (req, res) => {
   const userId = req.session.userId;
@@ -4868,33 +4698,33 @@ app.post('/api/redeem-code', requireAuth, (req, res) => {
 // Starter deck — cartes faibles pour tester sans collection
 const STARTER_DECK = [
   // 4x Goblin (1 mana, terre)
-  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
-  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
-  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
-  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1 },
+  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1,passive_desc:'+1 ATK si un autre Goblin est sur le terrain' },
+  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1,passive_desc:'+1 ATK si un autre Goblin est sur le terrain' },
+  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1,passive_desc:'+1 ATK si un autre Goblin est sur le terrain' },
+  { name:'Goblin',emoji:'🗡️',rarity:'commune',type:'creature',element:'terre',attack:2,defense:1,hp:3,mana_cost:1,ability_name:'Appel gobelin',ability_desc:'Invoque un Goblin 1/1/2',crystal_cost:1,passive_desc:'+1 ATK si un autre Goblin est sur le terrain' },
   // 3x Tortue des Rivieres (4 mana, eau)
-  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1 },
-  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1 },
-  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1 },
+  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1,passive_desc:'Les unites Eau alliees gagnent +1 PV' },
+  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1,passive_desc:'Les unites Eau alliees gagnent +1 PV' },
+  { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1,passive_desc:'Les unites Eau alliees gagnent +1 PV' },
   // 3x Serpent des Marees (2 mana, eau)
-  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1 },
-  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1 },
-  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1 },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1,passive_desc:'Poison dure 1 tour de plus' },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1,passive_desc:'Poison dure 1 tour de plus' },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1,passive_desc:'Poison dure 1 tour de plus' },
   // 3x Mage de Foudre (3 mana, eau)
-  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1 },
-  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1 },
-  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1 },
+  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1,passive_desc:'+20% degats ability' },
+  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1,passive_desc:'+20% degats ability' },
+  { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1,passive_desc:'+20% degats ability' },
   // 2x Salamandre Ardente (3 mana, feu)
-  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat cible + adjacents',crystal_cost:1 },
-  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat cible + adjacents',crystal_cost:1 },
+  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat cible + adjacents',crystal_cost:1,passive_desc:'+1 ATK par KO realise' },
+  { name:'Salamandre Ardente',emoji:'🦎',rarity:'rare',type:'creature',element:'feu',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Flamme adjacente',ability_desc:'1 degat cible + adjacents',crystal_cost:1,passive_desc:'+1 ATK par KO realise' },
   // 2x Esprit des Forets (3 mana, terre)
-  { name:'Esprit des Forets',emoji:'🌿',rarity:'rare',type:'creature',element:'terre',attack:1,defense:3,hp:4,mana_cost:3,ability_name:'Croissance',ability_desc:'+1 DEF equipe',crystal_cost:1.5 },
-  { name:'Esprit des Forets',emoji:'🌿',rarity:'rare',type:'creature',element:'terre',attack:1,defense:3,hp:4,mana_cost:3,ability_name:'Croissance',ability_desc:'+1 DEF equipe',crystal_cost:1.5 },
+  { name:'Esprit des Forets',emoji:'🌿',rarity:'rare',type:'creature',element:'terre',attack:1,defense:3,hp:4,mana_cost:3,ability_name:'Croissance',ability_desc:'+1 DEF equipe',crystal_cost:1.5,passive_desc:'Soin 1 PV par tour' },
+  { name:'Esprit des Forets',emoji:'🌿',rarity:'rare',type:'creature',element:'terre',attack:1,defense:3,hp:4,mana_cost:3,ability_name:'Croissance',ability_desc:'+1 DEF equipe',crystal_cost:1.5,passive_desc:'Soin 1 PV par tour' },
   // 2x Dragonnet de Braise (4 mana, feu)
-  { name:'Dragonnet de Braise',emoji:'🐉',rarity:'epique',type:'creature',element:'feu',attack:3,defense:2,hp:4,mana_cost:4,ability_name:'Souffle de braise',ability_desc:'1 degat a tous les ennemis',crystal_cost:1.5 },
-  { name:'Dragonnet de Braise',emoji:'🐉',rarity:'epique',type:'creature',element:'feu',attack:3,defense:2,hp:4,mana_cost:4,ability_name:'Souffle de braise',ability_desc:'1 degat a tous les ennemis',crystal_cost:1.5 },
+  { name:'Dragonnet de Braise',emoji:'🐉',rarity:'epique',type:'creature',element:'feu',attack:3,defense:2,hp:4,mana_cost:4,ability_name:'Souffle de braise',ability_desc:'1 degat a tous les ennemis',crystal_cost:1.5,passive_desc:'+1 ATK si 2+ Betes sur le terrain' },
+  { name:'Dragonnet de Braise',emoji:'🐉',rarity:'epique',type:'creature',element:'feu',attack:3,defense:2,hp:4,mana_cost:4,ability_name:'Souffle de braise',ability_desc:'1 degat a tous les ennemis',crystal_cost:1.5,passive_desc:'+1 ATK si 2+ Betes sur le terrain' },
   // 1x Golem de Roche (5 mana, terre)
-  { name:'Golem de Roche',emoji:'🪨',rarity:'epique',type:'creature',element:'terre',attack:2,defense:5,hp:7,mana_cost:5,ability_name:'Fortification',ability_desc:'+3 DEF ce tour',crystal_cost:1 },
+  { name:'Golem de Roche',emoji:'🪨',rarity:'epique',type:'creature',element:'terre',attack:2,defense:5,hp:7,mana_cost:5,ability_name:'Fortification',ability_desc:'+3 DEF ce tour',crystal_cost:1,passive_desc:'+2 DEF si PV < 30%' },
 ];
 
 // GET /api/decks — Liste des decks du joueur
@@ -4993,16 +4823,6 @@ app.delete('/api/decks/:id', requireAuth, (req, res) => {
 
   db.prepare('DELETE FROM deck_cards WHERE deck_id = ?').run(deck.id);
   db.prepare('DELETE FROM decks WHERE id = ?').run(deck.id);
-  res.json({ success: true });
-});
-
-// POST /api/decks/:id/set-pvp — Definir comme deck PvP actif
-app.post('/api/decks/:id/set-pvp', requireAuth, (req, res) => {
-  const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(req.params.id, req.session.userId);
-  if (!deck) return res.status(404).json({ error: 'Deck introuvable' });
-
-  db.prepare('UPDATE decks SET is_pvp_deck = 0 WHERE user_id = ?').run(req.session.userId);
-  db.prepare('UPDATE decks SET is_pvp_deck = 1 WHERE id = ?').run(deck.id);
   res.json({ success: true });
 });
 
@@ -5718,9 +5538,9 @@ app.get('/api/stats', requireAuth, (req, res) => {
     JOIN cards c ON uc.card_id = c.id WHERE uc.user_id = ? GROUP BY c.rarity
   `).all(userId);
 
-  const totalPvp = (user.stat_pvp_wins || 0) + (user.stat_pvp_losses || 0);
+  const totalCombat = (user.stat_pvp_wins || 0) + (user.stat_pvp_losses || 0);
   res.json({
-    pvp: { wins: user.stat_pvp_wins || 0, losses: user.stat_pvp_losses || 0, winRate: totalPvp > 0 ? Math.round((user.stat_pvp_wins / totalPvp) * 100) : 0 },
+    combat: { wins: user.stat_pvp_wins || 0, losses: user.stat_pvp_losses || 0, winRate: totalCombat > 0 ? Math.round((user.stat_pvp_wins / totalCombat) * 100) : 0 },
     casino: { spins: user.stat_casino_spins || 0, spent: (user.stat_casino_spins || 0) * CASINO_COST, won: user.stat_casino_won || 0, net: (user.stat_casino_won || 0) - ((user.stat_casino_spins || 0) * CASINO_COST) },
     fusion: { total: user.stat_fusions || 0, success: user.stat_fusion_success || 0, fail: user.stat_fusion_fail || 0, rate: (user.stat_fusions || 0) > 0 ? Math.round(((user.stat_fusion_success || 0) / (user.stat_fusions || 0)) * 100) : 0 },
     boosters: { total: user.stat_boosters_opened || 0, origines: user.stat_boosters_origines || 0, rift: user.stat_boosters_rift || 0, avance: user.stat_boosters_avance || 0 },
@@ -6015,9 +5835,7 @@ app.get('/collection', requireAuth, (req, res) => { res.sendFile(path.join(__dir
 app.get('/fusion', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'fusion.html')); });
 app.get('/mine', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'mine.html')); });
 app.get('/combat', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'combat.html')); });
-app.get('/campaign', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'campaign.html')); });
 app.get('/battle', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battle.html')); });
-app.get('/pvp', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'pvp.html')); });
 app.get('/decks', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'decks.html')); });
 app.get('/battlepass', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battlepass.html')); });
 app.get('/casino', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'casino.html')); });
@@ -6121,7 +5939,7 @@ app.post('/api/admin/restore', requireAdmin, (req, res) => {
     const backupDb = new Database(backupPath, { readonly: true });
 
     // Vider et remplir les tables principales
-    const tables = ['users', 'cards', 'user_cards', 'campaign_progress', 'pvp_teams', 'battle_log'];
+    const tables = ['users', 'cards', 'user_cards', 'battle_log'];
 
     db.exec('BEGIN');
     for (const table of tables) {
@@ -6153,296 +5971,13 @@ app.post('/api/admin/restore', requireAdmin, (req, res) => {
 });
 
 // ============================================
-// PVP TEMPS REEL — Socket.io
+// Socket.io — Friends / Notifications
 // ============================================
 
 const io = new Server(server);
 io.engine.use(sessionMiddleware);
 
-const pvpQueue = [];
-const pvpBattles = new Map();
 const userSocketMap = new Map();
-let pvpBattleIdCounter = 1;
-
-// --- Helpers PVP ---
-
-function getPvpSides(battle, side) {
-  const me = battle[side];
-  const oppSide = side === 'p1' ? 'p2' : 'p1';
-  const opp = battle[oppSide];
-  return { me, opp, oppSide };
-}
-
-function getPvpSnapshot(battle, side) {
-  const me = battle[side];
-  const oppSide = side === 'p1' ? 'p2' : 'p1';
-  const opp = battle[oppSide];
-  return {
-    battleId: battle.battleId,
-    turn: battle.turn,
-    phase: battle.currentTurn === side ? 'player_turn' : 'enemy_turn',
-    result: convertPvpResult(battle.result, side),
-    playerHand: me.hand,
-    playerField: me.field,
-    playerEnergy: me.energy,
-    playerMaxEnergy: me.maxEnergy,
-    playerCrystal: Math.round((me.crystal || 0) * 100) / 100,
-    playerMaxCrystal: me.maxCrystal || 2,
-    playerDeckCount: me.deck.length,
-    playerHp: me.hp,
-    playerMaxHp: me.maxHp,
-    enemyField: opp.field,
-    enemyHandCount: opp.hand.length,
-    enemyEnergy: opp.energy,
-    enemyMaxEnergy: opp.maxEnergy,
-    enemyCrystal: Math.round((opp.crystal || 0) * 100) / 100,
-    enemyMaxCrystal: opp.maxCrystal || 2,
-    enemyDeckCount: opp.deck.length,
-    enemyHp: opp.hp,
-    enemyMaxHp: opp.maxHp,
-    attackedThisTurn: me.attackedThisTurn || [],
-    isPvp: true,
-  };
-}
-
-function convertPvpResult(result, side) {
-  if (!result) return null;
-  if (result.winner === 'draw') return 'draw';
-  if (result.winner === side) return 'victory';
-  return 'defeat';
-}
-
-function checkPvpWin(battle) {
-  if (battle.p2.hp <= 0) { battle.result = { winner: 'p1' }; return true; }
-  if (battle.p1.hp <= 0) { battle.result = { winner: 'p2' }; return true; }
-  if (battle.turn > battle.maxTurns) {
-    if (battle.p1.hp > battle.p2.hp) battle.result = { winner: 'p1' };
-    else if (battle.p2.hp > battle.p1.hp) battle.result = { winner: 'p2' };
-    else battle.result = { winner: 'draw' };
-    return true;
-  }
-  return false;
-}
-
-function emitPvpUpdate(battle, actingSide, events) {
-  const oppSide = actingSide === 'p1' ? 'p2' : 'p1';
-  const actingSocket = userSocketMap.get(battle[actingSide].userId);
-  const oppSocket = userSocketMap.get(battle[oppSide].userId);
-
-  if (actingSocket && actingSocket.connected) {
-    actingSocket.emit('pvp:update', { events, ...getPvpSnapshot(battle, actingSide) });
-  }
-  const flipped = flipEventSides(events);
-  if (oppSocket && oppSocket.connected) {
-    oppSocket.emit('pvp:update', { events: flipped, ...getPvpSnapshot(battle, oppSide) });
-  }
-}
-
-function flipEventSides(events) {
-  return events.map(e => {
-    const f = { ...e };
-    if (f.type === 'deploy') f.type = 'enemy_deploy';
-    else if (f.type === 'enemy_deploy') f.type = 'deploy';
-    if (f.type === 'player_draw') { f.type = 'enemy_draw'; delete f.card; }
-    else if (f.type === 'enemy_draw') f.type = 'player_draw';
-    if (f.side === 'player') f.side = 'enemy';
-    else if (f.side === 'enemy') f.side = 'player';
-    return f;
-  });
-}
-
-function finalizePvpBattle(battle) {
-  for (const side of ['p1', 'p2']) {
-    const player = battle[side];
-    const oppSide = side === 'p1' ? 'p2' : 'p1';
-    let reward = 0, result;
-
-    if (!battle.result) { result = 'draw'; reward = 50; }
-    else if (battle.result.winner === 'draw') { result = 'draw'; reward = 50; }
-    else if (battle.result.winner === side) { result = 'victory'; reward = 200; }
-    else { result = 'defeat'; reward = 25; }
-
-    try {
-      db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(reward, player.userId);
-      db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)')
-        .run(player.userId, 'pvp_realtime', battle[oppSide].username, result, reward);
-      addBattlePassXP(player.userId, result === 'victory' ? BP_XP.pvp_realtime_win : result === 'defeat' ? BP_XP.pvp_realtime_lose : BP_XP.pvp_lose);
-      // Quest/achievement hooks
-      if (result === 'victory') {
-        db.prepare('UPDATE users SET stat_pvp_wins = stat_pvp_wins + 1 WHERE id = ?').run(player.userId);
-        updateQuestProgress(player.userId, 'pvp_win', 1);
-      }
-      if (result === 'defeat') {
-        db.prepare('UPDATE users SET stat_pvp_losses = stat_pvp_losses + 1 WHERE id = ?').run(player.userId);
-      }
-      if (reward > 0) updateQuestProgress(player.userId, 'credits_earned', reward);
-      checkAchievements(player.userId);
-    } catch(e) { console.error('[PVP] DB error:', e.message); }
-
-    const sock = userSocketMap.get(player.userId);
-    if (sock && sock.connected) {
-      sock.emit('pvp:battle-end', { result, reward });
-      sock.pvpBattleId = null;
-      sock.pvpSide = null;
-    }
-  }
-  setTimeout(() => pvpBattles.delete(battle.battleId), 60000);
-}
-
-function applyPvpDeployPassives(unit, myField, events) {
-  if (unit.element === 'eau') {
-    const tortueCount = getFieldAlive(myField).filter(u => u.name === 'Tortue des Rivieres' && u !== unit).length;
-    if (tortueCount > 0) {
-      unit.maxHp += tortueCount;
-      unit.currentHp += tortueCount;
-      events.push({ type: 'type_passive', desc: `Tortue des Rivieres : +${tortueCount} PV max a ${unit.name}` });
-    }
-  }
-  if (unit.name === 'Sapeur de Terre') {
-    unit.permanentBonusAtk = (unit.permanentBonusAtk || 0) + 1;
-    unit.lastingAtkBuff = (unit.lastingAtkBuff || 0) + 1;
-    unit.lastingAtkTurns = 2;
-    events.push({ type: 'type_passive', desc: `${unit.name} se prepare ! +1 ATK (2 tours)` });
-  }
-  if (unit.name === 'Poisson Combattant') {
-    unit.justDeployed = false;
-    events.push({ type: 'type_passive', desc: `${unit.name} pret au combat ! Peut attaquer immediatement` });
-  }
-}
-
-function applyTurnStartPassives(activeField, oppField, events) {
-  // Divin aura
-  const divinCount = getFieldAlive(activeField).filter(u => u.type === 'divin').length;
-  if (divinCount > 0) {
-    getFieldAlive(activeField).forEach(u => { u.currentHp = Math.min(u.maxHp, u.currentHp + divinCount); });
-    events.push({ type: 'type_passive', desc: `Aura divine : +${divinCount} PV` });
-  }
-  // Esprit des Forets
-  const espritCount = getFieldAlive(activeField).filter(u => u.name === 'Esprit des Forets').length;
-  if (espritCount > 0) {
-    getFieldAlive(activeField).filter(u => u.element === 'terre').forEach(u => { u.buffDef += espritCount; });
-    events.push({ type: 'type_passive', desc: `Esprit des Forets : +${espritCount} DEF aux Terre` });
-  }
-  // Eclaireur des Dunes
-  const aliveUnits = getFieldAlive(activeField);
-  aliveUnits.filter(u => u.name === 'Eclaireur des Dunes').forEach(u => {
-    if (aliveUnits.length === 1) { u.buffDef += 2; events.push({ type: 'type_passive', desc: `${u.name} est seule ! +2 DEF` }); }
-  });
-  // Phoenix Ancestral
-  const phoenixCount = getFieldAlive(activeField).filter(u => u.name === 'Phoenix Ancestral').length;
-  if (phoenixCount > 0) {
-    getFieldAlive(oppField).forEach(u => {
-      u.currentHp = Math.max(0, u.currentHp - phoenixCount);
-      if (u.currentHp <= 0) checkKO(u, events, { deadTempCards: [] });
-    });
-    cleanDeadFromField(oppField);
-    events.push({ type: 'type_passive', desc: `Phoenix Ancestral : ${phoenixCount} degat(s) aux ennemis` });
-  }
-  // Leviathan Abyssal
-  const leviathanCount = getFieldAlive(activeField).filter(u => u.name === 'Leviathan Abyssal').length;
-  if (leviathanCount > 0) {
-    getFieldAlive(activeField).filter(u => u.element === 'eau').forEach(u => { u.buffAtk += leviathanCount; });
-    events.push({ type: 'type_passive', desc: `Leviathan Abyssal : +${leviathanCount} ATK aux Eau` });
-  }
-  // Pretresse Solaire
-  const pretresseCount = getFieldAlive(activeField).filter(u => u.name === 'Pretresse Solaire').length;
-  if (pretresseCount > 0) {
-    for (let i = 0; i < pretresseCount; i++) {
-      const wounded = getFieldAlive(activeField).filter(u => u.currentHp < u.maxHp).sort((a, b) => a.currentHp - b.currentHp)[0];
-      if (wounded) { wounded.currentHp = Math.min(wounded.maxHp, wounded.currentHp + 1); events.push({ type: 'type_passive', desc: `Pretresse Solaire soigne ${wounded.name} de 1 PV` }); }
-    }
-  }
-}
-
-function tryMatchPlayers() {
-  while (pvpQueue.length >= 2) {
-    const p1 = pvpQueue.shift();
-    const p2 = pvpQueue.shift();
-    const s1 = userSocketMap.get(p1.userId);
-    const s2 = userSocketMap.get(p2.userId);
-    if (!s1 || !s1.connected) { pvpQueue.unshift(p2); continue; }
-    if (!s2 || !s2.connected) { pvpQueue.unshift(p1); continue; }
-    createPvpBattle(p1, p2);
-  }
-}
-
-function createPvpBattle(p1Data, p2Data) {
-  const battleId = 'pvp_' + (pvpBattleIdCounter++);
-
-  const p1Deck = shuffleArray(p1Data.playerCards.map(c => makeHandCard(c)));
-  const p2Deck = shuffleArray(p2Data.playerCards.map(c => makeHandCard(c)));
-  const p1Hand = p1Deck.splice(0, 5);
-  const p2Hand = p2Deck.splice(0, 5);
-  const firstPlayer = Math.random() < 0.5 ? 'p1' : 'p2';
-
-  const state = {
-    battleId,
-    isPvp: true,
-    isDeckBattle: true,
-    turn: 1,
-    maxTurns: 20,
-    currentTurn: firstPlayer,
-    p1: {
-      userId: p1Data.userId, username: p1Data.username,
-      deck: p1Deck, hand: p1Hand, field: [null, null, null],
-      energy: getManaForTurn(1), maxEnergy: getManaForTurn(1),
-      crystal: 0, crystalRate: 0.3, maxCrystal: 2,
-      hp: 20, maxHp: 20, attackedThisTurn: [],
-    },
-    p2: {
-      userId: p2Data.userId, username: p2Data.username,
-      deck: p2Deck, hand: p2Hand, field: [null, null, null],
-      energy: getManaForTurn(1), maxEnergy: getManaForTurn(1),
-      crystal: 0, crystalRate: 0.3, maxCrystal: 2,
-      hp: 20, maxHp: 20, attackedThisTurn: [],
-    },
-    result: null,
-    deadTempCards: [],
-    lastAction: Date.now(),
-  };
-
-  pvpBattles.set(battleId, state);
-
-  const s1 = userSocketMap.get(p1Data.userId);
-  const s2 = userSocketMap.get(p2Data.userId);
-  s1.pvpBattleId = battleId; s1.pvpSide = 'p1';
-  s2.pvpBattleId = battleId; s2.pvpSide = 'p2';
-  s1.join(battleId);
-  s2.join(battleId);
-
-  s1.emit('pvp:battle-start', {
-    ...getPvpSnapshot(state, 'p1'),
-    opponentName: p2Data.username,
-    myTurn: firstPlayer === 'p1',
-  });
-  s2.emit('pvp:battle-start', {
-    ...getPvpSnapshot(state, 'p2'),
-    opponentName: p1Data.username,
-    myTurn: firstPlayer === 'p2',
-  });
-
-  console.log(`[PVP] Match: ${p1Data.username} vs ${p2Data.username} (${battleId})`);
-}
-
-function handlePvpDisconnect(userId) {
-  for (const [battleId, battle] of pvpBattles) {
-    if (battle.result) continue;
-    let disconnectedSide = null;
-    if (battle.p1.userId === userId) disconnectedSide = 'p1';
-    if (battle.p2.userId === userId) disconnectedSide = 'p2';
-    if (disconnectedSide) {
-      battle.disconnectTimer = setTimeout(() => {
-        const winnerSide = disconnectedSide === 'p1' ? 'p2' : 'p1';
-        battle.result = { winner: winnerSide };
-        finalizePvpBattle(battle);
-      }, 30000);
-      const oppSide = disconnectedSide === 'p1' ? 'p2' : 'p1';
-      const oppSocket = userSocketMap.get(battle[oppSide].userId);
-      if (oppSocket) oppSocket.emit('pvp:opponent-disconnected', { timeout: 30 });
-      break;
-    }
-  }
-}
 
 // --- Socket.io Connection ---
 
@@ -6468,25 +6003,6 @@ io.on('connection', (socket) => {
     if (fSock && fSock.connected) fSock.emit('chat:typing', { userId });
   });
 
-  // Check reconnection to active PVP battle
-  for (const [battleId, battle] of pvpBattles) {
-    if (battle.result) continue;
-    let side = null;
-    if (battle.p1.userId === userId) side = 'p1';
-    if (battle.p2.userId === userId) side = 'p2';
-    if (side) {
-      socket.pvpBattleId = battleId;
-      socket.pvpSide = side;
-      socket.join(battleId);
-      if (battle.disconnectTimer) { clearTimeout(battle.disconnectTimer); battle.disconnectTimer = null; }
-      socket.emit('pvp:reconnect', { ...getPvpSnapshot(battle, side), opponentName: battle[side === 'p1' ? 'p2' : 'p1'].username, myTurn: battle.currentTurn === side });
-      const oppSide = side === 'p1' ? 'p2' : 'p1';
-      const oppSocket = userSocketMap.get(battle[oppSide].userId);
-      if (oppSocket) oppSocket.emit('pvp:opponent-reconnected');
-      break;
-    }
-  }
-
   socket.on('disconnect', () => {
     onlineUsers.delete(userId);
     const offFriends = db.prepare(`
@@ -6497,359 +6013,10 @@ io.on('connection', (socket) => {
       const fSock = userSocketMap.get(fid);
       if (fSock && fSock.connected) fSock.emit('friend:status', { userId, online: false });
     }
-    const qIdx = pvpQueue.findIndex(p => p.userId === userId);
-    if (qIdx !== -1) pvpQueue.splice(qIdx, 1);
-    handlePvpDisconnect(userId);
     userSocketMap.delete(userId);
   });
 
-  // --- Matchmaking ---
-
-  socket.on('pvp:join-queue', ({ deckId }) => {
-    if (pvpQueue.some(p => p.userId === userId)) { socket.emit('pvp:error', { message: 'Deja en file' }); return; }
-
-    let playerCards;
-    if (deckId === 'starter') {
-      playerCards = STARTER_DECK.map(c => ({ ...c }));
-    } else {
-      const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(deckId, userId);
-      if (!deck) { socket.emit('pvp:error', { message: 'Deck introuvable' }); return; }
-      const cards = db.prepare(`SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.* FROM deck_cards dc JOIN user_cards uc ON dc.user_card_id = uc.id JOIN cards c ON uc.card_id = c.id WHERE dc.deck_id = ? ORDER BY dc.position`).all(deck.id);
-      if (cards.length !== 20) { socket.emit('pvp:error', { message: 'Deck incomplet (20 cartes)' }); return; }
-      playerCards = cards;
-    }
-
-    const user = db.prepare('SELECT username, display_name FROM users WHERE id = ?').get(userId);
-    pvpQueue.push({ userId, username: user.display_name || user.username, deckId, playerCards, socketId: socket.id, joinedAt: Date.now() });
-    socket.emit('pvp:queued');
-    tryMatchPlayers();
-  });
-
-  socket.on('pvp:leave-queue', () => {
-    const idx = pvpQueue.findIndex(p => p.userId === userId);
-    if (idx !== -1) pvpQueue.splice(idx, 1);
-  });
-
-  // --- PVP Battle Actions ---
-
-  socket.on('pvp:deploy', ({ handIndex, fieldSlot }) => {
-    const battle = pvpBattles.get(socket.pvpBattleId);
-    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
-    const { me } = getPvpSides(battle, socket.pvpSide);
-
-    const card = me.hand[handIndex];
-    if (!card || card.type === 'objet') return;
-    if (fieldSlot < 0 || fieldSlot > 2) return;
-    if (me.field[fieldSlot] && me.field[fieldSlot].alive) return;
-    if (card.mana_cost > me.energy) return;
-
-    me.hand.splice(handIndex, 1);
-    me.field[fieldSlot] = null;
-    const unit = makeDeckFieldUnit(card, 'player');
-    unit.justDeployed = true;
-    me.field[fieldSlot] = unit;
-    me.energy -= card.mana_cost;
-
-    const events = [{ type: 'deploy', slot: fieldSlot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost }];
-    applyPvpDeployPassives(unit, me.field, events);
-    battle.lastAction = Date.now();
-    emitPvpUpdate(battle, socket.pvpSide, events);
-  });
-
-  socket.on('pvp:attack-card', ({ fieldSlot, targetSlot }) => {
-    const battle = pvpBattles.get(socket.pvpBattleId);
-    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
-    const { me, opp } = getPvpSides(battle, socket.pvpSide);
-
-    const attacker = me.field[fieldSlot];
-    if (!attacker || !attacker.alive || attacker.stunned || attacker.justDeployed) return;
-    if (me.attackedThisTurn.includes(fieldSlot)) return;
-    if (me.energy < 1) return;
-    const target = opp.field[targetSlot];
-    if (!target || !target.alive) return;
-
-    me.energy -= 1;
-    const events = [];
-
-    // Fortification Guerrier
-    if (attacker.type === 'guerrier' && !attacker.lowHpDefTriggered && attacker.currentHp / attacker.maxHp < 0.3) {
-      attacker.permanentBonusDef += 2; attacker.lowHpDefTriggered = true;
-      events.push({ type: 'type_passive', desc: `${attacker.name} active Fortification ! +2 DEF` });
-    }
-
-    const packBonus = getPackBonus(me.field, attacker);
-    attacker.permanentBonusAtk += packBonus;
-    const dmg = calcDamage(attacker, target, false, me.field);
-    attacker.permanentBonusAtk -= packBonus;
-
-    applyDamage(target, dmg, events, attacker, battle);
-    events.push({ type: 'attack', attacker: attacker.name, attackerSlot: fieldSlot, target: target.name, targetSlot, damage: dmg, side: 'player' });
-
-    if (attacker.name === 'Salamandre Ardente' && !target.alive) {
-      attacker.permanentBonusAtk = (attacker.permanentBonusAtk || 0) + 1;
-      attacker.lastingAtkBuff = (attacker.lastingAtkBuff || 0) + 1; attacker.lastingAtkTurns = 2;
-      events.push({ type: 'type_passive', desc: `${attacker.name} s'enflamme ! +1 ATK` });
-    }
-
-    me.attackedThisTurn.push(fieldSlot);
-
-    if (attacker.lifestealPercent > 0) {
-      const healed = Math.floor(dmg * attacker.lifestealPercent / 100);
-      attacker.currentHp = Math.min(attacker.maxHp, attacker.currentHp + healed);
-      events.push({ type: 'ability_heal', unit: attacker.name, target: attacker.name, ability: 'Vampirisme', heal: healed });
-    }
-    if (!target.alive && attacker.type === 'bete') {
-      attacker.permanentBonusAtk += 1;
-      events.push({ type: 'type_passive', desc: `${attacker.name} gagne en feroce ! +1 ATK` });
-    }
-    if (!target.alive) {
-      getFieldAlive(me.field).filter(u => u.name === 'Dragonnet de Braise').forEach(u => {
-        u.buffAtk += 1; events.push({ type: 'type_passive', desc: `${u.name} s'embrase ! +1 ATK` });
-      });
-    }
-    if (!target.alive && attacker.name === 'Requin des Profondeurs' && attacker.alive) {
-      const idx = me.attackedThisTurn.indexOf(fieldSlot);
-      if (idx !== -1) { me.attackedThisTurn.splice(idx, 1); events.push({ type: 'type_passive', desc: `${attacker.name} sent le sang ! Peut attaquer a nouveau` }); }
-    }
-
-    cleanDeadFromField(opp.field);
-    checkPvpWin(battle);
-    battle.lastAction = Date.now();
-    emitPvpUpdate(battle, socket.pvpSide, events);
-    if (battle.result) finalizePvpBattle(battle);
-  });
-
-  socket.on('pvp:attack-avatar', ({ fieldSlot }) => {
-    const battle = pvpBattles.get(socket.pvpBattleId);
-    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
-    const { me, opp } = getPvpSides(battle, socket.pvpSide);
-
-    const attacker = me.field[fieldSlot];
-    if (!attacker || !attacker.alive || attacker.stunned || attacker.justDeployed) return;
-    if (me.attackedThisTurn.includes(fieldSlot) || me.energy < 1) return;
-    if (getFieldAlive(opp.field).length > 0) return;
-
-    me.energy -= 1;
-    const totalAtk = attacker.effectiveStats.attack + (attacker.buffAtk || 0) + (attacker.permanentBonusAtk || 0);
-    const dmg = Math.max(1, totalAtk);
-    opp.hp = Math.max(0, opp.hp - dmg);
-    me.attackedThisTurn.push(fieldSlot);
-
-    const events = [{ type: 'avatar_damage', attacker: attacker.name, damage: dmg, targetHp: opp.hp, side: 'player' }];
-    checkPvpWin(battle);
-    battle.lastAction = Date.now();
-    emitPvpUpdate(battle, socket.pvpSide, events);
-    if (battle.result) finalizePvpBattle(battle);
-  });
-
-  socket.on('pvp:use-ability', ({ fieldSlot, targetSlot }) => {
-    const battle = pvpBattles.get(socket.pvpBattleId);
-    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
-    const { me, opp } = getPvpSides(battle, socket.pvpSide);
-
-    const unit = me.field[fieldSlot];
-    if (!unit || !unit.alive || unit.usedAbility || unit.stunned) return;
-    const crystalCost = unit.crystal_cost || 1;
-    if ((me.crystal || 0) < crystalCost) return;
-    const ability = ABILITY_MAP[unit.ability_name];
-    if (!ability) return;
-
-    const myAlive = getFieldAlive(me.field);
-    const oppAlive = getFieldAlive(opp.field);
-    let targets = oppAlive;
-    if (targetSlot !== undefined && targetSlot !== null) {
-      const t = opp.field[targetSlot];
-      if (t && t.alive) targets = [t];
-    }
-
-    const events = resolveAbility(unit, targets, myAlive, oppAlive, battle);
-    me.crystal -= crystalCost;
-    cleanDeadFromField(opp.field);
-    cleanDeadFromField(me.field);
-    checkPvpWin(battle);
-    battle.lastAction = Date.now();
-    emitPvpUpdate(battle, socket.pvpSide, events);
-    if (battle.result) finalizePvpBattle(battle);
-  });
-
-  socket.on('pvp:use-ability-avatar', ({ fieldSlot }) => {
-    const battle = pvpBattles.get(socket.pvpBattleId);
-    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
-    const { me, opp } = getPvpSides(battle, socket.pvpSide);
-
-    const unit = me.field[fieldSlot];
-    if (!unit || !unit.alive || unit.usedAbility || unit.stunned) return;
-    const crystalCost = unit.crystal_cost || 1;
-    if ((me.crystal || 0) < crystalCost) return;
-    if (getFieldAlive(opp.field).length > 0) return;
-    const ability = ABILITY_MAP[unit.ability_name];
-    if (!ability) return;
-
-    let dmg = 0;
-    const events = [];
-    if (['direct_damage', 'direct_damage_ignore_def', 'aoe_damage', 'ignore_def'].includes(ability.type)) {
-      dmg = ability.value || 1;
-    } else if (ability.type === 'sacrifice') {
-      unit.currentHp = Math.max(1, unit.currentHp - Math.floor(unit.maxHp * ability.selfPercent / 100));
-      dmg = ability.value || 3;
-    } else {
-      const myAlive = getFieldAlive(me.field);
-      const abilityEvents = resolveAbility(unit, [], myAlive, [], battle);
-      me.crystal -= crystalCost;
-      emitPvpUpdate(battle, socket.pvpSide, abilityEvents);
-      return;
-    }
-
-    opp.hp = Math.max(0, opp.hp - dmg);
-    me.crystal -= crystalCost;
-    unit.usedAbility = true;
-    events.push({ type: 'ability', unit: unit.name, ability: unit.ability_name, desc: unit.ability_desc });
-    events.push({ type: 'avatar_damage', attacker: unit.name, damage: dmg, targetHp: opp.hp, side: 'player' });
-    checkPvpWin(battle);
-    battle.lastAction = Date.now();
-    emitPvpUpdate(battle, socket.pvpSide, events);
-    if (battle.result) finalizePvpBattle(battle);
-  });
-
-  socket.on('pvp:use-item', ({ handIndex, targetSlot, targetSide }) => {
-    const battle = pvpBattles.get(socket.pvpBattleId);
-    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
-    const { me, opp } = getPvpSides(battle, socket.pvpSide);
-
-    const item = me.hand[handIndex];
-    if (!item || item.type !== 'objet') return;
-    if (item.mana_cost > me.energy) return;
-    const effect = ITEM_EFFECTS[item.ability_name];
-    if (!effect) return;
-
-    const myAlive = getFieldAlive(me.field);
-    const oppAlive = getFieldAlive(opp.field);
-    let target = null;
-    if (effect.target === 'ally' && targetSlot !== undefined) {
-      target = me.field[targetSlot];
-      if (!target || !target.alive) return;
-    } else if (effect.target === 'enemy' && targetSlot !== undefined) {
-      target = opp.field[targetSlot];
-      if (!target || !target.alive) return;
-    }
-
-    const events = [];
-    resolveItemEffect(item, target, myAlive, oppAlive, events, battle);
-    if (effect.type === 'add_crystal') {
-      me.crystal = Math.min(me.maxCrystal, (me.crystal || 0) + effect.value);
-    }
-    me.hand.splice(handIndex, 1);
-    me.energy -= item.mana_cost;
-    cleanDeadFromField(opp.field);
-    cleanDeadFromField(me.field);
-    checkPvpWin(battle);
-    battle.lastAction = Date.now();
-    emitPvpUpdate(battle, socket.pvpSide, events);
-    if (battle.result) finalizePvpBattle(battle);
-  });
-
-  socket.on('pvp:end-turn', () => {
-    const battle = pvpBattles.get(socket.pvpBattleId);
-    if (!battle || battle.result || battle.currentTurn !== socket.pvpSide) return;
-    const side = socket.pvpSide;
-    const { me, opp, oppSide } = getPvpSides(battle, side);
-    const events = [];
-
-    // 1. Poison ticks on current player's field
-    for (const unit of getFieldAlive(me.field)) {
-      if (unit.poisoned > 0) {
-        unit.currentHp = Math.max(1, unit.currentHp - unit.poisoned);
-        events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisoned });
-        unit.poisoned = 0;
-        if (unit.currentHp <= 0) checkKO(unit, events, battle);
-      }
-      if (unit.alive && unit.poisonDotTurns > 0 && unit.poisonDot > 0) {
-        unit.currentHp = Math.max(1, unit.currentHp - unit.poisonDot);
-        events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisonDot, desc: `Poison (${unit.poisonDotTurns} tours)` });
-        unit.poisonDotTurns--;
-        if (unit.poisonDotTurns <= 0) unit.poisonDot = 0;
-        if (unit.currentHp <= 0) checkKO(unit, events, battle);
-      }
-    }
-    cleanDeadFromField(me.field);
-
-    // 2. Reset temp buffs
-    for (const unit of getFieldAlive(me.field)) {
-      unit.buffAtk = 0; unit.buffDef = 0;
-      unit.marked = 0; unit.counterDamage = 0;
-      unit.lifestealPercent = 0; unit.hasAttacked = false;
-      if (unit.lastingDefBuff > 0) {
-        unit.permanentBonusDef = Math.max(0, (unit.permanentBonusDef || 0) - unit.lastingDefBuff);
-        unit.lastingDefBuff = 0;
-      }
-      if (unit.lastingAtkBuff > 0 && unit.lastingAtkTurns !== undefined) {
-        unit.lastingAtkTurns--;
-        if (unit.lastingAtkTurns <= 0) { unit.permanentBonusAtk = Math.max(0, (unit.permanentBonusAtk || 0) - unit.lastingAtkBuff); unit.lastingAtkBuff = 0; }
-      }
-      if (unit.ralliement && unit.alive) {
-        const earthCount = getFieldAlive(me.field).filter(a => a.alive && a.element === 'terre' && a !== unit).length;
-        unit.buffAtk += earthCount;
-      }
-    }
-
-    if (checkPvpWin(battle)) {
-      emitPvpUpdate(battle, side, events);
-      finalizePvpBattle(battle);
-      return;
-    }
-
-    // 3. Switch to opponent's turn
-    battle.currentTurn = oppSide;
-    battle.turn++;
-
-    // Clear summoning sickness
-    for (const unit of getFieldAlive(opp.field)) { unit.justDeployed = false; }
-
-    // Opponent energy
-    opp.maxEnergy = getManaForTurn(battle.turn);
-    opp.energy = opp.maxEnergy;
-    opp.crystal = Math.min(opp.maxCrystal, (opp.crystal || 0) + (opp.crystalRate || 0.3));
-    opp.attackedThisTurn = [];
-
-    // Opponent draws
-    if (opp.hand.length < 7 && opp.deck.length > 0) {
-      opp.hand.push(opp.deck.shift());
-      events.push({ type: 'enemy_draw' });
-    }
-
-    // Turn-start passives for opponent
-    applyTurnStartPassives(opp.field, me.field, events);
-
-    if (checkPvpWin(battle)) {
-      emitPvpUpdate(battle, side, events);
-      finalizePvpBattle(battle);
-      return;
-    }
-
-    battle.lastAction = Date.now();
-    emitPvpUpdate(battle, side, events);
-
-    const oppSocket = userSocketMap.get(opp.userId);
-    if (oppSocket && oppSocket.connected) oppSocket.emit('pvp:your-turn');
-  });
-
-  socket.on('pvp:surrender', () => {
-    const battle = pvpBattles.get(socket.pvpBattleId);
-    if (!battle || battle.result) return;
-    const winnerSide = socket.pvpSide === 'p1' ? 'p2' : 'p1';
-    battle.result = { winner: winnerSide };
-    emitPvpUpdate(battle, socket.pvpSide, [{ type: 'surrender', side: 'player' }]);
-    finalizePvpBattle(battle);
-  });
 });
-
-// Cleanup stale PVP battles
-setInterval(() => {
-  const now = Date.now();
-  for (const [id, battle] of pvpBattles) {
-    if (now - battle.lastAction > 30 * 60 * 1000) pvpBattles.delete(id);
-  }
-}, 5 * 60 * 1000);
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`Gacha Game lance sur http://0.0.0.0:${PORT}`);

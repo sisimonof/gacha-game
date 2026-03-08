@@ -18,24 +18,24 @@
 
       <div class="combat-grid">
         <!-- IA -->
-        <button class="combat-mode-btn combat-mode-ia" onclick="showDeckSelect('ia')">
-          <span class="combat-mode-icon">🤖</span>
-          <span class="combat-mode-label">IA</span>
+        <button class="combat-mode-btn combat-mode-ia" onclick="showDeckSelect()">
+          <span class="combat-mode-icon">&#x1F916;</span>
+          <span class="combat-mode-label">COMBAT IA</span>
           <span class="combat-mode-desc">Affrontez l'intelligence artificielle</span>
         </button>
+      </div>
 
-        <!-- PVP temps reel -->
-        <button class="combat-mode-btn combat-mode-pvp" onclick="showDeckSelect('pvp')">
-          <span class="combat-mode-icon">⚔️</span>
-          <span class="combat-mode-label">PVP</span>
-          <span class="combat-mode-desc">Affrontez un joueur en temps reel</span>
-        </button>
+      <!-- Mecaniques info -->
+      <div class="combat-mechanics-info">
+        <div class="mechanic-chip"><span class="mechanic-icon">&#x2694;&#xFE0F;</span> Rank Synergy — Flancs: +1 ATK | Centre: +1 DEF</div>
+        <div class="mechanic-chip"><span class="mechanic-icon">&#x1F504;</span> Mana Carry — Conservez 1 mana non utilise (max +2)</div>
+        <div class="mechanic-chip"><span class="mechanic-icon">&#x1F525;</span> Combo Kill — 3+ KO/tour = +1 ATK toute l'equipe</div>
       </div>
 
       <!-- Liens secondaires -->
       <div style="display:flex; gap:12px; justify-content:center; margin-top:16px;">
-        <button class="deck-select-cancel" onclick="window.location.href='/decks'" style="font-size:8px;">🃏 MES DECKS</button>
-        <button class="deck-select-cancel" onclick="window.location.href='/wiki'" style="font-size:8px;">📖 WIKI</button>
+        <button class="deck-select-cancel" onclick="window.location.href='/decks'" style="font-size:8px;">&#x1F0CF; MES DECKS</button>
+        <button class="deck-select-cancel" onclick="window.location.href='/wiki'" style="font-size:8px;">&#x1F4D6; WIKI</button>
       </div>
 
       <!-- Deck selection overlay -->
@@ -45,7 +45,7 @@
           <div class="deck-select-list" id="deck-select-list"></div>
           <div class="deck-select-or">— OU —</div>
           <button class="combat-mode-btn combat-starter-btn" onclick="startBattle('starter')">
-            <span class="combat-mode-icon">🎮</span>
+            <span class="combat-mode-icon">&#x1F3AE;</span>
             <span class="combat-mode-label">DECK STARTER</span>
             <span class="combat-mode-desc">Deck de test gratuit (cartes faibles)</span>
           </button>
@@ -58,21 +58,9 @@
         <div class="loading-text">Lancement du combat...</div>
       </div>
 
-      <!-- PVP Searching overlay -->
-      <div class="pvp-searching-overlay hidden" id="pvp-searching">
-        <div class="pvp-searching-content">
-          <div class="pvp-searching-spinner"></div>
-          <div class="pvp-searching-title">RECHERCHE PVP</div>
-          <div class="pvp-searching-text">En attente d'un adversaire...</div>
-          <div class="pvp-searching-timer" id="pvp-timer">0:00</div>
-          <button class="deck-select-cancel" onclick="cancelPvpSearch()">ANNULER</button>
-        </div>
-      </div>
-
     </div>
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/toast.js"></script>
   <script src="/js/friends.js"></script>
   <script src="/js/card-renderer.js"></script>
