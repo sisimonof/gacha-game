@@ -188,6 +188,19 @@ db.exec(`
   }
 }
 
+// Migration: profile_frame + unlocked_frames
+{
+  const userColsFrames = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!userColsFrames.includes('profile_frame')) {
+    db.exec("ALTER TABLE users ADD COLUMN profile_frame TEXT DEFAULT 'none'");
+    console.log('Migration: profile_frame ajouté');
+  }
+  if (!userColsFrames.includes('unlocked_frames')) {
+    db.exec(`ALTER TABLE users ADD COLUMN unlocked_frames TEXT DEFAULT '["none","flames"]'`);
+    console.log('Migration: unlocked_frames ajouté');
+  }
+}
+
 // === QUETES & SUCCES ===
 db.exec(`
   CREATE TABLE IF NOT EXISTS user_quests (
@@ -248,7 +261,9 @@ db.exec(`
     ['stat_fusion_fail', 'INTEGER DEFAULT 0'],
     ['stat_boosters_origines', 'INTEGER DEFAULT 0'],
     ['stat_boosters_rift', 'INTEGER DEFAULT 0'],
-    ['stat_boosters_avance', 'INTEGER DEFAULT 0']
+    ['stat_boosters_avance', 'INTEGER DEFAULT 0'],
+    ['stat_market_sales', 'INTEGER DEFAULT 0'],
+    ['stat_market_purchases', 'INTEGER DEFAULT 0']
   ];
   for (const [col, type] of newMigrations) {
     if (!cols2.includes(col)) {
@@ -282,6 +297,26 @@ db.exec(`
 db.exec('CREATE INDEX IF NOT EXISTS idx_chat_sr ON chat_messages(sender_id, receiver_id)');
 db.exec('CREATE INDEX IF NOT EXISTS idx_friend_uid ON friendships(user_id)');
 db.exec('CREATE INDEX IF NOT EXISTS idx_friend_fid ON friendships(friend_id)');
+
+// === MARCHE (Trading Market) ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS market_listings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    seller_id INTEGER NOT NULL,
+    user_card_id INTEGER NOT NULL,
+    card_id INTEGER NOT NULL,
+    price INTEGER NOT NULL,
+    status TEXT DEFAULT 'active',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    sold_at DATETIME DEFAULT NULL,
+    buyer_id INTEGER DEFAULT NULL,
+    FOREIGN KEY (seller_id) REFERENCES users(id),
+    FOREIGN KEY (user_card_id) REFERENCES user_cards(id),
+    FOREIGN KEY (card_id) REFERENCES cards(id)
+  )
+`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_market_status ON market_listings(status)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_market_seller ON market_listings(seller_id)');
 
 // === GIFT CODES ===
 db.exec(`
@@ -857,6 +892,18 @@ const ACHIEVEMENTS = [
 // CASINO
 // ============================================
 const CASINO_COST = 200;
+
+// --- PROFILE FRAMES ---
+const PROFILE_FRAMES = {
+  none:    { label: 'Aucun',       css: '',              emoji: '⬜' },
+  flames:  { label: 'Flammes',     css: 'frame-flames',  emoji: '🔥' },
+  glitch:  { label: 'Glitch',      css: 'frame-glitch',  emoji: '📺' },
+  rainbow: { label: 'Arc-en-ciel', css: 'frame-rainbow', emoji: '🌈' },
+  neon:    { label: 'Neon',        css: 'frame-neon',     emoji: '💡' },
+  frost:   { label: 'Givre',       css: 'frame-frost',    emoji: '❄' },
+  skull:   { label: 'Crane',       css: 'frame-skull',    emoji: '💀' },
+  diamond: { label: 'Diamant',     css: 'frame-diamond',  emoji: '💎' },
+};
 
 // --- LOGIN STREAK ---
 const STREAK_REWARDS = [
@@ -3122,7 +3169,7 @@ app.post('/api/logout', (req, res) => {
 
 // --- Routes USER ---
 app.get('/api/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date, profile_frame, unlocked_frames FROM users WHERE id = ?').get(req.session.userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(req.session.userId).c;
 
   const today = new Date().toISOString().split('T')[0];
@@ -3151,6 +3198,8 @@ app.get('/api/me', requireAuth, (req, res) => {
     streakRewards: STREAK_REWARDS,
     usernameEffect: user.username_effect || '',
     unlockedAvatars: JSON.parse(user.unlocked_avatars || '["⚔"]'),
+    profileFrame: user.profile_frame || 'none',
+    unlockedFrames: JSON.parse(user.unlocked_frames || '["none"]'),
     battlePassTier: bp?.current_tier || 0,
     battlePassXP: bp?.xp || 0
   });
@@ -3165,7 +3214,7 @@ const VALID_AVATARS = [
 ];
 
 app.post('/api/settings', requireAuth, (req, res) => {
-  const { avatar, displayName } = req.body;
+  const { avatar, displayName, profileFrame } = req.body;
   const userId = req.session.userId;
 
   if (avatar !== undefined) {
@@ -3194,8 +3243,20 @@ app.post('/api/settings', requireAuth, (req, res) => {
     db.prepare('UPDATE users SET display_name = ? WHERE id = ?').run(trimmed, userId);
   }
 
-  const user = db.prepare('SELECT username, avatar, display_name FROM users WHERE id = ?').get(userId);
-  res.json({ success: true, avatar: user.avatar || '⚔', displayName: user.display_name || user.username });
+  if (profileFrame !== undefined) {
+    if (!PROFILE_FRAMES[profileFrame]) {
+      return res.status(400).json({ error: 'Cadre invalide' });
+    }
+    const u = db.prepare('SELECT unlocked_frames FROM users WHERE id = ?').get(userId);
+    const unlockedFrames = JSON.parse(u.unlocked_frames || '["none"]');
+    if (!unlockedFrames.includes(profileFrame)) {
+      return res.status(400).json({ error: 'Cadre non deverrouille' });
+    }
+    db.prepare('UPDATE users SET profile_frame = ? WHERE id = ?').run(profileFrame, userId);
+  }
+
+  const user = db.prepare('SELECT username, avatar, display_name, profile_frame FROM users WHERE id = ?').get(userId);
+  res.json({ success: true, avatar: user.avatar || '⚔', displayName: user.display_name || user.username, profileFrame: user.profile_frame || 'none' });
 });
 
 app.post('/api/daily', requireAuth, (req, res) => {
@@ -5671,6 +5732,154 @@ app.get('/api/stats', requireAuth, (req, res) => {
 });
 
 // ============================================
+// MARCHE (Trading Market) API
+// ============================================
+
+function isCardOnMarket(userCardId) {
+  return !!db.prepare("SELECT id FROM market_listings WHERE user_card_id = ? AND status = 'active'").get(userCardId);
+}
+
+app.get('/market', requireAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'market.html'));
+});
+
+app.get('/api/market', requireAuth, (req, res) => {
+  const { rarity, element, search, sort, page } = req.query;
+  const pageSize = 20;
+  const offset = ((parseInt(page) || 1) - 1) * pageSize;
+
+  let where = "WHERE ml.status = 'active'";
+  const params = [];
+
+  if (rarity && rarity !== 'all') { where += ' AND c.rarity = ?'; params.push(rarity); }
+  if (element && element !== 'all') { where += ' AND c.element = ?'; params.push(element); }
+  if (search) { where += ' AND c.name LIKE ?'; params.push('%' + search + '%'); }
+
+  let orderBy = 'ORDER BY ml.created_at DESC';
+  if (sort === 'price_asc') orderBy = 'ORDER BY ml.price ASC';
+  else if (sort === 'price_desc') orderBy = 'ORDER BY ml.price DESC';
+  else if (sort === 'rarity') orderBy = "ORDER BY CASE c.rarity WHEN 'secret' THEN 0 WHEN 'chaos' THEN 1 WHEN 'legendaire' THEN 2 WHEN 'epique' THEN 3 WHEN 'rare' THEN 4 WHEN 'commune' THEN 5 END";
+
+  const total = db.prepare(`SELECT COUNT(*) as total FROM market_listings ml JOIN cards c ON ml.card_id = c.id ${where}`).get(...params).total;
+
+  const listings = db.prepare(`
+    SELECT ml.id as listingId, ml.price, ml.created_at as listedAt,
+      ml.seller_id as sellerId, u.username as sellerName, u.display_name as sellerDisplayName, u.avatar as sellerAvatar,
+      c.id as cardId, c.name, c.rarity, c.type, c.element, c.attack, c.defense, c.hp, c.mana_cost, c.ability_name, c.ability_desc, c.image, c.emoji,
+      uc.is_shiny, uc.is_fused, uc.is_temp
+    FROM market_listings ml
+    JOIN user_cards uc ON ml.user_card_id = uc.id
+    JOIN cards c ON ml.card_id = c.id
+    JOIN users u ON ml.seller_id = u.id
+    ${where} ${orderBy} LIMIT ? OFFSET ?
+  `).all(...params, pageSize, offset);
+
+  res.json({ listings, total, page: parseInt(page) || 1, totalPages: Math.ceil(total / pageSize) });
+});
+
+app.get('/api/market/my-listings', requireAuth, (req, res) => {
+  const listings = db.prepare(`
+    SELECT ml.id as listingId, ml.price, ml.status, ml.created_at as listedAt,
+      c.id as cardId, c.name, c.rarity, c.type, c.element, c.attack, c.defense, c.hp, c.emoji, c.image,
+      uc.is_shiny, uc.is_fused, uc.is_temp
+    FROM market_listings ml
+    JOIN user_cards uc ON ml.user_card_id = uc.id
+    JOIN cards c ON ml.card_id = c.id
+    WHERE ml.seller_id = ? AND ml.status = 'active'
+    ORDER BY ml.created_at DESC
+  `).all(req.session.userId);
+  res.json(listings);
+});
+
+app.get('/api/market/my-cards', requireAuth, (req, res) => {
+  const cards = db.prepare(`
+    SELECT uc.id as userCardId, uc.is_shiny, uc.is_fused, uc.is_temp,
+      c.id as cardId, c.name, c.rarity, c.type, c.element, c.attack, c.defense, c.hp, c.mana_cost, c.ability_name, c.ability_desc, c.emoji, c.image
+    FROM user_cards uc
+    JOIN cards c ON uc.card_id = c.id
+    WHERE uc.user_id = ?
+    ORDER BY CASE c.rarity WHEN 'secret' THEN 0 WHEN 'chaos' THEN 1 WHEN 'legendaire' THEN 2 WHEN 'epique' THEN 3 WHEN 'rare' THEN 4 WHEN 'commune' THEN 5 END, c.name
+  `).all(req.session.userId);
+
+  // Mark cards already on market
+  cards.forEach(card => {
+    card.onMarket = isCardOnMarket(card.userCardId);
+  });
+  res.json(cards);
+});
+
+app.post('/api/market/sell', requireAuth, (req, res) => {
+  const { userCardId, price } = req.body;
+  const userId = req.session.userId;
+
+  if (!userCardId || !price) return res.status(400).json({ error: 'Parametres manquants' });
+  const intPrice = parseInt(price);
+  if (!Number.isInteger(intPrice) || intPrice < 10 || intPrice > 999999) return res.status(400).json({ error: 'Prix entre 10 et 999 999 CR' });
+
+  const userCard = db.prepare('SELECT uc.*, c.name, c.rarity FROM user_cards uc JOIN cards c ON uc.card_id = c.id WHERE uc.id = ? AND uc.user_id = ?').get(userCardId, userId);
+  if (!userCard) return res.status(400).json({ error: 'Carte introuvable' });
+  if (isCardOnMarket(userCardId)) return res.status(400).json({ error: 'Carte deja en vente' });
+
+  const inDeck = db.prepare('SELECT id FROM deck_cards WHERE user_card_id = ?').get(userCardId);
+  if (inDeck) return res.status(400).json({ error: 'Retirez la carte de votre deck d\'abord' });
+
+  const activeCount = db.prepare("SELECT COUNT(*) as c FROM market_listings WHERE seller_id = ? AND status = 'active'").get(userId).c;
+  if (activeCount >= 20) return res.status(400).json({ error: 'Maximum 20 cartes en vente' });
+
+  db.prepare('INSERT INTO market_listings (seller_id, user_card_id, card_id, price) VALUES (?, ?, ?, ?)').run(userId, userCardId, userCard.card_id, intPrice);
+  res.json({ success: true, message: userCard.name + ' en vente pour ' + intPrice + ' CR' });
+});
+
+app.post('/api/market/buy', requireAuth, (req, res) => {
+  const { listingId } = req.body;
+  const buyerId = req.session.userId;
+
+  const buyTx = db.transaction(() => {
+    const listing = db.prepare("SELECT * FROM market_listings WHERE id = ? AND status = 'active'").get(listingId);
+    if (!listing) throw new Error('Offre introuvable ou deja vendue');
+    if (listing.seller_id === buyerId) throw new Error('Impossible d\'acheter votre propre carte');
+
+    const buyer = db.prepare('SELECT credits FROM users WHERE id = ?').get(buyerId);
+    if (buyer.credits < listing.price) throw new Error('Credits insuffisants');
+
+    const tax = Math.floor(listing.price * 0.10);
+    const sellerReceives = listing.price - tax;
+
+    db.prepare('UPDATE users SET credits = credits - ?, stat_market_purchases = stat_market_purchases + 1 WHERE id = ?').run(listing.price, buyerId);
+    db.prepare('UPDATE users SET credits = credits + ?, stat_market_sales = stat_market_sales + 1, stat_total_earned = stat_total_earned + ? WHERE id = ?').run(sellerReceives, sellerReceives, listing.seller_id);
+    db.prepare('UPDATE user_cards SET user_id = ? WHERE id = ?').run(buyerId, listing.user_card_id);
+    db.prepare("UPDATE market_listings SET status = 'sold', sold_at = CURRENT_TIMESTAMP, buyer_id = ? WHERE id = ?").run(buyerId, listingId);
+
+    return { listing, sellerReceives, tax };
+  });
+
+  try {
+    const result = buyTx();
+    const card = db.prepare('SELECT name, emoji FROM cards WHERE id = ?').get(result.listing.card_id);
+    const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(buyerId).credits;
+
+    // Notify seller via socket
+    const sellerSocket = userSocketMap.get(result.listing.seller_id);
+    if (sellerSocket) {
+      sellerSocket.emit('notification', { message: (card.emoji || '') + ' ' + card.name + ' vendue pour ' + result.listing.price + ' CR (recu: ' + result.sellerReceives + ' CR)', type: 'success' });
+    }
+
+    res.json({ success: true, credits: newCredits, message: (card.emoji || '') + ' ' + card.name + ' achetee pour ' + result.listing.price + ' CR (taxe: ' + result.tax + ' CR)' });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/market/cancel', requireAuth, (req, res) => {
+  const { listingId } = req.body;
+  const listing = db.prepare("SELECT * FROM market_listings WHERE id = ? AND seller_id = ? AND status = 'active'").get(listingId, req.session.userId);
+  if (!listing) return res.status(400).json({ error: 'Offre introuvable' });
+
+  db.prepare("UPDATE market_listings SET status = 'cancelled' WHERE id = ?").run(listingId);
+  res.json({ success: true, message: 'Offre annulee' });
+});
+
+// ============================================
 // FRIENDS API
 // ============================================
 app.get('/api/friends', requireAuth, (req, res) => {
@@ -5680,22 +5889,23 @@ app.get('/api/friends', requireAuth, (req, res) => {
       CASE WHEN f.user_id = ? THEN f.friend_id ELSE f.user_id END as friendUserId,
       CASE WHEN f.user_id = ? THEN u2.username ELSE u1.username END as username,
       CASE WHEN f.user_id = ? THEN u2.display_name ELSE u1.display_name END as displayName,
-      CASE WHEN f.user_id = ? THEN u2.avatar ELSE u1.avatar END as avatar
+      CASE WHEN f.user_id = ? THEN u2.avatar ELSE u1.avatar END as avatar,
+      CASE WHEN f.user_id = ? THEN u2.profile_frame ELSE u1.profile_frame END as profileFrame
     FROM friendships f
     JOIN users u1 ON f.user_id = u1.id
     JOIN users u2 ON f.friend_id = u2.id
     WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted'
-  `).all(userId, userId, userId, userId, userId, userId);
+  `).all(userId, userId, userId, userId, userId, userId, userId);
   friends.forEach(f => { f.online = onlineUsers.has(f.friendUserId); });
 
   const pendingReceived = db.prepare(`
-    SELECT f.id as friendshipId, u.username, u.display_name as displayName, u.avatar
+    SELECT f.id as friendshipId, u.username, u.display_name as displayName, u.avatar, u.profile_frame as profileFrame
     FROM friendships f JOIN users u ON f.user_id = u.id
     WHERE f.friend_id = ? AND f.status = 'pending'
   `).all(userId);
 
   const pendingSent = db.prepare(`
-    SELECT f.id as friendshipId, u.username, u.display_name as displayName, u.avatar
+    SELECT f.id as friendshipId, u.username, u.display_name as displayName, u.avatar, u.profile_frame as profileFrame
     FROM friendships f JOIN users u ON f.friend_id = u.id
     WHERE f.user_id = ? AND f.status = 'pending'
   `).all(userId);

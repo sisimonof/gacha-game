@@ -22,6 +22,7 @@
         <a href="/mine" class="dash-nav-link dash-nav-link--mine">MINE</a>
         <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
         <a href="/battlepass" class="dash-nav-link dash-nav-link--bp">PASSE</a>
+        <a href="/market" class="dash-nav-link dash-nav-link--market">MARCHE</a>
         <a href="/casino" class="dash-nav-link dash-nav-link--casino">CASINO</a>
         <a href="/stats" class="dash-nav-link dash-nav-link--stats">STATS</a>
         <a href="/wiki" class="dash-nav-link">WIKI</a>
@@ -138,6 +139,16 @@
           <div class="dash-card-info">
             <h3 class="dash-card-title">MINE</h3>
             <p class="dash-card-desc">Minez des ressources</p>
+          </div>
+          <div class="dash-card-arrow">&#10095;</div>
+        </div>
+
+        <!-- Marche -->
+        <div class="dash-card dash-card--market" onclick="window.location.href='/market'">
+          <div class="dash-card-icon dash-card-icon--market">&#127978;</div>
+          <div class="dash-card-info">
+            <h3 class="dash-card-title">MARCHE</h3>
+            <p class="dash-card-desc">Achetez et vendez des cartes</p>
           </div>
           <div class="dash-card-arrow">&#10095;</div>
         </div>
@@ -354,6 +365,16 @@
             <input type="text" id="settings-displayname" class="settings-input" placeholder="Nouveau pseudo..." maxlength="20">
             <span class="settings-input-hint">3-20 caracteres (lettres, chiffres, _, -)</span>
           </div>
+        </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section">
+          <h3 class="settings-section-title">CADRE DE PROFIL</h3>
+          <div class="settings-frame-preview">
+            <div class="dash-avatar settings-frame-avatar" id="settings-frame-preview-avatar">
+              <span class="dash-avatar-icon" id="settings-frame-preview-icon">⚔</span>
+            </div>
+          </div>
+          <div class="settings-frame-grid" id="frame-grid"></div>
         </div>
         <div class="settings-divider"></div>
         <div class="settings-section settings-theme-section">

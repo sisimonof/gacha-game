@@ -24,10 +24,20 @@ async function loadUser() {
     const collDesc = document.getElementById('collection-desc');
     if (collDesc) collDesc.textContent = data.cardCount + ' cartes collectees';
 
+    // Apply profile frame on avatar
+    const frameClass = data.profileFrame && data.profileFrame !== 'none' ? 'frame-' + data.profileFrame : '';
+    const avatarEl = document.querySelector('.dash-avatar');
+    if (avatarEl) {
+      avatarEl.className = 'dash-avatar';
+      if (frameClass) avatarEl.classList.add(frameClass);
+    }
+
     // Store for settings modal
     window._currentAvatar = data.avatar || '⚔';
     window._currentDisplayName = displayName;
     window._unlockedAvatars = data.unlockedAvatars || ['⚔'];
+    window._currentFrame = data.profileFrame || 'none';
+    window._unlockedFrames = data.unlockedFrames || ['none'];
 
     // Apply username effect
     if (data.usernameEffect) {
@@ -83,6 +93,58 @@ let selectedAvatar = null;
 
 const BP_AVATARS = ['🎖','🐲','👁‍🗨','🐦‍🔥','🏴‍☠️','🔱','👾'];
 
+// === PROFILE FRAMES ===
+const PROFILE_FRAMES = {
+  none:    { label: 'Aucun',       emoji: '⬜' },
+  flames:  { label: 'Flammes',     emoji: '🔥' },
+  glitch:  { label: 'Glitch',      emoji: '📺' },
+  rainbow: { label: 'Arc-en-ciel', emoji: '🌈' },
+  neon:    { label: 'Neon',        emoji: '💡' },
+  frost:   { label: 'Givre',       emoji: '❄' },
+  skull:   { label: 'Crane',       emoji: '💀' },
+  diamond: { label: 'Diamant',     emoji: '💎' },
+};
+
+let selectedFrame = null;
+
+function initFrameGrid() {
+  const grid = document.getElementById('frame-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const unlockedFrames = window._unlockedFrames || ['none'];
+  const currentFrame = window._currentFrame || 'none';
+
+  Object.entries(PROFILE_FRAMES).forEach(([key, frame]) => {
+    const unlocked = unlockedFrames.includes(key);
+    const btn = document.createElement('button');
+    btn.className = 'frame-option' + (unlocked ? '' : ' frame-option--locked') + (key === currentFrame ? ' frame-selected' : '');
+    btn.dataset.frame = key;
+    btn.innerHTML = '<span class="frame-option-emoji">' + frame.emoji + '</span><span class="frame-option-label">' + frame.label + '</span>';
+
+    if (unlocked) {
+      btn.addEventListener('click', () => selectFrame(key));
+    } else {
+      btn.title = 'Non debloque';
+    }
+    grid.appendChild(btn);
+  });
+}
+
+function selectFrame(key) {
+  selectedFrame = key;
+  // Update preview avatar with frame
+  const previewAvatar = document.getElementById('settings-frame-preview-avatar');
+  if (previewAvatar) {
+    previewAvatar.className = 'dash-avatar settings-frame-avatar';
+    if (key !== 'none') previewAvatar.classList.add('frame-' + key);
+  }
+  // Highlight selected
+  document.querySelectorAll('.frame-option').forEach(btn => {
+    btn.classList.toggle('frame-selected', btn.dataset.frame === key);
+  });
+}
+
 function initSettingsModal() {
   const grid = document.getElementById('avatar-grid');
   if (!grid) return;
@@ -117,6 +179,8 @@ function initSettingsModal() {
 function selectAvatar(emoji) {
   selectedAvatar = emoji;
   document.getElementById('settings-current-avatar').textContent = emoji;
+  const previewIcon = document.getElementById('settings-frame-preview-icon');
+  if (previewIcon) previewIcon.textContent = emoji;
   document.querySelectorAll('.avatar-option').forEach(btn => {
     btn.classList.toggle('avatar-selected', btn.textContent === emoji);
   });
@@ -124,11 +188,23 @@ function selectAvatar(emoji) {
 
 function openSettings() {
   selectedAvatar = window._currentAvatar;
+  selectedFrame = window._currentFrame || 'none';
   document.getElementById('settings-current-avatar').textContent = selectedAvatar;
   document.getElementById('settings-displayname').value = window._currentDisplayName;
   document.querySelectorAll('.avatar-option').forEach(btn => {
     btn.classList.toggle('avatar-selected', btn.textContent === selectedAvatar);
   });
+
+  // Frame preview
+  const previewIcon = document.getElementById('settings-frame-preview-icon');
+  if (previewIcon) previewIcon.textContent = selectedAvatar;
+  const previewAvatar = document.getElementById('settings-frame-preview-avatar');
+  if (previewAvatar) {
+    previewAvatar.className = 'dash-avatar settings-frame-avatar';
+    if (selectedFrame !== 'none') previewAvatar.classList.add('frame-' + selectedFrame);
+  }
+  initFrameGrid();
+
   document.getElementById('settings-msg').textContent = '';
   document.getElementById('settings-overlay').classList.add('active');
 }
@@ -150,6 +226,9 @@ async function saveSettings() {
   }
   if (displayName && displayName !== window._currentDisplayName) {
     body.displayName = displayName;
+  }
+  if (selectedFrame && selectedFrame !== window._currentFrame) {
+    body.profileFrame = selectedFrame;
   }
 
   if (Object.keys(body).length === 0) {
@@ -175,10 +254,20 @@ async function saveSettings() {
 
     window._currentAvatar = data.avatar;
     window._currentDisplayName = data.displayName;
+    if (data.profileFrame !== undefined) window._currentFrame = data.profileFrame;
 
     document.getElementById('profile-avatar').textContent = data.avatar;
     document.getElementById('profile-username').textContent = data.displayName;
     document.getElementById('username-display').textContent = data.displayName;
+
+    // Apply frame on main avatar
+    const mainAvatar = document.querySelector('.dash-avatar');
+    if (mainAvatar) {
+      mainAvatar.className = 'dash-avatar';
+      if (window._currentFrame && window._currentFrame !== 'none') {
+        mainAvatar.classList.add('frame-' + window._currentFrame);
+      }
+    }
 
     msgEl.textContent = 'Sauvegarde !';
     msgEl.classList.add('success');

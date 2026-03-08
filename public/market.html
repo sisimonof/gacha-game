@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Marche</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
+  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+
+  <div class="crt-screen market-page">
+    <div class="market-container">
+
+      <!-- Title -->
+      <div class="market-title-bar">
+        <h1 class="market-title">🏪 MARCHE</h1>
+        <p class="market-subtitle">Achetez et vendez des cartes entre joueurs — Taxe 10%</p>
+      </div>
+
+      <!-- Tabs -->
+      <div class="market-tabs">
+        <button class="market-tab active" data-tab="browse" onclick="switchTab('browse')">ACHETER</button>
+        <button class="market-tab" data-tab="sell" onclick="switchTab('sell')">VENDRE</button>
+        <button class="market-tab" data-tab="my-listings" onclick="switchTab('my-listings')">MES VENTES</button>
+      </div>
+
+      <!-- BROWSE TAB -->
+      <div class="market-tab-content" id="tab-browse">
+        <div class="market-filters">
+          <input type="text" id="market-search" class="market-search-input" placeholder="Rechercher une carte..." maxlength="50">
+          <select id="market-rarity" class="market-filter-select">
+            <option value="all">Toutes raretes</option>
+            <option value="commune">Commune</option>
+            <option value="rare">Rare</option>
+            <option value="epique">Epique</option>
+            <option value="legendaire">Legendaire</option>
+            <option value="chaos">Chaos</option>
+            <option value="secret">Secret</option>
+          </select>
+          <select id="market-element" class="market-filter-select">
+            <option value="all">Tous elements</option>
+            <option value="feu">Feu</option>
+            <option value="eau">Eau</option>
+            <option value="terre">Terre</option>
+            <option value="lumiere">Lumiere</option>
+            <option value="ombre">Ombre</option>
+            <option value="neutre">Neutre</option>
+          </select>
+          <select id="market-sort" class="market-filter-select">
+            <option value="recent">Plus recentes</option>
+            <option value="price_asc">Prix croissant</option>
+            <option value="price_desc">Prix decroissant</option>
+            <option value="rarity">Rarete</option>
+          </select>
+        </div>
+        <div class="market-grid" id="market-grid">
+          <div class="market-loading">Chargement...</div>
+        </div>
+        <div class="market-pagination" id="market-pagination"></div>
+      </div>
+
+      <!-- SELL TAB -->
+      <div class="market-tab-content hidden" id="tab-sell">
+        <p class="market-sell-hint">Selectionnez une carte a mettre en vente</p>
+        <div class="market-sell-grid" id="sell-cards-grid"></div>
+      </div>
+
+      <!-- MY LISTINGS TAB -->
+      <div class="market-tab-content hidden" id="tab-my-listings">
+        <div id="my-listings-container"></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SELL MODAL -->
+  <div class="market-overlay hidden" id="sell-overlay" onclick="if(event.target===this)closeSellModal()">
+    <div class="market-modal">
+      <h3>METTRE EN VENTE</h3>
+      <div class="market-modal-card-preview" id="sell-preview-emoji"></div>
+      <div class="market-modal-card-name" id="sell-preview-name"></div>
+      <div class="market-modal-price-row">
+        <label>Prix:</label>
+        <input type="number" id="sell-price-input" class="market-modal-price-input" min="10" max="999999" value="100">
+        <label>CR</label>
+      </div>
+      <div class="market-modal-tax" id="sell-tax-info">Taxe 10% — Vous recevrez: 90 CR</div>
+      <div class="market-modal-actions">
+        <button class="market-modal-btn market-modal-btn--confirm" onclick="confirmSell()">VENDRE</button>
+        <button class="market-modal-btn market-modal-btn--cancel" onclick="closeSellModal()">ANNULER</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUY MODAL -->
+  <div class="market-overlay hidden" id="buy-overlay" onclick="if(event.target===this)closeBuyModal()">
+    <div class="market-modal">
+      <h3>ACHETER</h3>
+      <div class="market-modal-card-preview" id="buy-preview-emoji"></div>
+      <div class="market-modal-card-name" id="buy-preview-name"></div>
+      <div class="market-modal-info" id="buy-price-info"></div>
+      <div class="market-modal-info" id="buy-seller-info" style="color:#666;font-size:14px"></div>
+      <div class="market-modal-actions" style="margin-top:14px">
+        <button class="market-modal-btn market-modal-btn--confirm" onclick="confirmBuy()">ACHETER</button>
+        <button class="market-modal-btn market-modal-btn--cancel" onclick="closeBuyModal()">ANNULER</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="version-tag">v1.6.0</div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/friends.js"></script>
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/market.js"></script>
+</body>
+</html>

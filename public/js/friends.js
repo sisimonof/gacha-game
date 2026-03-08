@@ -83,9 +83,10 @@
       .sort(function(a, b) { return (b.online ? 1 : 0) - (a.online ? 1 : 0); })
       .map(function(f) {
         var name = f.displayName || f.username;
+        var frameClass = (f.profileFrame && f.profileFrame !== 'none') ? ' frame-' + f.profileFrame : '';
         return '<div class="friend-item ' + (f.online ? 'online' : '') + '" onclick="openChat(' + f.friendUserId + ', \'' + escapeAttr(name) + '\')">' +
           '<span class="friend-status-dot ' + (f.online ? 'dot-online' : 'dot-offline') + '"></span>' +
-          '<span class="friend-avatar">' + (f.avatar || '⚔') + '</span>' +
+          '<span class="friend-avatar' + frameClass + '">' + (f.avatar || '⚔') + '</span>' +
           '<span class="friend-name">' + escapeHtml(name) + '</span>' +
           (f.unreadCount > 0 ? '<span class="friend-unread">' + f.unreadCount + '</span>' : '') +
         '</div>';
