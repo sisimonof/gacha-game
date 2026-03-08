@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GACHA CARDS - Admin Panel</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body>
   <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
@@ -221,6 +222,9 @@
   </div>
 
   <div class="version-tag">v1.2.0</div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/friends.js"></script>
   <script src="/js/card-renderer.js"></script>
   <script src="/js/admin.js"></script>
 </body>

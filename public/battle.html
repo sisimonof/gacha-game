@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GACHA CARDS - Combat</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body class="battle-page">
   <div class="bg-grid"></div>
@@ -110,6 +111,8 @@
   <button class="bt-surrender hidden" id="surrender-btn" onclick="surrender()">🏳 ABANDON</button>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/friends.js"></script>
   <script src="/js/card-renderer.js"></script>
   <script src="/js/battle.js"></script>
 </body>

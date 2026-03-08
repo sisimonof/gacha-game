@@ -235,6 +235,54 @@ db.exec(`
   }
 }
 
+// Migration: login streak + additional stat columns
+{
+  const cols2 = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  const newMigrations = [
+    ['login_streak', 'INTEGER DEFAULT 0'],
+    ['last_streak_date', "TEXT DEFAULT ''"],
+    ['stat_pvp_losses', 'INTEGER DEFAULT 0'],
+    ['stat_casino_won', 'INTEGER DEFAULT 0'],
+    ['stat_total_earned', 'INTEGER DEFAULT 0'],
+    ['stat_fusion_success', 'INTEGER DEFAULT 0'],
+    ['stat_fusion_fail', 'INTEGER DEFAULT 0'],
+    ['stat_boosters_origines', 'INTEGER DEFAULT 0'],
+    ['stat_boosters_rift', 'INTEGER DEFAULT 0'],
+    ['stat_boosters_avance', 'INTEGER DEFAULT 0']
+  ];
+  for (const [col, type] of newMigrations) {
+    if (!cols2.includes(col)) {
+      db.exec(`ALTER TABLE users ADD COLUMN ${col} ${type}`);
+      console.log(`Migration: ${col} ajouté`);
+    }
+  }
+}
+
+// === FRIENDS & CHAT ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS friendships (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    friend_id INTEGER NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, friend_id)
+  )
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER NOT NULL,
+    receiver_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_read INTEGER DEFAULT 0
+  )
+`);
+db.exec('CREATE INDEX IF NOT EXISTS idx_chat_sr ON chat_messages(sender_id, receiver_id)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_friend_uid ON friendships(user_id)');
+db.exec('CREATE INDEX IF NOT EXISTS idx_friend_fid ON friendships(friend_id)');
+
 // === GIFT CODES ===
 db.exec(`
   CREATE TABLE IF NOT EXISTS gift_codes (
@@ -731,6 +779,28 @@ const ACHIEVEMENTS = [
 // CASINO
 // ============================================
 const CASINO_COST = 200;
+
+// --- LOGIN STREAK ---
+const STREAK_REWARDS = [
+  { day: 1, credits: 200, card: null },
+  { day: 2, credits: 250, card: null },
+  { day: 3, credits: 300, card: null },
+  { day: 4, credits: 350, card: null },
+  { day: 5, credits: 400, card: null },
+  { day: 6, credits: 450, card: null },
+  { day: 7, credits: 500, card: 'rare' }
+];
+
+// --- DAILY SHOP ---
+const DAILY_SHOP_PRICES = { rare: 200, epique: 500, legendaire: 1200 };
+function seededRandom(seed) {
+  let s = 0;
+  for (let i = 0; i < seed.length; i++) { s = ((s << 5) - s) + seed.charCodeAt(i); s = s & s; }
+  return function() { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+}
+
+// --- ONLINE USERS ---
+const onlineUsers = new Set();
 const CASINO_SEGMENTS = [
   { label: 'PERDU',            color: '#333333', weight: 30,  reward: { type: 'nothing' } },
   { label: '50 CR',            color: '#2a5a2a', weight: 20,  reward: { type: 'credits', amount: 50 } },
@@ -871,6 +941,13 @@ function checkAchievements(userId) {
     if (ach.check(stats)) {
       insert.run(userId, ach.key);
       newlyUnlocked.push(ach);
+    }
+  }
+  // Real-time notification
+  for (const ach of newlyUnlocked) {
+    const sock = userSocketMap.get(userId);
+    if (sock && sock.connected) {
+      sock.emit('achievement:unlocked', { key: ach.key, label: ach.label, icon: ach.icon });
     }
   }
   return newlyUnlocked;
@@ -2940,11 +3017,20 @@ app.post('/api/logout', (req, res) => {
 
 // --- Routes USER ---
 app.get('/api/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date FROM users WHERE id = ?').get(req.session.userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(req.session.userId).c;
 
   const today = new Date().toISOString().split('T')[0];
   const canClaimDaily = user.last_daily !== today;
+
+  // Calculate current streak for display
+  let displayStreak = user.login_streak || 0;
+  if (user.last_streak_date) {
+    const lastDate = new Date(user.last_streak_date);
+    const todayDate = new Date(today);
+    const diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+    if (diffDays > 1) displayStreak = 0;
+  }
 
   const bp = db.prepare('SELECT xp, current_tier FROM battle_pass WHERE user_id = ?').get(req.session.userId);
 
@@ -2956,6 +3042,8 @@ app.get('/api/me', requireAuth, (req, res) => {
     essence: user.excavation_essence || 0,
     cardCount,
     canClaimDaily,
+    loginStreak: displayStreak,
+    streakRewards: STREAK_REWARDS,
     usernameEffect: user.username_effect || '',
     unlockedAvatars: JSON.parse(user.unlocked_avatars || '["⚔"]'),
     battlePassTier: bp?.current_tier || 0,
@@ -3006,23 +3094,49 @@ app.post('/api/settings', requireAuth, (req, res) => {
 });
 
 app.post('/api/daily', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT credits, last_daily FROM users WHERE id = ?').get(req.session.userId);
+  const userId = req.session.userId;
+  const user = db.prepare('SELECT credits, last_daily, login_streak, last_streak_date FROM users WHERE id = ?').get(userId);
   const today = new Date().toISOString().split('T')[0];
 
   if (user.last_daily === today) {
     return res.status(400).json({ error: 'Deja recupere aujourd\'hui !' });
   }
 
-  const DAILY_AMOUNT = 200;
-  db.prepare('UPDATE users SET credits = credits + ?, last_daily = ? WHERE id = ?')
-    .run(DAILY_AMOUNT, today, req.session.userId);
-  addBattlePassXP(req.session.userId, BP_XP.daily_login);
-  updateQuestProgress(req.session.userId, 'daily_claim', 1);
-  updateQuestProgress(req.session.userId, 'credits_earned', DAILY_AMOUNT);
-  checkAchievements(req.session.userId);
+  // Calculate streak
+  let newStreak = 1;
+  if (user.last_streak_date) {
+    const lastDate = new Date(user.last_streak_date);
+    const todayDate = new Date(today);
+    const diffDays = Math.floor((todayDate - lastDate) / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) {
+      newStreak = (user.login_streak >= 7) ? 1 : user.login_streak + 1;
+    } else {
+      newStreak = 1;
+    }
+  }
 
-  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
-  res.json({ success: true, amount: DAILY_AMOUNT, credits: newCredits });
+  const reward = STREAK_REWARDS[newStreak - 1];
+  const creditAmount = reward.credits;
+
+  db.prepare('UPDATE users SET credits = credits + ?, last_daily = ?, login_streak = ?, last_streak_date = ?, stat_total_earned = stat_total_earned + ? WHERE id = ?')
+    .run(creditAmount, today, newStreak, today, creditAmount, userId);
+  addBattlePassXP(userId, BP_XP.daily_login);
+  updateQuestProgress(userId, 'daily_claim', 1);
+  updateQuestProgress(userId, 'credits_earned', creditAmount);
+  checkAchievements(userId);
+
+  let cardGiven = null;
+  if (reward.card) {
+    const cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(reward.card);
+    if (cards.length > 0) {
+      const card = cards[Math.floor(Math.random() * cards.length)];
+      db.prepare('INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)').run(userId, card.id);
+      cardGiven = { name: card.name, rarity: card.rarity, emoji: card.emoji };
+    }
+  }
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ success: true, amount: creditAmount, credits: newCredits, streakDay: newStreak, cardGiven });
 });
 
 // --- Routes BOUTIQUE ---
@@ -3040,6 +3154,11 @@ app.post('/api/boosters/:id/open', requireAuth, (req, res) => {
   }
 
   db.prepare('UPDATE users SET credits = credits - ?, stat_boosters_opened = stat_boosters_opened + 1, stat_credits_spent = stat_credits_spent + ? WHERE id = ?').run(booster.price, booster.price, req.session.userId);
+  // Track per-booster type
+  const boosterCol = 'stat_boosters_' + req.params.id;
+  if (['stat_boosters_origines', 'stat_boosters_rift', 'stat_boosters_avance'].includes(boosterCol)) {
+    db.prepare(`UPDATE users SET ${boosterCol} = ${boosterCol} + 1 WHERE id = ?`).run(req.session.userId);
+  }
   const cards = openBooster(booster.id, req.session.userId);
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
   addBattlePassXP(req.session.userId, BP_XP.booster_open);
@@ -3170,6 +3289,11 @@ app.post('/api/fusion', requireAuth, (req, res) => {
   }
   addBattlePassXP(req.session.userId, BP_XP.fusion);
   db.prepare('UPDATE users SET stat_fusions = stat_fusions + 1 WHERE id = ?').run(req.session.userId);
+  if (success) {
+    db.prepare('UPDATE users SET stat_fusion_success = stat_fusion_success + 1 WHERE id = ?').run(req.session.userId);
+  } else {
+    db.prepare('UPDATE users SET stat_fusion_fail = stat_fusion_fail + 1 WHERE id = ?').run(req.session.userId);
+  }
   updateQuestProgress(req.session.userId, 'fusion', 1);
   checkAchievements(req.session.userId);
 
@@ -4473,7 +4597,9 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
     db.prepare('DELETE FROM battle_pass WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM user_quests WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM user_achievements WHERE user_id = ?').run(userId);
-    db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0, unlocked_avatars = \'["⚔"]\', username_effect = \'\', avatar = \'⚔\', stat_boosters_opened = 0, stat_pvp_wins = 0, stat_diamonds_mined = 0, stat_fusions = 0, stat_casino_spins = 0, stat_credits_spent = 0 WHERE id = ?').run(userId);
+    db.prepare('DELETE FROM friendships WHERE user_id = ? OR friend_id = ?').run(userId, userId);
+    db.prepare('DELETE FROM chat_messages WHERE sender_id = ? OR receiver_id = ?').run(userId, userId);
+    db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0, unlocked_avatars = \'["⚔"]\', username_effect = \'\', avatar = \'⚔\', login_streak = 0, last_streak_date = \'\', stat_boosters_opened = 0, stat_pvp_wins = 0, stat_pvp_losses = 0, stat_diamonds_mined = 0, stat_fusions = 0, stat_fusion_success = 0, stat_fusion_fail = 0, stat_casino_spins = 0, stat_casino_won = 0, stat_credits_spent = 0, stat_total_earned = 0, stat_boosters_origines = 0, stat_boosters_rift = 0, stat_boosters_avance = 0 WHERE id = ?').run(userId);
   });
   resetTx();
   res.json({ success: true, username: user.username });
@@ -5313,7 +5439,7 @@ app.post('/api/casino/spin', requireAuth, (req, res) => {
   let cardGiven = null;
 
   if (segment.reward.type === 'credits' && segment.reward.amount > 0) {
-    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(segment.reward.amount, userId);
+    db.prepare('UPDATE users SET credits = credits + ?, stat_casino_won = stat_casino_won + ?, stat_total_earned = stat_total_earned + ? WHERE id = ?').run(segment.reward.amount, segment.reward.amount, segment.reward.amount, userId);
     rewardInfo.amount = segment.reward.amount;
   } else if (segment.reward.type === 'xp') {
     addBattlePassXP(userId, segment.reward.amount);
@@ -5348,6 +5474,223 @@ app.post('/api/casino/spin', requireAuth, (req, res) => {
 });
 
 // ============================================
+// DAILY SHOP (BOUTIQUE ROTATIVE)
+// ============================================
+app.get('/api/shop/daily-cards', requireAuth, (req, res) => {
+  const today = new Date().toISOString().split('T')[0];
+  const rng = seededRandom('dailyshop-' + today);
+  const eligibleCards = db.prepare("SELECT * FROM cards WHERE rarity IN ('rare', 'epique', 'legendaire')").all();
+  if (eligibleCards.length < 3) return res.json({ cards: [], resetIn: 0 });
+
+  const byRarity = { rare: [], epique: [], legendaire: [] };
+  for (const c of eligibleCards) { if (byRarity[c.rarity]) byRarity[c.rarity].push(c); }
+
+  const picked = [];
+  for (const r of ['rare', 'epique', 'legendaire']) {
+    if (byRarity[r].length > 0) {
+      const idx = Math.floor(rng() * byRarity[r].length);
+      picked.push({ ...byRarity[r][idx], shopPrice: DAILY_SHOP_PRICES[r] });
+    }
+  }
+
+  const now = new Date();
+  const tomorrow = new Date(now);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  tomorrow.setUTCHours(0, 0, 0, 0);
+  const resetIn = Math.floor((tomorrow - now) / 1000);
+
+  res.json({ cards: picked, resetIn });
+});
+
+app.post('/api/shop/buy-card', requireAuth, (req, res) => {
+  const { cardId } = req.body;
+  const userId = req.session.userId;
+  const today = new Date().toISOString().split('T')[0];
+  const rng = seededRandom('dailyshop-' + today);
+  const eligibleCards = db.prepare("SELECT * FROM cards WHERE rarity IN ('rare', 'epique', 'legendaire')").all();
+  const byRarity = { rare: [], epique: [], legendaire: [] };
+  for (const c of eligibleCards) { if (byRarity[c.rarity]) byRarity[c.rarity].push(c); }
+
+  let validCard = null;
+  for (const r of ['rare', 'epique', 'legendaire']) {
+    if (byRarity[r].length > 0) {
+      const idx = Math.floor(rng() * byRarity[r].length);
+      if (byRarity[r][idx].id === cardId) { validCard = byRarity[r][idx]; break; }
+    }
+  }
+  if (!validCard) return res.status(400).json({ error: 'Carte non disponible aujourd\'hui' });
+
+  const price = DAILY_SHOP_PRICES[validCard.rarity];
+  const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId);
+  if (user.credits < price) return res.status(400).json({ error: 'Pas assez de credits !' });
+
+  db.prepare('UPDATE users SET credits = credits - ?, stat_credits_spent = stat_credits_spent + ? WHERE id = ?').run(price, price, userId);
+  db.prepare('INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)').run(userId, cardId);
+  updateQuestProgress(userId, 'credits_spent', price);
+  checkAchievements(userId);
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ success: true, card: validCard, credits: newCredits });
+});
+
+// ============================================
+// STATS API
+// ============================================
+app.get('/api/stats', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const user = db.prepare(`SELECT credits,
+    stat_pvp_wins, stat_pvp_losses,
+    stat_casino_spins, stat_casino_won, stat_credits_spent,
+    stat_fusions, stat_fusion_success, stat_fusion_fail,
+    stat_boosters_opened, stat_boosters_origines, stat_boosters_rift, stat_boosters_avance,
+    stat_diamonds_mined, stat_total_earned,
+    created_at FROM users WHERE id = ?`).get(userId);
+
+  const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(userId).c;
+  const rarityBreakdown = db.prepare(`
+    SELECT c.rarity, COUNT(*) as count FROM user_cards uc
+    JOIN cards c ON uc.card_id = c.id WHERE uc.user_id = ? GROUP BY c.rarity
+  `).all(userId);
+
+  const totalPvp = (user.stat_pvp_wins || 0) + (user.stat_pvp_losses || 0);
+  res.json({
+    pvp: { wins: user.stat_pvp_wins || 0, losses: user.stat_pvp_losses || 0, winRate: totalPvp > 0 ? Math.round((user.stat_pvp_wins / totalPvp) * 100) : 0 },
+    casino: { spins: user.stat_casino_spins || 0, spent: (user.stat_casino_spins || 0) * CASINO_COST, won: user.stat_casino_won || 0, net: (user.stat_casino_won || 0) - ((user.stat_casino_spins || 0) * CASINO_COST) },
+    fusion: { total: user.stat_fusions || 0, success: user.stat_fusion_success || 0, fail: user.stat_fusion_fail || 0, rate: (user.stat_fusions || 0) > 0 ? Math.round(((user.stat_fusion_success || 0) / (user.stat_fusions || 0)) * 100) : 0 },
+    boosters: { total: user.stat_boosters_opened || 0, origines: user.stat_boosters_origines || 0, rift: user.stat_boosters_rift || 0, avance: user.stat_boosters_avance || 0 },
+    cards: { total: cardCount, byRarity: Object.fromEntries(rarityBreakdown.map(r => [r.rarity, r.count])) },
+    credits: { current: user.credits, totalSpent: user.stat_credits_spent || 0, totalEarned: user.stat_total_earned || 0 },
+    mine: { diamondsMined: user.stat_diamonds_mined || 0 },
+    memberSince: user.created_at
+  });
+});
+
+// ============================================
+// FRIENDS API
+// ============================================
+app.get('/api/friends', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const friends = db.prepare(`
+    SELECT f.id as friendshipId,
+      CASE WHEN f.user_id = ? THEN f.friend_id ELSE f.user_id END as friendUserId,
+      CASE WHEN f.user_id = ? THEN u2.username ELSE u1.username END as username,
+      CASE WHEN f.user_id = ? THEN u2.display_name ELSE u1.display_name END as displayName,
+      CASE WHEN f.user_id = ? THEN u2.avatar ELSE u1.avatar END as avatar
+    FROM friendships f
+    JOIN users u1 ON f.user_id = u1.id
+    JOIN users u2 ON f.friend_id = u2.id
+    WHERE (f.user_id = ? OR f.friend_id = ?) AND f.status = 'accepted'
+  `).all(userId, userId, userId, userId, userId, userId);
+  friends.forEach(f => { f.online = onlineUsers.has(f.friendUserId); });
+
+  const pendingReceived = db.prepare(`
+    SELECT f.id as friendshipId, u.username, u.display_name as displayName, u.avatar
+    FROM friendships f JOIN users u ON f.user_id = u.id
+    WHERE f.friend_id = ? AND f.status = 'pending'
+  `).all(userId);
+
+  const pendingSent = db.prepare(`
+    SELECT f.id as friendshipId, u.username, u.display_name as displayName, u.avatar
+    FROM friendships f JOIN users u ON f.friend_id = u.id
+    WHERE f.user_id = ? AND f.status = 'pending'
+  `).all(userId);
+
+  const unreadCounts = db.prepare('SELECT sender_id, COUNT(*) as count FROM chat_messages WHERE receiver_id = ? AND is_read = 0 GROUP BY sender_id').all(userId);
+  const unreadMap = Object.fromEntries(unreadCounts.map(u => [u.sender_id, u.count]));
+  friends.forEach(f => { f.unreadCount = unreadMap[f.friendUserId] || 0; });
+
+  res.json({ friends, pendingReceived, pendingSent });
+});
+
+app.post('/api/friends/request', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'Pseudo requis' });
+
+  const target = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE OR display_name = ? COLLATE NOCASE').get(username, username);
+  if (!target) return res.status(404).json({ error: 'Joueur introuvable' });
+  if (target.id === userId) return res.status(400).json({ error: 'Tu ne peux pas t\'ajouter toi-meme' });
+
+  const existing = db.prepare('SELECT * FROM friendships WHERE (user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)').get(userId, target.id, target.id, userId);
+  if (existing) {
+    if (existing.status === 'accepted') return res.status(400).json({ error: 'Deja amis !' });
+    return res.status(400).json({ error: 'Demande deja envoyee' });
+  }
+
+  db.prepare('INSERT INTO friendships (user_id, friend_id, status) VALUES (?, ?, ?)').run(userId, target.id, 'pending');
+  const sock = userSocketMap.get(target.id);
+  if (sock && sock.connected) {
+    const sender = db.prepare('SELECT username, display_name, avatar FROM users WHERE id = ?').get(userId);
+    sock.emit('friend:request', { username: sender.display_name || sender.username, avatar: sender.avatar });
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/friends/accept', requireAuth, (req, res) => {
+  const { friendshipId } = req.body;
+  const friendship = db.prepare('SELECT * FROM friendships WHERE id = ? AND friend_id = ? AND status = ?').get(friendshipId, req.session.userId, 'pending');
+  if (!friendship) return res.status(404).json({ error: 'Demande introuvable' });
+  db.prepare('UPDATE friendships SET status = ? WHERE id = ?').run('accepted', friendshipId);
+  const sock = userSocketMap.get(friendship.user_id);
+  if (sock && sock.connected) {
+    const accepter = db.prepare('SELECT username, display_name FROM users WHERE id = ?').get(req.session.userId);
+    sock.emit('friend:accepted', { username: accepter.display_name || accepter.username });
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/friends/decline', requireAuth, (req, res) => {
+  const { friendshipId } = req.body;
+  const f = db.prepare('SELECT * FROM friendships WHERE id = ? AND friend_id = ? AND status = ?').get(friendshipId, req.session.userId, 'pending');
+  if (!f) return res.status(404).json({ error: 'Demande introuvable' });
+  db.prepare('DELETE FROM friendships WHERE id = ?').run(friendshipId);
+  res.json({ success: true });
+});
+
+app.post('/api/friends/remove', requireAuth, (req, res) => {
+  const { friendshipId } = req.body;
+  const f = db.prepare('SELECT * FROM friendships WHERE id = ? AND (user_id = ? OR friend_id = ?)').get(friendshipId, req.session.userId, req.session.userId);
+  if (!f) return res.status(404).json({ error: 'Ami introuvable' });
+  db.prepare('DELETE FROM friendships WHERE id = ?').run(friendshipId);
+  res.json({ success: true });
+});
+
+// ============================================
+// CHAT API
+// ============================================
+app.get('/api/chat/:friendId', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const friendId = parseInt(req.params.friendId);
+  const friendship = db.prepare('SELECT id FROM friendships WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) AND status = ?').get(userId, friendId, friendId, userId, 'accepted');
+  if (!friendship) return res.status(403).json({ error: 'Non amis' });
+
+  const messages = db.prepare('SELECT id, sender_id, receiver_id, message, created_at, is_read FROM chat_messages WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) ORDER BY created_at DESC LIMIT 50').all(userId, friendId, friendId, userId);
+  db.prepare('UPDATE chat_messages SET is_read = 1 WHERE sender_id = ? AND receiver_id = ? AND is_read = 0').run(friendId, userId);
+  res.json(messages.reverse());
+});
+
+app.post('/api/chat/:friendId', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const friendId = parseInt(req.params.friendId);
+  const { message } = req.body;
+  if (!message || message.trim().length === 0) return res.status(400).json({ error: 'Message vide' });
+  if (message.length > 500) return res.status(400).json({ error: 'Message trop long (max 500)' });
+
+  const friendship = db.prepare('SELECT id FROM friendships WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) AND status = ?').get(userId, friendId, friendId, userId, 'accepted');
+  if (!friendship) return res.status(403).json({ error: 'Non amis' });
+
+  const result = db.prepare('INSERT INTO chat_messages (sender_id, receiver_id, message) VALUES (?, ?, ?)').run(userId, friendId, message.trim());
+  const msg = { id: result.lastInsertRowid, sender_id: userId, receiver_id: friendId, message: message.trim(), created_at: new Date().toISOString(), is_read: 0 };
+
+  const sock = userSocketMap.get(friendId);
+  if (sock && sock.connected) {
+    const sender = db.prepare('SELECT username, display_name, avatar FROM users WHERE id = ?').get(userId);
+    sock.emit('chat:message', { ...msg, senderName: sender.display_name || sender.username, senderAvatar: sender.avatar });
+  }
+  res.json(msg);
+});
+
+// ============================================
 // PAGE ROUTES
 // ============================================
 app.get('/intro', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'intro.html')); });
@@ -5363,6 +5706,7 @@ app.get('/pvp', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, '
 app.get('/decks', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'decks.html')); });
 app.get('/battlepass', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battlepass.html')); });
 app.get('/casino', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'casino.html')); });
+app.get('/stats', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'stats.html')); });
 app.get('/admin', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.get('/wiki', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'wiki.html')); });
 
@@ -5613,6 +5957,9 @@ function finalizePvpBattle(battle) {
         db.prepare('UPDATE users SET stat_pvp_wins = stat_pvp_wins + 1 WHERE id = ?').run(player.userId);
         updateQuestProgress(player.userId, 'pvp_win', 1);
       }
+      if (result === 'defeat') {
+        db.prepare('UPDATE users SET stat_pvp_losses = stat_pvp_losses + 1 WHERE id = ?').run(player.userId);
+      }
       if (reward > 0) updateQuestProgress(player.userId, 'credits_earned', reward);
       checkAchievements(player.userId);
     } catch(e) { console.error('[PVP] DB error:', e.message); }
@@ -5790,6 +6137,22 @@ io.on('connection', (socket) => {
   const userId = sess.userId;
   userSocketMap.set(userId, socket);
 
+  // --- Friends online status ---
+  onlineUsers.add(userId);
+  const friendIds = db.prepare(`
+    SELECT CASE WHEN user_id = ? THEN friend_id ELSE user_id END as fid
+    FROM friendships WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'
+  `).all(userId, userId, userId);
+  for (const { fid } of friendIds) {
+    const fSock = userSocketMap.get(fid);
+    if (fSock && fSock.connected) fSock.emit('friend:status', { userId, online: true });
+  }
+
+  socket.on('chat:typing', ({ friendId }) => {
+    const fSock = userSocketMap.get(friendId);
+    if (fSock && fSock.connected) fSock.emit('chat:typing', { userId });
+  });
+
   // Check reconnection to active PVP battle
   for (const [battleId, battle] of pvpBattles) {
     if (battle.result) continue;
@@ -5810,6 +6173,15 @@ io.on('connection', (socket) => {
   }
 
   socket.on('disconnect', () => {
+    onlineUsers.delete(userId);
+    const offFriends = db.prepare(`
+      SELECT CASE WHEN user_id = ? THEN friend_id ELSE user_id END as fid
+      FROM friendships WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'
+    `).all(userId, userId, userId);
+    for (const { fid } of offFriends) {
+      const fSock = userSocketMap.get(fid);
+      if (fSock && fSock.connected) fSock.emit('friend:status', { userId, online: false });
+    }
     const qIdx = pvpQueue.findIndex(p => p.userId === userId);
     if (qIdx !== -1) pvpQueue.splice(qIdx, 1);
     handlePvpDisconnect(userId);

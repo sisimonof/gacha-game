@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GACHA CARDS - Boutique</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body>
   <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
@@ -18,14 +19,26 @@
         <!-- Rempli par JS -->
       </div>
 
-      <!-- BONUS DU JOUR -->
-      <div class="shop-daily" id="shop-daily">
-        <div class="shop-daily-icon">&#127873;</div>
-        <div class="shop-daily-info">
-          <h3 class="shop-daily-title">BONUS DU JOUR</h3>
-          <p class="shop-daily-desc" id="daily-desc">+200 credits gratuits</p>
+      <!-- STREAK BONUS -->
+      <div class="shop-streak" id="shop-streak">
+        <div class="streak-header">
+          <div class="shop-daily-icon">&#127873;</div>
+          <div class="streak-info">
+            <h3 class="shop-daily-title">BONUS CONSECUTIF</h3>
+            <p class="streak-desc" id="streak-desc">Jour 0 / 7</p>
+          </div>
+          <button class="shop-daily-btn" id="daily-btn" onclick="claimDaily()">RECUPERER</button>
         </div>
-        <button class="shop-daily-btn" id="daily-btn" onclick="claimDaily()">RECUPERER</button>
+        <div class="streak-progress" id="streak-progress"></div>
+      </div>
+
+      <!-- BOUTIQUE DU JOUR -->
+      <div class="daily-shop-section" id="daily-shop-section">
+        <div class="daily-shop-header">
+          <h3 class="daily-shop-title">&#128302; BOUTIQUE DU JOUR</h3>
+          <span class="daily-shop-timer" id="daily-shop-timer">??:??:??</span>
+        </div>
+        <div class="daily-shop-cards" id="daily-shop-cards"></div>
       </div>
 
       <!-- CODE CADEAU -->
@@ -68,6 +81,9 @@
   <div class="screen-flash hidden" id="screen-flash"></div>
 
   <div class="version-tag">v1.2.0</div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/friends.js"></script>
   <script src="/js/card-renderer.js"></script>
   <script src="/js/shop.js"></script>
 </body>

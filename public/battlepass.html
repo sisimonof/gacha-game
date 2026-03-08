@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GACHA CARDS - Passe de Combat</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body class="bp-page">
   <div class="bg-grid"></div>
@@ -22,6 +23,7 @@
         <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
         <a href="/battlepass" class="dash-nav-link dash-nav-link--active dash-nav-link--bp">PASSE</a>
         <a href="/casino" class="dash-nav-link dash-nav-link--casino">CASINO</a>
+        <a href="/stats" class="dash-nav-link dash-nav-link--stats">STATS</a>
         <a href="/wiki" class="dash-nav-link">WIKI</a>
       </div>
       <div class="dash-nav-user">
@@ -80,6 +82,9 @@
   </div>
 
   <div class="version-tag">v1.2.0</div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/friends.js"></script>
   <script src="/js/battlepass.js"></script>
 </body>
 </html>

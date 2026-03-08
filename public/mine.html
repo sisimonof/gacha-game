@@ -6,6 +6,7 @@
   <title>GACHA CARDS — Mine</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body class="mine-page">
   <div class="bg-grid"></div>
@@ -22,6 +23,7 @@
         <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
         <a href="/battlepass" class="dash-nav-link dash-nav-link--bp">PASSE</a>
         <a href="/casino" class="dash-nav-link dash-nav-link--casino">CASINO</a>
+        <a href="/stats" class="dash-nav-link dash-nav-link--stats">STATS</a>
         <a href="/wiki" class="dash-nav-link">WIKI</a>
       </div>
       <div class="dash-nav-user">
@@ -134,6 +136,9 @@
   <div class="mine-notification hidden" id="mine-notification"></div>
 
   <span class="version-tag">v1.3.0</span>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/friends.js"></script>
   <script src="/js/mine.js"></script>
 </body>
 </html>

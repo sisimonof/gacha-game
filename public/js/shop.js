@@ -10,6 +10,7 @@ const BOOSTER_IMAGES = {
 };
 
 let currentCredits = 0;
+let cachedStreakRewards = null;
 
 async function loadCredits() {
   const res = await fetch('/api/me');
@@ -17,20 +18,36 @@ async function loadCredits() {
   const data = await res.json();
   currentCredits = data.credits;
   document.getElementById('credits-count').textContent = data.credits;
+  cachedStreakRewards = data.streakRewards;
 
-  // Daily bonus state
-  if (!data.canClaimDaily) {
-    markDailyClaimed();
-  }
+  // Streak UI
+  renderStreakProgress(data.loginStreak, data.streakRewards, data.canClaimDaily);
+  if (!data.canClaimDaily) markDailyClaimed();
+}
+
+function renderStreakProgress(currentDay, rewards, canClaim) {
+  const container = document.getElementById('streak-progress');
+  const desc = document.getElementById('streak-desc');
+  if (!container || !desc) return;
+  desc.textContent = 'Jour ' + currentDay + ' / 7';
+
+  container.innerHTML = (rewards || []).map(function(r, i) {
+    const dayNum = i + 1;
+    const claimed = dayNum <= currentDay;
+    const isNext = canClaim && (dayNum === currentDay + 1 || (currentDay === 0 && dayNum === 1) || (currentDay >= 7 && dayNum === 1));
+    const classes = ['streak-day'];
+    if (claimed) classes.push('streak-claimed');
+    if (isNext) classes.push('streak-next');
+    return '<div class="' + classes.join(' ') + '">' +
+      '<span class="streak-day-num">J' + dayNum + '</span>' +
+      '<span class="streak-day-reward">' + r.credits + ' CR' + (r.card ? ' + 🃏' : '') + '</span>' +
+    '</div>';
+  }).join('');
 }
 
 function markDailyClaimed() {
-  const daily = document.getElementById('shop-daily');
   const btn = document.getElementById('daily-btn');
-  const desc = document.getElementById('daily-desc');
-  if (daily) daily.classList.add('daily-claimed');
   if (btn) { btn.classList.add('daily-claimed'); btn.textContent = 'RECUPERE'; btn.disabled = true; }
-  if (desc) desc.textContent = 'Reviens demain !';
 }
 
 async function claimDaily() {
@@ -44,13 +61,74 @@ async function claimDaily() {
     if (data.success) {
       currentCredits = data.credits;
       document.getElementById('credits-count').textContent = data.credits;
-      document.getElementById('daily-desc').textContent = 'Recu ! +200 CR';
+      renderStreakProgress(data.streakDay, cachedStreakRewards, false);
       markDailyClaimed();
       screenFlash();
+      if (window.showToast) showToast('+' + data.amount + ' CR (Jour ' + data.streakDay + ')', 'success');
+      if (data.cardGiven) {
+        if (window.showToast) showToast('Carte bonus: ' + (data.cardGiven.emoji || '') + ' ' + data.cardGiven.name, 'achievement', 6000);
+      }
     } else {
       markDailyClaimed();
     }
   } catch {}
+}
+
+// === BOUTIQUE DU JOUR ===
+async function loadDailyShop() {
+  try {
+    const res = await fetch('/api/shop/daily-cards');
+    const data = await res.json();
+    const container = document.getElementById('daily-shop-cards');
+    if (!container || !data.cards) return;
+
+    container.innerHTML = data.cards.map(function(card) {
+      const r = RARITY_COLORS[card.rarity] || RARITY_COLORS['rare'];
+      return '<div class="daily-shop-card rarity-' + card.rarity + '" style="border-color:' + r.color + '">' +
+        '<div class="daily-shop-card-visual">' + (card.emoji || '?') + '</div>' +
+        '<div class="daily-shop-card-name">' + card.name + '</div>' +
+        '<div class="daily-shop-card-rarity" style="color:' + r.color + '">' + card.rarity.toUpperCase() + '</div>' +
+        '<div class="daily-shop-card-stats">' + card.attack + '/' + card.defense + '/' + card.hp + '</div>' +
+        '<button class="daily-shop-buy-btn" onclick="buyDailyCard(' + card.id + ',' + card.shopPrice + ')">' + card.shopPrice + ' CR</button>' +
+      '</div>';
+    }).join('');
+
+    if (data.resetIn > 0) startDailyShopTimer(data.resetIn);
+  } catch(e) {}
+}
+
+async function buyDailyCard(cardId, price) {
+  if (currentCredits < price) { screenShake(); return; }
+  try {
+    const res = await fetch('/api/shop/buy-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cardId: cardId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      currentCredits = data.credits;
+      document.getElementById('credits-count').textContent = data.credits;
+      screenFlash();
+      if (window.showToast) showToast('Carte achetee: ' + (data.card.emoji || '') + ' ' + data.card.name, 'success');
+    } else {
+      if (window.showToast) showToast(data.error, 'error');
+    }
+  } catch { if (window.showToast) showToast('Erreur serveur', 'error'); }
+}
+
+function startDailyShopTimer(seconds) {
+  let remaining = seconds;
+  const timerEl = document.getElementById('daily-shop-timer');
+  if (!timerEl) return;
+  const interval = setInterval(function() {
+    if (remaining <= 0) { clearInterval(interval); location.reload(); return; }
+    const h = Math.floor(remaining / 3600);
+    const m = Math.floor((remaining % 3600) / 60);
+    const s = remaining % 60;
+    timerEl.textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    remaining--;
+  }, 1000);
 }
 
 async function loadBoosters() {
@@ -394,3 +472,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 loadCredits();
 loadBoosters();
+loadDailyShop();

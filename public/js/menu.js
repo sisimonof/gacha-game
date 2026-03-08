@@ -340,7 +340,28 @@ document.getElementById('achievements-overlay').addEventListener('click', (e) =>
   if (e.target === e.currentTarget) closeAchievements();
 });
 
+// === THEME ===
+function setTheme(theme) {
+  if (theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('gacha-theme', theme);
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.removeItem('gacha-theme');
+  }
+  updateThemeButtons();
+}
+
+function updateThemeButtons() {
+  const current = localStorage.getItem('gacha-theme') || '';
+  document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('theme-active'));
+  if (current === 'blue') document.getElementById('theme-blue')?.classList.add('theme-active');
+  else if (current === 'rose') document.getElementById('theme-rose')?.classList.add('theme-active');
+  else document.getElementById('theme-green')?.classList.add('theme-active');
+}
+
 // Init
 initSettingsModal();
+updateThemeButtons();
 loadUser();
 loadQuests();

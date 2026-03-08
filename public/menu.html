@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GACHA CARDS - Menu</title>
   <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body class="dashboard-page">
   <div class="bg-grid"></div>
@@ -22,6 +23,7 @@
         <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
         <a href="/battlepass" class="dash-nav-link dash-nav-link--bp">PASSE</a>
         <a href="/casino" class="dash-nav-link dash-nav-link--casino">CASINO</a>
+        <a href="/stats" class="dash-nav-link dash-nav-link--stats">STATS</a>
         <a href="/wiki" class="dash-nav-link">WIKI</a>
       </div>
       <div class="dash-nav-user">
@@ -353,12 +355,33 @@
             <span class="settings-input-hint">3-20 caracteres (lettres, chiffres, _, -)</span>
           </div>
         </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section settings-theme-section">
+          <h3 class="settings-section-title">THEME</h3>
+          <div class="theme-buttons">
+            <button class="theme-btn theme-btn--green" onclick="setTheme('')" id="theme-green">
+              <div class="theme-btn-color"></div>
+              <span class="theme-btn-label">CRT VERT</span>
+            </button>
+            <button class="theme-btn theme-btn--blue" onclick="setTheme('blue')" id="theme-blue">
+              <div class="theme-btn-color"></div>
+              <span class="theme-btn-label">CYBER BLEU</span>
+            </button>
+            <button class="theme-btn theme-btn--rose" onclick="setTheme('rose')" id="theme-rose">
+              <div class="theme-btn-color"></div>
+              <span class="theme-btn-label">NEON ROSE</span>
+            </button>
+          </div>
+        </div>
         <button class="settings-save-btn" id="settings-save">> SAUVEGARDER</button>
         <p class="settings-msg" id="settings-msg"></p>
       </div>
     </div>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/friends.js"></script>
   <script src="/js/menu.js"></script>
 </body>
 </html>
