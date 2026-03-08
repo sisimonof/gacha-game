@@ -108,6 +108,52 @@ db.exec(`
   }
 }
 
+// --- Migration : ajout colonne excavation_essence ---
+{
+  const userCols3 = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!userCols3.includes('excavation_essence')) {
+    db.exec("ALTER TABLE users ADD COLUMN excavation_essence INTEGER DEFAULT 0");
+    console.log('Migration: excavation_essence ajouté');
+  }
+}
+
+// --- Tables Mine ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mine_state (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE,
+    grid TEXT NOT NULL DEFAULT '[]',
+    hidden_charbon INTEGER DEFAULT 0,
+    hidden_fer INTEGER DEFAULT 0,
+    hidden_or INTEGER DEFAULT 0,
+    hidden_diamant INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mine_inventory (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    resource TEXT NOT NULL,
+    slot_index INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    UNIQUE(user_id, slot_index)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mine_upgrades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL UNIQUE,
+    mine_speed INTEGER DEFAULT 0,
+    inventory_size INTEGER DEFAULT 0,
+    luck INTEGER DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
 // --- Seed compte admin ---
 {
   const adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
@@ -445,6 +491,79 @@ const BOOSTERS = [
   }
 ];
 
+// ============================================
+// SYSTEME DE MINE
+// ============================================
+const MINE_RESOURCES = {
+  charbon: { name: 'Charbon', price: 5, weight: 60, resistMult: 1 },
+  fer:     { name: 'Fer',     price: 15, weight: 25, resistMult: 1.2 },
+  or:      { name: 'Or',      price: 50, weight: 12, resistMult: 1.5 },
+  diamant: { name: 'Diamant', price: 100, weight: 3, resistMult: 2 }
+};
+
+const MINE_UPGRADES_CONFIG = {
+  mine_speed:     { name: 'Pioche Amelioree', emoji: '⛏', maxLevel: 5, costs: [1,2,3,5,8], desc: '-1 coup necessaire par niveau' },
+  inventory_size: { name: 'Sac Elargi',       emoji: '🎒', maxLevel: 5, costs: [1,1,2,3,5], desc: '+1 emplacement par niveau' },
+  luck:           { name: 'Oeil du Mineur',    emoji: '👁', maxLevel: 3, costs: [2,4,8],     desc: 'Ressources rares plus frequentes' }
+};
+
+const BASE_INVENTORY_SLOTS = 5;
+const MINE_GRID_SIZE = 20;
+
+function generateMineGrid(luckLevel = 0) {
+  const grid = [];
+  const counts = { charbon: 0, fer: 0, or: 0, diamant: 0 };
+
+  // Adjust weights based on luck
+  const weights = {};
+  const luckBonus = luckLevel * 2;
+  for (const [key, data] of Object.entries(MINE_RESOURCES)) {
+    if (key === 'charbon') {
+      weights[key] = Math.max(data.weight - luckBonus * 3, 20);
+    } else {
+      weights[key] = data.weight + luckBonus;
+    }
+  }
+  const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
+
+  for (let i = 0; i < MINE_GRID_SIZE * MINE_GRID_SIZE; i++) {
+    // Roll resource
+    let roll = Math.random() * totalWeight;
+    let resource = 'charbon';
+    for (const [key, w] of Object.entries(weights)) {
+      roll -= w;
+      if (roll <= 0) { resource = key; break; }
+    }
+
+    // Resistance based on resource rarity
+    const mult = MINE_RESOURCES[resource].resistMult;
+    const resistance = Math.max(3, Math.floor((3 + Math.random() * 7) * mult));
+
+    grid.push({ resource, resistance, hits: 0, mined: false, collected: false });
+    counts[resource]++;
+  }
+
+  return { grid, counts };
+}
+
+function getMineUpgrades(userId) {
+  let upgrades = db.prepare('SELECT * FROM mine_upgrades WHERE user_id = ?').get(userId);
+  if (!upgrades) {
+    db.prepare('INSERT INTO mine_upgrades (user_id) VALUES (?)').run(userId);
+    upgrades = { mine_speed: 0, inventory_size: 0, luck: 0 };
+  }
+  return upgrades;
+}
+
+function getMineInventory(userId) {
+  return db.prepare('SELECT * FROM mine_inventory WHERE user_id = ? ORDER BY slot_index').all(userId);
+}
+
+function getMaxSlots(userId) {
+  const upgrades = getMineUpgrades(userId);
+  return BASE_INVENTORY_SLOTS + upgrades.inventory_size;
+}
+
 function rollRarity(weights) {
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
   let roll = Math.random() * total;
@@ -482,6 +601,27 @@ function openBooster(boosterId, userId) {
     const isTemp = card.name.startsWith('Crystal ') ? 1 : (Math.random() < 0.08 ? 1 : 0);
     insertCard.run(userId, card.id, isShiny, isTemp);
     drawnCards.push({ ...card, is_shiny: isShiny, is_temp: isTemp });
+  }
+
+  // Chance de drop Essence d'Excavation (3% par carte tiree)
+  const essenceGained = drawnCards.filter(() => Math.random() < 0.03).length;
+  if (essenceGained > 0) {
+    db.prepare('UPDATE users SET excavation_essence = excavation_essence + ? WHERE id = ?').run(essenceGained, userId);
+    for (let e = 0; e < essenceGained; e++) {
+      drawnCards.push({
+        _isEssence: true,
+        name: "Essence d'Excavation",
+        rarity: 'epique',
+        emoji: '⛏',
+        type: 'essence',
+        element: 'terre',
+        attack: 0, defense: 0, hp: 0, mana_cost: 0,
+        ability_name: 'Excavation',
+        ability_desc: '+1 Essence d\'Excavation',
+        passive_desc: '',
+        is_shiny: 0, is_temp: 0
+      });
+    }
   }
 
   return drawnCards;
@@ -2432,7 +2572,7 @@ app.post('/api/logout', (req, res) => {
 
 // --- Routes USER ---
 app.get('/api/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence FROM users WHERE id = ?').get(req.session.userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(req.session.userId).c;
 
   const today = new Date().toISOString().split('T')[0];
@@ -2443,6 +2583,7 @@ app.get('/api/me', requireAuth, (req, res) => {
     displayName: user.display_name || user.username,
     avatar: user.avatar || '⚔',
     credits: user.credits,
+    essence: user.excavation_essence || 0,
     cardCount,
     canClaimDaily
   });
@@ -4086,11 +4227,291 @@ app.get('/api/my-cards', requireAuth, (req, res) => {
 });
 
 // --- Pages ---
+// ============================================
+// MINE API ENDPOINTS
+// ============================================
+
+// GET mine state (or create new mine)
+app.get('/api/mine/state', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const upgrades = getMineUpgrades(userId);
+  const maxSlots = BASE_INVENTORY_SLOTS + upgrades.inventory_size;
+
+  let mine = db.prepare('SELECT * FROM mine_state WHERE user_id = ?').get(userId);
+  if (!mine) {
+    const { grid, counts } = generateMineGrid(upgrades.luck);
+    db.prepare('INSERT INTO mine_state (user_id, grid, hidden_charbon, hidden_fer, hidden_or, hidden_diamant) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(userId, JSON.stringify(grid), counts.charbon, counts.fer, counts.or, counts.diamant);
+    mine = db.prepare('SELECT * FROM mine_state WHERE user_id = ?').get(userId);
+  }
+
+  const grid = JSON.parse(mine.grid);
+  // Hide resources of unmined blocks
+  const clientGrid = grid.map(b => ({
+    resistance: b.resistance,
+    hits: b.hits,
+    mined: b.mined,
+    collected: b.collected,
+    resource: b.mined ? b.resource : null
+  }));
+
+  const inventory = getMineInventory(userId);
+  const user = db.prepare('SELECT credits, excavation_essence FROM users WHERE id = ?').get(userId);
+
+  res.json({
+    grid: clientGrid,
+    hiddenResources: {
+      charbon: mine.hidden_charbon,
+      fer: mine.hidden_fer,
+      or: mine.hidden_or,
+      diamant: mine.hidden_diamant
+    },
+    inventory,
+    maxSlots,
+    upgrades: { mine_speed: upgrades.mine_speed, inventory_size: upgrades.inventory_size, luck: upgrades.luck },
+    essence: user.excavation_essence || 0,
+    credits: user.credits
+  });
+});
+
+// POST hit a block
+app.post('/api/mine/hit', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { index } = req.body;
+
+  if (index === undefined || index < 0 || index >= MINE_GRID_SIZE * MINE_GRID_SIZE) {
+    return res.status(400).json({ error: 'Index invalide' });
+  }
+
+  const mine = db.prepare('SELECT * FROM mine_state WHERE user_id = ?').get(userId);
+  if (!mine) return res.status(400).json({ error: 'Aucune mine active' });
+
+  const grid = JSON.parse(mine.grid);
+  const block = grid[index];
+
+  if (block.mined) {
+    return res.json({ success: false, error: 'Bloc deja mine', block: { ...block, resource: block.resource } });
+  }
+
+  const upgrades = getMineUpgrades(userId);
+  const speedReduction = upgrades.mine_speed;
+  const adjustedResistance = Math.max(1, block.resistance - speedReduction);
+
+  block.hits++;
+
+  let inventoryItem = null;
+  let inventoryFull = false;
+
+  if (block.hits >= adjustedResistance) {
+    block.mined = true;
+
+    // Auto-collect if inventory not full
+    const inventory = getMineInventory(userId);
+    const maxSlots = BASE_INVENTORY_SLOTS + upgrades.inventory_size;
+
+    if (inventory.length < maxSlots) {
+      const nextSlot = inventory.length;
+      db.prepare('INSERT INTO mine_inventory (user_id, resource, slot_index) VALUES (?, ?, ?)').run(userId, block.resource, nextSlot);
+      block.collected = true;
+      inventoryItem = { slot: nextSlot, resource: block.resource };
+
+      // Update hidden count
+      const col = 'hidden_' + block.resource;
+      db.prepare(`UPDATE mine_state SET ${col} = ${col} - 1 WHERE user_id = ?`).run(userId);
+    } else {
+      inventoryFull = true;
+    }
+  }
+
+  // Save grid
+  db.prepare('UPDATE mine_state SET grid = ? WHERE user_id = ?').run(JSON.stringify(grid), userId);
+
+  const crackLevel = Math.min(4, Math.floor((block.hits / adjustedResistance) * 4));
+
+  res.json({
+    success: true,
+    block: {
+      hits: block.hits,
+      resistance: block.resistance,
+      adjustedResistance,
+      crackLevel,
+      mined: block.mined,
+      collected: block.collected,
+      resource: block.mined ? block.resource : null
+    },
+    inventoryItem,
+    inventoryFull
+  });
+});
+
+// POST collect uncollected mined resource
+app.post('/api/mine/collect', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { index } = req.body;
+
+  const mine = db.prepare('SELECT * FROM mine_state WHERE user_id = ?').get(userId);
+  if (!mine) return res.status(400).json({ error: 'Aucune mine active' });
+
+  const grid = JSON.parse(mine.grid);
+  const block = grid[index];
+
+  if (!block || !block.mined || block.collected) {
+    return res.status(400).json({ error: 'Bloc non collectible' });
+  }
+
+  const inventory = getMineInventory(userId);
+  const maxSlots = getMaxSlots(userId);
+
+  if (inventory.length >= maxSlots) {
+    return res.json({ success: false, inventoryFull: true });
+  }
+
+  const nextSlot = inventory.length;
+  db.prepare('INSERT INTO mine_inventory (user_id, resource, slot_index) VALUES (?, ?, ?)').run(userId, block.resource, nextSlot);
+  block.collected = true;
+
+  const col = 'hidden_' + block.resource;
+  db.prepare(`UPDATE mine_state SET grid = ?, ${col} = ${col} - 1 WHERE user_id = ?`).run(JSON.stringify(grid), userId);
+
+  res.json({ success: true, inventoryItem: { slot: nextSlot, resource: block.resource } });
+});
+
+// POST sell one resource
+app.post('/api/mine/sell', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { slot } = req.body;
+
+  const item = db.prepare('SELECT * FROM mine_inventory WHERE user_id = ? AND slot_index = ?').get(userId, slot);
+  if (!item) return res.status(400).json({ error: 'Emplacement vide' });
+
+  const price = MINE_RESOURCES[item.resource]?.price || 0;
+
+  const sellTx = db.transaction(() => {
+    db.prepare('DELETE FROM mine_inventory WHERE user_id = ? AND slot_index = ?').run(userId, slot);
+    // Reindex remaining slots
+    const remaining = db.prepare('SELECT * FROM mine_inventory WHERE user_id = ? ORDER BY slot_index').all(userId);
+    db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
+    remaining.forEach((r, i) => {
+      db.prepare('INSERT INTO mine_inventory (user_id, resource, slot_index) VALUES (?, ?, ?)').run(userId, r.resource, i);
+    });
+    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(price, userId);
+  });
+  sellTx();
+
+  const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  const inventory = getMineInventory(userId);
+
+  res.json({ success: true, credits, soldPrice: price, soldResource: item.resource, inventory });
+});
+
+// POST sell all resources
+app.post('/api/mine/sell-all', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const items = getMineInventory(userId);
+
+  if (!items.length) return res.json({ success: false, error: 'Inventaire vide' });
+
+  let totalPrice = 0;
+  items.forEach(item => { totalPrice += MINE_RESOURCES[item.resource]?.price || 0; });
+
+  const sellAllTx = db.transaction(() => {
+    db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
+    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(totalPrice, userId);
+  });
+  sellAllTx();
+
+  const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+
+  res.json({ success: true, credits, totalSold: totalPrice, itemsSold: items.length });
+});
+
+// POST reset mine
+app.post('/api/mine/reset', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const items = getMineInventory(userId);
+
+  if (items.length > 0) {
+    return res.status(400).json({ error: 'Videz votre inventaire avant de reset la mine' });
+  }
+
+  const upgrades = getMineUpgrades(userId);
+  const { grid, counts } = generateMineGrid(upgrades.luck);
+
+  db.prepare('UPDATE mine_state SET grid = ?, hidden_charbon = ?, hidden_fer = ?, hidden_or = ?, hidden_diamant = ?, created_at = CURRENT_TIMESTAMP WHERE user_id = ?')
+    .run(JSON.stringify(grid), counts.charbon, counts.fer, counts.or, counts.diamant, userId);
+
+  const clientGrid = grid.map(b => ({
+    resistance: b.resistance,
+    hits: b.hits,
+    mined: b.mined,
+    collected: b.collected,
+    resource: null
+  }));
+
+  res.json({ success: true, grid: clientGrid, hiddenResources: counts });
+});
+
+// GET upgrades
+app.get('/api/mine/upgrades', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const upgrades = getMineUpgrades(userId);
+  const user = db.prepare('SELECT excavation_essence FROM users WHERE id = ?').get(userId);
+
+  const available = {};
+  for (const [key, config] of Object.entries(MINE_UPGRADES_CONFIG)) {
+    const currentLevel = upgrades[key] || 0;
+    available[key] = {
+      ...config,
+      level: currentLevel,
+      nextCost: currentLevel < config.maxLevel ? config.costs[currentLevel] : null,
+      maxed: currentLevel >= config.maxLevel
+    };
+  }
+
+  res.json({ upgrades: available, essence: user.excavation_essence || 0 });
+});
+
+// POST buy upgrade
+app.post('/api/mine/upgrade', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { type } = req.body;
+
+  const config = MINE_UPGRADES_CONFIG[type];
+  if (!config) return res.status(400).json({ error: 'Amelioration invalide' });
+
+  const upgrades = getMineUpgrades(userId);
+  const currentLevel = upgrades[type] || 0;
+
+  if (currentLevel >= config.maxLevel) return res.status(400).json({ error: 'Niveau maximum atteint' });
+
+  const cost = config.costs[currentLevel];
+  const user = db.prepare('SELECT excavation_essence FROM users WHERE id = ?').get(userId);
+
+  if ((user.excavation_essence || 0) < cost) {
+    return res.status(400).json({ error: 'Pas assez d\'essence' });
+  }
+
+  const upgradeTx = db.transaction(() => {
+    db.prepare('UPDATE users SET excavation_essence = excavation_essence - ? WHERE id = ?').run(cost, userId);
+    db.prepare(`UPDATE mine_upgrades SET ${type} = ${type} + 1 WHERE user_id = ?`).run(userId);
+  });
+  upgradeTx();
+
+  const newEssence = db.prepare('SELECT excavation_essence FROM users WHERE id = ?').get(userId).excavation_essence;
+  const newUpgrades = getMineUpgrades(userId);
+
+  res.json({ success: true, essence: newEssence, upgrades: newUpgrades });
+});
+
+// ============================================
+// PAGE ROUTES
+// ============================================
 app.get('/intro', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'intro.html')); });
 app.get('/menu', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'menu.html')); });
 app.get('/shop', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'shop.html')); });
 app.get('/collection', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'collection.html')); });
 app.get('/fusion', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'fusion.html')); });
+app.get('/mine', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'mine.html')); });
 app.get('/combat', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'combat.html')); });
 app.get('/campaign', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'campaign.html')); });
 app.get('/battle', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battle.html')); });

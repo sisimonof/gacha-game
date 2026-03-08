@@ -162,25 +162,46 @@ function showCardsReveal(cards) {
 
   // Creer toutes les cartes
   sorted.forEach((card, idx) => {
-    const r = RARITY_COLORS[card.rarity];
+    const r = RARITY_COLORS[card.rarity] || RARITY_COLORS['epique'];
     const el = document.createElement('div');
     el.className = 'reveal-card waiting card-slam';
     el.dataset.index = idx;
 
-    const shinyClass = card.is_shiny ? 'reveal-card-shiny' : '';
-    const tempClass = card.is_temp ? 'reveal-card-temp' : '';
+    // Essence d'Excavation special card
+    if (card._isEssence) {
+      el.dataset.isEssence = '1';
+      el.innerHTML = `
+        <div class="card-inner">
+          <div class="card-back">
+            <div class="card-back-pattern"></div>
+            <span>?</span>
+          </div>
+          <div class="card-front rarity-epique" style="border-color:#ffaa00; box-shadow:0 0 20px rgba(255,170,0,0.5)">
+            <div class="card-rarity" style="background:#ffaa00">ESSENCE</div>
+            <div class="card-emoji" style="font-size:64px; margin:20px 0;">⛏</div>
+            <div class="card-name" style="color:#ffaa00">Essence d'Excavation</div>
+            <div class="card-ability">
+              <div class="ability-desc" style="color:#ffcc44">+1 Essence pour la Mine</div>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      const shinyClass = card.is_shiny ? 'reveal-card-shiny' : '';
+      const tempClass = card.is_temp ? 'reveal-card-temp' : '';
 
-    el.innerHTML = `
-      <div class="card-inner ${shinyClass} ${tempClass}">
-        <div class="card-back">
-          <div class="card-back-pattern"></div>
-          <span>?</span>
+      el.innerHTML = `
+        <div class="card-inner ${shinyClass} ${tempClass}">
+          <div class="card-back">
+            <div class="card-back-pattern"></div>
+            <span>?</span>
+          </div>
+          <div class="card-front rarity-${card.rarity}" style="border-color:${r.color}; box-shadow:0 0 20px ${r.glow}">
+            ${renderCardFront(card)}
+          </div>
         </div>
-        <div class="card-front rarity-${card.rarity}" style="border-color:${r.color}; box-shadow:0 0 20px ${r.glow}">
-          ${renderCardFront(card)}
-        </div>
-      </div>
-    `;
+      `;
+    }
 
     reveal.appendChild(el);
   });
