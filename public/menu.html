@@ -27,11 +27,6 @@
         <a href="/stats" class="dash-nav-link dash-nav-link--stats">STATS</a>
         <a href="/wiki" class="dash-nav-link">WIKI</a>
       </div>
-      <div class="dash-nav-user">
-        <span class="dash-nav-stat" title="Credits">&#128176; <span id="stat-credits">0</span></span>
-        <span class="dash-nav-stat" title="Cartes">&#128230; <span id="stat-cards">0</span></span>
-        <span class="dash-nav-username" id="username-display">???</span>
-      </div>
     </div>
   </nav>
 
@@ -40,6 +35,7 @@
 
     <!-- LEFT: Player Profile -->
     <aside class="dash-profile">
+      <!-- Profile card -->
       <div class="dash-profile-card">
         <button class="settings-gear" id="settings-trigger" title="Parametres">&#9881;</button>
         <div class="dash-avatar">
@@ -50,26 +46,50 @@
           <span class="dash-rank-badge">&#9733;</span>
           <span class="dash-rank-label rank-label">RECRUE</span>
         </div>
-        <div class="dash-profile-divider"></div>
-        <div class="dash-profile-stats">
-          <div class="dash-pstat">
-            <span class="dash-pstat-label">CARTES</span>
-            <span class="dash-pstat-value" id="profile-cards">0</span>
-          </div>
-          <div class="dash-pstat">
-            <span class="dash-pstat-label">CREDITS</span>
-            <span class="dash-pstat-value" id="profile-credits">0</span>
-          </div>
-          <div class="dash-pstat">
-            <span class="dash-pstat-label">RANG</span>
-            <span class="dash-pstat-value dash-pstat-rank" id="profile-rank">RECRUE</span>
-          </div>
+      </div>
+
+      <!-- XP Progress bar -->
+      <div class="dash-xp-section">
+        <div class="dash-xp-header">
+          <span class="dash-xp-tier">PASSE T<span id="sidebar-bp-tier">0</span></span>
+          <span class="dash-xp-text"><span id="sidebar-bp-xp">0</span>/<span id="sidebar-bp-req">100</span> XP</span>
+        </div>
+        <div class="dash-xp-bar-bg">
+          <div class="dash-xp-bar-fill" id="sidebar-xp-bar"></div>
         </div>
       </div>
 
-      <!-- Achievements button -->
+      <!-- Resources -->
+      <div class="dash-resources">
+        <div class="dash-resource">
+          <span class="dash-resource-icon">&#128176;</span>
+          <span class="dash-resource-label">CREDITS</span>
+          <span class="dash-resource-value" id="stat-credits">0</span>
+        </div>
+        <div class="dash-resource">
+          <span class="dash-resource-icon">&#9935;</span>
+          <span class="dash-resource-label">ESSENCE</span>
+          <span class="dash-resource-value" id="stat-essence">0</span>
+        </div>
+        <div class="dash-resource">
+          <span class="dash-resource-icon">&#128230;</span>
+          <span class="dash-resource-label">CARTES</span>
+          <span class="dash-resource-value" id="stat-cards">0</span>
+        </div>
+      </div>
+
+      <!-- Achievements -->
       <div class="dash-achievements-btn" id="achievements-btn" onclick="openAchievements()">
         &#127942; SUCCES
+      </div>
+
+      <!-- Quick links -->
+      <div class="dash-quicklinks">
+        <a href="/shop" class="dash-quicklink">&#128176; BOUTIQUE</a>
+        <a href="/collection" class="dash-quicklink">&#128214; COLLECTION</a>
+        <a href="/mine" class="dash-quicklink">&#9935; MINE</a>
+        <a href="/battlepass" class="dash-quicklink">&#127942; PASSE</a>
+        <a href="/casino" class="dash-quicklink">&#127922; CASINO</a>
       </div>
 
       <!-- Admin (cache par defaut) -->
@@ -81,95 +101,56 @@
     <!-- CENTER + RIGHT: Main area -->
     <div class="dash-main">
 
-      <!-- Hero CTA -->
-      <section class="dash-hero">
-        <div class="dash-hero-bg"></div>
-        <div class="dash-hero-content">
-          <h2 class="dash-hero-title">PRET AU COMBAT ?</h2>
-          <p class="dash-hero-sub">Construisez votre deck et affrontez des adversaires</p>
-          <button class="dash-hero-btn" onclick="window.location.href='/combat'">
-            <span class="dash-hero-btn-icon">&#9876;</span>
-            <span class="dash-hero-btn-text">JOUER</span>
-          </button>
+      <!-- Combat + Decks row -->
+      <section class="dash-combat-row">
+        <div class="dash-combat-zone">
+          <div class="dash-combat-bg"></div>
+          <div class="dash-combat-content">
+            <h2 class="dash-combat-title">PRET AU COMBAT ?</h2>
+            <button class="dash-hero-btn" onclick="window.location.href='/combat'">
+              <span class="dash-hero-btn-icon">&#9876;</span>
+              <span class="dash-hero-btn-text">JOUER</span>
+            </button>
+            <div class="dash-combat-stats">
+              <div class="dash-combat-stat">
+                <span class="dash-combat-stat-value" id="combat-wins">-</span>
+                <span class="dash-combat-stat-label">VICTOIRES</span>
+              </div>
+              <div class="dash-combat-stat">
+                <span class="dash-combat-stat-value" id="combat-losses">-</span>
+                <span class="dash-combat-stat-label">DEFAITES</span>
+              </div>
+              <div class="dash-combat-stat">
+                <span class="dash-combat-stat-value" id="combat-winrate">-%</span>
+                <span class="dash-combat-stat-label">WINRATE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="dash-decks-preview">
+          <h3 class="dash-decks-title">MES DECKS</h3>
+          <div class="dash-decks-list" id="decks-preview-list">
+            <div class="quest-loading">Chargement...</div>
+          </div>
         </div>
       </section>
 
-      <!-- Quests panel -->
+      <!-- Quests with tabs -->
       <section class="quests-panel" id="quests-panel">
-        <div class="quests-section">
-          <h3 class="quests-section-title">QUETES DU JOUR</h3>
-          <div class="quests-list" id="daily-quests">
-            <div class="quest-loading">Chargement...</div>
-          </div>
+        <div class="quests-tabs">
+          <button class="quests-tab quests-tab--active" id="tab-daily" onclick="switchQuestTab('daily')">JOUR</button>
+          <button class="quests-tab" id="tab-weekly" onclick="switchQuestTab('weekly')">SEMAINE</button>
         </div>
-        <div class="quests-section">
-          <h3 class="quests-section-title quests-weekly-title">QUETES DE LA SEMAINE</h3>
-          <div class="quests-list" id="weekly-quests">
-            <div class="quest-loading">Chargement...</div>
-          </div>
+        <div class="quests-grid" id="quests-grid">
+          <div class="quest-loading">Chargement...</div>
         </div>
-      </section>
-
-      <!-- Cards grid -->
-      <section class="dash-cards-grid">
-
-        <!-- Boutique -->
-        <div class="dash-card dash-card--shop" onclick="window.location.href='/shop'">
-          <div class="dash-card-icon dash-card-icon--shop">&#127978;</div>
-          <div class="dash-card-info">
-            <h3 class="dash-card-title">BOUTIQUE</h3>
-            <p class="dash-card-desc">Boosters et packs disponibles</p>
-          </div>
-          <div class="dash-card-arrow">&#10095;</div>
-        </div>
-
-        <!-- Collection -->
-        <div class="dash-card dash-card--collection" onclick="window.location.href='/collection'">
-          <div class="dash-card-icon dash-card-icon--collection">&#128214;</div>
-          <div class="dash-card-info">
-            <h3 class="dash-card-title">COLLECTION</h3>
-            <p class="dash-card-desc" id="collection-desc">Voir mes cartes</p>
-          </div>
-          <div class="dash-card-arrow">&#10095;</div>
-        </div>
-
-        <!-- Mine -->
-        <div class="dash-card dash-card--mine" onclick="window.location.href='/mine'">
-          <div class="dash-card-icon dash-card-icon--mine">&#9935;</div>
-          <div class="dash-card-info">
-            <h3 class="dash-card-title">MINE</h3>
-            <p class="dash-card-desc">Minez des ressources</p>
-          </div>
-          <div class="dash-card-arrow">&#10095;</div>
-        </div>
-
-        <!-- Marche -->
-        <div class="dash-card dash-card--market" onclick="window.location.href='/market'">
-          <div class="dash-card-icon dash-card-icon--market">&#127978;</div>
-          <div class="dash-card-info">
-            <h3 class="dash-card-title">MARCHE</h3>
-            <p class="dash-card-desc">Achetez et vendez des cartes</p>
-          </div>
-          <div class="dash-card-arrow">&#10095;</div>
-        </div>
-
-        <!-- Patch Notes -->
-        <div class="dash-card dash-card--patch" id="patchnotes-trigger">
-          <div class="dash-card-icon dash-card-icon--patch">&#128220;</div>
-          <div class="dash-card-info">
-            <h3 class="dash-card-title">PATCH NOTES</h3>
-            <p class="dash-card-desc">v1.2.0 — Rarete CHAOS</p>
-          </div>
-          <div class="dash-card-arrow">&#10095;</div>
-        </div>
-
       </section>
     </div>
   </main>
 
   <!-- ===== FOOTER ===== -->
   <footer class="dash-footer">
-    <span class="dash-footer-version">v1.2.0</span>
+    <span class="dash-footer-version" id="patchnotes-trigger" style="cursor:pointer">v2.0.0 &#128220;</span>
     <span class="dash-footer-status">SYS: <span class="status-online">EN LIGNE</span></span>
     <span class="dash-footer-logout" id="logout-btn">DECONNEXION</span>
   </footer>

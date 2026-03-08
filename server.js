@@ -583,6 +583,8 @@ function getManaForTurn(turn) {
   db.prepare("UPDATE cards SET ability_desc = '1 degat a la cible et aux adjacents. Si tue : +1 ATK tour suivant', passive_desc = '' WHERE name = 'Salamandre Ardente'").run();
   db.prepare("UPDATE cards SET ability_desc = 'Statut: +1 ATK par unite Terre alliee' WHERE name = 'Guerrier des Falaises'").run();
   db.prepare("UPDATE cards SET rarity = 'legendaire' WHERE name = 'Archange Dechu'").run();
+  // v1.5.0 fix: rename Meditation -> Meditation interieure for Moine Errant (conflict with Moine)
+  db.prepare("UPDATE cards SET ability_name = 'Meditation interieure' WHERE name = 'Moine Errant' AND ability_name = 'Meditation'").run();
 }
 
 // --- Migration : La Voie Lactee → rareté SECRET ---
@@ -649,7 +651,7 @@ function getManaForTurn(turn) {
   const newCards2 = [
     // COMMUNES (5)
     ['Rat des Egouts', 'commune', 'bete', 'ombre', 2, 0, 1, 1, 'Morsure infectee', 'Empoisonne la cible (1 degat/tour, 2 tours)', '🐀', 'Si le Rat meurt, empoisonne son tueur (1 degat/tour, 2 tours)', 1.0],
-    ['Moine Errant', 'commune', 'divin', 'lumiere', 0, 2, 4, 2, 'Meditation', 'Se soigne 2 HP et gagne +1 DEF permanent', '🧘', '', 1.0],
+    ['Moine Errant', 'commune', 'divin', 'lumiere', 0, 2, 4, 2, 'Meditation interieure', 'Se soigne 2 HP et gagne +1 DEF permanent', '🧘', '', 1.0],
     ['Scarabee de Lave', 'commune', 'bete', 'feu', 2, 2, 2, 2, 'Aucun', 'Aucun', '🪲', 'Quand il meurt, inflige 1 degat a toutes les cartes ennemies (explosion)', 1.0],
     ['Espion des Brumes', 'commune', 'creature', 'eau', 1, 1, 2, 1, 'Infiltration', 'Pioche 1 carte supplementaire', '🌫️', 'Ne peut pas etre cible au premier tour', 1.0],
     ['Champignon Toxique', 'commune', 'creature', 'terre', 0, 0, 3, 1, 'Spores', 'Empoisonne tous les ennemis (1 degat, 1 tour)', '🍄', 'Ne peut pas attaquer. Meurt au bout de 3 tours', 1.0],
@@ -1499,30 +1501,30 @@ const ABILITY_MAP = {
   'Action de Moderation': { type: 'silence' },                          // Koteons (supprime l'ability d'un ennemi)
 
   // ===== NOUVELLES CARTES v1.4.0 =====
-  'Mur infranchissable':  { type: 'buff_def_lasting', value: 2, taunt: true },  // Sentinelle de Pierre
+  'Mur infranchissable':  { type: 'buff_def_lasting', value: 2 },               // Sentinelle de Pierre
   'Malediction mineure':  { type: 'debuff_atk',       value: 1 },               // Acolyte de l Ombre
-  'Brasier guerisseur':   { type: 'combo',  effects: [{ type: 'direct_damage', value: 2 }, { type: 'heal_ally', value: 2 }] },  // Chaman des Cendres
-  'Toucher givre':        { type: 'combo',  effects: [{ type: 'stun', duration: 1 }, { type: 'direct_damage', value: 1 }] },     // Spectre Glacial
-  'Frappe fatale':        { type: 'execute_pct',       threshold: 50 },          // Assassin Nocturne (x2 si <= 50% HP)
-  'Tsunami devastateur':  { type: 'combo',  effects: [{ type: 'aoe_damage', value: 2 }, { type: 'debuff_def_all', value: 1 }] }, // Dragon des Abysses
-  'Aegis divin':          { type: 'combo',  effects: [{ type: 'team_heal', value: 2 }, { type: 'shield', value: 2, target: 'self' }] }, // Paladin Sacre
-  'Souffle du Yomi':      { type: 'combo',  effects: [{ type: 'debuff_atk_all', value: 1 }, { type: 'debuff_def_all', value: 1 }, { type: 'reap', threshold: 2 }] }, // Izanami
+  'Brasier guerisseur':   { type: 'combo',  effects: [{ effect: 'damage', value: 2 }, { effect: 'heal_ally', value: 2 }] },       // Chaman des Cendres
+  'Toucher givre':        { type: 'combo',  effects: [{ effect: 'stun', duration: 1 }, { effect: 'damage', value: 1 }] },          // Spectre Glacial
+  'Frappe fatale':        { type: 'execute_pct', threshold: 50, executeDamage: 5, damage: 2 },  // Assassin Nocturne (x2 si <= 50% HP)
+  'Tsunami devastateur':  { type: 'combo',  effects: [{ effect: 'aoe_damage', value: 2 }, { effect: 'debuff_def_all', value: 1 }] }, // Dragon des Abysses
+  'Aegis divin':          { type: 'combo',  effects: [{ effect: 'team_heal', value: 2 }, { effect: 'shield', value: 2 }] },        // Paladin Sacre
+  'Souffle du Yomi':      { type: 'combo',  effects: [{ effect: 'aoe_debuff', value: 1 }, { effect: 'debuff_def_all', value: 1 }, { effect: 'reap', threshold: 2 }] }, // Izanami
   'Effondrement cosmique': { type: 'apocalypse' },                              // Le Neant Originel (detruit tout + degats directs)
   'Sacrifice radieux':    { type: 'delayed_sacrifice', directDamage: 5 },       // Lumis (suicide + 5 degats joueur)
 
   // ===== NOUVELLES CARTES v1.5.0 =====
-  'Morsure infectee':     { type: 'combo', effects: [{ type: 'direct_damage', value: 2 }, { type: 'poison', damage: 1, duration: 2 }] },  // Rat des Egouts
-  'Meditation':           { type: 'combo', effects: [{ type: 'heal_self', value: 2 }, { type: 'buff_def_lasting', value: 1 }] },           // Moine Errant
+  'Morsure infectee':     { type: 'combo', effects: [{ effect: 'damage', value: 2 }, { effect: 'poison', value: 1 }] },              // Rat des Egouts
+  'Meditation interieure': { type: 'combo', effects: [{ effect: 'heal', value: 2 }, { effect: 'buff_def_lasting', value: 1 }] },     // Moine Errant
   'Infiltration':         { type: 'draw_card', value: 1 },                              // Espion des Brumes (pioche 1 carte)
-  'Spores':               { type: 'poison_all', damage: 1, duration: 1 },               // Champignon Toxique (empoisonne tous ennemis)
-  'Jugement guerrier':    { type: 'combo', effects: [{ type: 'direct_damage', value: 3 }, { type: 'heal_on_kill', value: 3 }] },           // Valkyrie Dechue
+  'Spores':               { type: 'poison_all', damage: 1 },                            // Champignon Toxique (empoisonne tous ennemis)
+  'Jugement guerrier':    { type: 'combo', effects: [{ effect: 'damage', value: 3 }, { effect: 'heal_on_kill', value: 3 }] },        // Valkyrie Dechue
   'Transmutation':        { type: 'transfer_hp_to_atk', hpCost: 2, atkGain: 2, target: 'ally' },  // Alchimiste Fou
-  'Copie':                { type: 'copy_stats', target: 'any' },                        // Ombre Mimetique (copie ATK/DEF d'une carte)
-  'Souffle triple':       { type: 'direct_damage', value: 3, ignoreResistance: true },  // Chimere Elementaire
-  'Distorsion temporelle': { type: 'undo_last_action', uses: 1 },                       // Oracle du Temps (annule derniere action, 1x/combat)
-  'Recif vivant':         { type: 'summon_token', token: { name: 'Corail', atk: 0, def: 2, hp: 2, taunt: true } },  // Colosse de Corail
+  'Copie':                { type: 'copy_stats' },                                       // Ombre Mimetique (copie ATK/DEF d'une carte)
+  'Souffle triple':       { type: 'direct_damage', value: 3 },                          // Chimere Elementaire
+  'Distorsion temporelle': { type: 'undo_last_action' },                                // Oracle du Temps (annule debuffs allies + buffs ennemis)
+  'Recif vivant':         { type: 'summon_token', token: { name: 'Corail', atk: 0, def: 2, hp: 2 } },  // Colosse de Corail
   'Boucle temporelle':    { type: 'reset_all_stats' },                                  // Chronos (reinitialise toutes les cartes)
-  'Maree montante':       { type: 'combo', effects: [{ type: 'aoe_damage', value: 2 }, { type: 'stun_all', duration: 1 }] },              // Abyssia
+  'Maree montante':       { type: 'combo', effects: [{ effect: 'aoe_damage', value: 2 }, { effect: 'stun_all', duration: 1 }] },     // Abyssia
   'Lancer divin':         { type: 'dice_roll', outcomes: { 1: 'self_kill', 2: 'nothing', 3: { type: 'buff_atk', value: 3 }, 4: { type: 'aoe_damage', value: 3 }, 5: { type: 'heal_all', value: 4 }, 6: 'kill_random_enemy' } },  // Le De du Destin
 };
 
@@ -1602,6 +1604,8 @@ function calcDamage(attacker, defender, ignoreDef, attackerField) {
 
 // Helper pour appliquer des degats avec shield, counter, grace
 function applyDamage(target, damage, events, source, battle) {
+  // Track last attacker for death-trigger passives (Rat des Egouts)
+  if (source && source.name) target.lastAttacker = source.name;
   let remaining = damage;
   // Shield absorbe en premier
   if (target.shield > 0) {
@@ -1885,8 +1889,8 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
           const dmg = scaleDmg(ability.damage);
           applyDamage(target, dmg, events, unit, battle);
         }
-        // Passif Titan Originel : immunise aux effets de controle
-        if (target.name === 'Titan Originel') {
+        // Passif Titan Originel / Chronos : immunise aux effets de controle
+        if (target.name === 'Titan Originel' || target.name === 'Chronos') {
           events.push({ type: 'type_passive', desc: `${target.name} est immunise au controle !` });
         } else {
           target.stunned = true;
@@ -1904,7 +1908,9 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       break;
     }
     case 'first_turn_damage': {
-      if (battle.turn === 1) {
+      // Degats bonus uniquement a la premiere utilisation (embuscade)
+      if (!unit.usedFirstTurnAbility) {
+        unit.usedFirstTurnAbility = true;
         const target = pickTarget();
         if (target) {
           const dmg = scaleDmg(ability.value);
@@ -1961,8 +1967,12 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
     case 'poison': {
       const target = pickTarget();
       if (target) {
-        target.poisoned = (target.poisoned || 0) + ability.damage;
-        events.push({ type: 'ability_poison', unit: unit.name, target: target.name, ability: abilityName, damage: ability.damage });
+        if (target.name === 'Chronos') {
+          events.push({ type: 'type_passive', desc: `${target.name} est immunise au poison !` });
+        } else {
+          target.poisoned = (target.poisoned || 0) + ability.damage;
+          events.push({ type: 'ability_poison', unit: unit.name, target: target.name, ability: abilityName, damage: ability.damage });
+        }
       }
       break;
     }
@@ -2174,7 +2184,9 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
     case 'silence': {
       // Koteons : supprime la capacité d'un ennemi choisi
       const target = pickTarget();
-      if (target && !target.silenced) {
+      if (target && target.name === 'Chronos') {
+        events.push({ type: 'type_passive', desc: `${target.name} est immunise au silence !` });
+      } else if (target && !target.silenced) {
         target.silenced = true;
         target.usedAbility = true;
         // Passif Koteons : les ennemis réduits au silence perdent 1 DEF
@@ -2216,6 +2228,182 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
               events.push({ type: 'type_passive', desc: `${unit.name} renvoie ${target.name} en main !` });
             }
           }
+        }
+      }
+      break;
+    }
+    // ===== NOUVELLES ABILITIES v1.4.0 =====
+    case 'execute_pct': {
+      // Assassin Nocturne : x2 degats si cible <= X% HP
+      const target = pickTarget();
+      if (target) {
+        const hpPercent = target.currentHp / target.maxHp;
+        const isLow = hpPercent <= (ability.threshold / 100);
+        const dmg = scaleDmg(isLow ? ability.executeDamage : ability.damage);
+        applyDamage(target, dmg, events, unit, battle);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, desc: isLow ? 'Frappe fatale ! Degats doubles !' : '' });
+      }
+      break;
+    }
+    case 'apocalypse': {
+      // Le Neant Originel : detruit tout sur le terrain
+      const allUnits = [...allAllies.filter(a => a.alive && a !== unit), ...allEnemies.filter(e => e.alive)];
+      allUnits.forEach(u => {
+        u.currentHp = 0;
+        checkKO(u, events, battle);
+      });
+      unit.currentHp = 0;
+      events.push({ type: 'ability_aoe', unit: unit.name, ability: abilityName, desc: 'Effondrement cosmique ! Tout est detruit !' });
+      checkKO(unit, events, battle);
+      break;
+    }
+    case 'delayed_sacrifice': {
+      // Lumis : sacrifice + degats directs ignoring DEF
+      const target = pickTarget();
+      if (target) {
+        const dmg = scaleDmg(ability.directDamage);
+        target.currentHp = Math.max(0, target.currentHp - dmg);
+        events.push({ type: 'ability_damage', unit: unit.name, target: target.name, ability: abilityName, damage: dmg, desc: `Sacrifice radieux ! ${dmg} degats directs !` });
+        if (target.currentHp <= 0) checkKO(target, events, battle);
+      }
+      unit.currentHp = 0;
+      events.push({ type: 'ability_sacrifice', unit: unit.name, ability: abilityName, desc: `${unit.name} se sacrifie !` });
+      checkKO(unit, events, battle);
+      break;
+    }
+    // ===== NOUVELLES ABILITIES v1.5.0 =====
+    case 'draw_card': {
+      // Espion des Brumes : pioche 1 carte du deck
+      if (battle && battle.isDeckBattle) {
+        const deck = unit.side === 'player' ? battle.playerDeck : battle.enemyDeck;
+        const hand = unit.side === 'player' ? battle.playerHand : battle.enemyHand;
+        if (deck && deck.length > 0 && hand) {
+          const drawn = deck.shift();
+          hand.push(drawn);
+          events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Pioche ${drawn.name} !` });
+        } else {
+          events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Pas de carte a piocher !' });
+        }
+      } else {
+        unit.buffAtk += ability.value;
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${ability.value} ATK (renseignement)` });
+      }
+      break;
+    }
+    case 'poison_all': {
+      // Champignon Toxique : empoisonne tous les ennemis (sauf immunises)
+      allEnemies.filter(e => e.alive).forEach(e => {
+        if (e.name === 'Chronos') return; // immunise
+        e.poisoned = (e.poisoned || 0) + ability.damage;
+      });
+      events.push({ type: 'ability_poison', unit: unit.name, ability: abilityName, desc: `Spores ! Tous les ennemis empoisonnes (${ability.damage} degat/tour)` });
+      break;
+    }
+    case 'transfer_hp_to_atk': {
+      // Alchimiste Fou : perd HP, allie gagne ATK
+      const ally = ability.target === 'ally' ? (weakestAlly() || unit) : unit;
+      unit.currentHp = Math.max(1, unit.currentHp - ability.hpCost);
+      ally.buffAtk += ability.atkGain;
+      events.push({ type: 'ability', unit: unit.name, target: ally.name, ability: abilityName, desc: `Transmutation ! -${ability.hpCost} PV, ${ally.name} +${ability.atkGain} ATK` });
+      break;
+    }
+    case 'copy_stats': {
+      // Ombre Mimetique : copie ATK/DEF d'une cible
+      const target = pickTarget();
+      if (target) {
+        const tAtk = (target.effectiveStats?.attack || target.attack || 0) + (target.buffAtk || 0) + (target.permanentBonusAtk || 0);
+        const tDef = (target.effectiveStats?.defense || target.defense || 0) + (target.buffDef || 0) + (target.permanentBonusDef || 0);
+        const uAtk = (unit.effectiveStats?.attack || unit.attack || 0) + (unit.buffAtk || 0) + (unit.permanentBonusAtk || 0);
+        const uDef = (unit.effectiveStats?.defense || unit.defense || 0) + (unit.buffDef || 0) + (unit.permanentBonusDef || 0);
+        unit.buffAtk += (tAtk - uAtk);
+        unit.buffDef += (tDef - uDef);
+        events.push({ type: 'ability', unit: unit.name, target: target.name, ability: abilityName, desc: `Copie ${target.name} ! ATK=${tAtk}, DEF=${tDef}` });
+      }
+      break;
+    }
+    case 'undo_last_action': {
+      // Oracle du Temps : annule debuffs allies et buffs ennemis
+      allAllies.filter(a => a.alive).forEach(a => {
+        if (a.buffAtk < 0) a.buffAtk = 0;
+        if (a.buffDef < 0) a.buffDef = 0;
+        a.stunned = false;
+        a.poisoned = 0;
+        a.poisonDot = 0;
+      });
+      allEnemies.filter(e => e.alive).forEach(e => {
+        if (e.buffAtk > 0) e.buffAtk = 0;
+        if (e.buffDef > 0) e.buffDef = 0;
+      });
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Distorsion temporelle ! Buffs ennemis et debuffs allies annules !' });
+      break;
+    }
+    case 'summon_token': {
+      // Colosse de Corail : invoque un token sur le terrain
+      if (battle && battle.isDeckBattle) {
+        const field = unit.side === 'player' ? battle.playerField : battle.enemyField;
+        const emptyIdx = field.indexOf(null);
+        if (emptyIdx !== -1) {
+          const token = {
+            name: ability.token.name, emoji: '🪸',
+            attack: ability.token.atk, defense: ability.token.def,
+            hp: ability.token.hp, currentHp: ability.token.hp, maxHp: ability.token.hp,
+            alive: true, side: unit.side, ability_name: null, usedAbility: true,
+            buffAtk: 0, buffDef: 0, permanentBonusAtk: 0, permanentBonusDef: 0,
+            element: unit.element, type: unit.type,
+            effectiveStats: { attack: ability.token.atk, defense: ability.token.def }
+          };
+          field[emptyIdx] = token;
+          events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Invoque ${ability.token.name} !` });
+        } else {
+          events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Pas de place pour invoquer !' });
+        }
+      } else {
+        unit.shield = (unit.shield || 0) + ability.token.def;
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Recif protecteur ! Bouclier +${ability.token.def}` });
+      }
+      break;
+    }
+    case 'reset_all_stats': {
+      // Chronos : reinitialise tous les buffs/debuffs
+      const allUnits = [...allAllies.filter(a => a.alive), ...allEnemies.filter(e => e.alive)];
+      allUnits.forEach(u => {
+        u.buffAtk = 0; u.buffDef = 0;
+        u.stunned = false; u.poisoned = 0; u.poisonDot = 0;
+        u.shield = 0; u.marked = 0; u.silenced = false;
+      });
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Boucle temporelle ! Toutes les stats reinitialises !' });
+      break;
+    }
+    case 'dice_roll': {
+      // Le De du Destin : lance un de, effet aleatoire
+      const roll = Math.floor(Math.random() * 6) + 1;
+      const outcome = ability.outcomes[roll];
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Lance le de... ${roll} !` });
+      if (outcome === 'self_kill') {
+        unit.currentHp = 0;
+        events.push({ type: 'ability_damage', unit: unit.name, target: unit.name, ability: abilityName, desc: 'Le de maudit ! Auto-destruction !' });
+        checkKO(unit, events, battle);
+      } else if (outcome === 'nothing') {
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Rien ne se passe...' });
+      } else if (outcome === 'kill_random_enemy') {
+        const alive = allEnemies.filter(e => e.alive);
+        if (alive.length > 0) {
+          const t = alive[Math.floor(Math.random() * alive.length)];
+          t.currentHp = 0;
+          events.push({ type: 'ability_damage', unit: unit.name, target: t.name, ability: abilityName, desc: `Coup divin ! ${t.name} elimine !` });
+          checkKO(t, events, battle);
+        }
+      } else if (typeof outcome === 'object') {
+        if (outcome.type === 'buff_atk') {
+          unit.buffAtk += outcome.value;
+          events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `+${outcome.value} ATK !` });
+        } else if (outcome.type === 'aoe_damage') {
+          const dmg = scaleDmg(outcome.value);
+          allEnemies.filter(e => e.alive).forEach(e => { applyDamage(e, dmg, events, unit, battle); });
+          events.push({ type: 'ability_aoe', unit: unit.name, ability: abilityName, damage: dmg, desc: `Tempete divine ! ${dmg} degats a tous !` });
+        } else if (outcome.type === 'heal_all') {
+          allAllies.filter(a => a.alive).forEach(a => { a.currentHp = Math.min(a.maxHp, a.currentHp + outcome.value); });
+          events.push({ type: 'ability_team_heal', unit: unit.name, ability: abilityName, heal: outcome.value, desc: `Benediction ! +${outcome.value} PV a tous !` });
         }
       }
       break;
@@ -2302,6 +2490,52 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
             unit.canRevive = true;
             events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Revient avec ${fx.value} PV` });
             break;
+          case 'heal_ally': {
+            const ally = allAllies.filter(a => a.alive && a !== unit).sort((a, b) => a.currentHp - b.currentHp)[0];
+            if (ally) {
+              ally.currentHp = Math.min(ally.maxHp, ally.currentHp + fx.value);
+              events.push({ type: 'ability_heal', unit: unit.name, target: ally.name, ability: abilityName, heal: fx.value });
+            } else {
+              unit.currentHp = Math.min(unit.maxHp, unit.currentHp + fx.value);
+              events.push({ type: 'ability_heal', unit: unit.name, target: unit.name, ability: abilityName, heal: fx.value });
+            }
+            break;
+          }
+          case 'debuff_def_all':
+            allEnemies.filter(e => e.alive).forEach(e => { e.buffDef -= fx.value; });
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `-${fx.value} DEF a tous les ennemis` });
+            break;
+          case 'stun_all':
+            allEnemies.filter(e => e.alive).forEach(e => {
+              if (e.name !== 'Titan Originel') e.stunned = true;
+            });
+            events.push({ type: 'ability_stun', unit: unit.name, ability: abilityName, desc: 'Tous les ennemis etourdis !' });
+            break;
+          case 'reap': {
+            const t = pickTarget();
+            if (t && t.currentHp <= fx.threshold) {
+              t.currentHp = 0;
+              events.push({ type: 'ability_damage', unit: unit.name, target: t.name, ability: abilityName, desc: `Fauche ! ${t.name} elimine !` });
+              checkKO(t, events, battle);
+            } else if (t) {
+              events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${t.name} a trop de PV pour etre fauche` });
+            }
+            break;
+          }
+          case 'heal_on_kill': {
+            const anyDead = allEnemies.some(e => !e.alive);
+            if (anyDead) {
+              unit.currentHp = Math.min(unit.maxHp, unit.currentHp + fx.value);
+              events.push({ type: 'ability_heal', unit: unit.name, target: unit.name, ability: abilityName, heal: fx.value, desc: 'Guerison par execution !' });
+            }
+            break;
+          }
+          case 'buff_def_lasting': {
+            const ally = allAllies.filter(a => a.alive && a !== unit)[0] || unit;
+            ally.permanentBonusDef = (ally.permanentBonusDef || 0) + fx.value;
+            events.push({ type: 'ability', unit: unit.name, target: ally.name, ability: abilityName, desc: `+${fx.value} DEF permanent a ${ally.name}` });
+            break;
+          }
         }
       }
       break;
@@ -2352,6 +2586,69 @@ function checkKO(unit, events, battle) {
           events.push({ type: 'type_passive', desc: `${unit.name} tombe ! Soigne 2 PV a tous les allies` });
         }
       }
+      // === PASSIFS DE MORT v1.4.0/v1.5.0 ===
+      if (battle) {
+        const getAllies = () => battle.isDeckBattle
+          ? (unit.side === 'player' ? (battle.playerField || []).filter(u => u && u.alive) : (battle.enemyField || []).filter(u => u && u.alive))
+          : ((unit.side === 'player' ? battle.playerTeam : battle.enemyTeam) || []).filter(u => u.alive);
+        const getEnemies = () => battle.isDeckBattle
+          ? (unit.side === 'player' ? (battle.enemyField || []).filter(u => u && u.alive) : (battle.playerField || []).filter(u => u && u.alive))
+          : ((unit.side === 'player' ? battle.enemyTeam : battle.playerTeam) || []).filter(u => u.alive);
+
+        // Rat des Egouts : empoisonne son tueur
+        if (unit.name === 'Rat des Egouts' && unit.lastAttacker) {
+          const killer = [...getAllies(), ...getEnemies()].find(u => u.name === unit.lastAttacker && u.alive);
+          if (killer) {
+            killer.poisonDot = (killer.poisonDot || 0) + 1;
+            killer.poisonDotTurns = Math.max(killer.poisonDotTurns || 0, 2);
+            events.push({ type: 'type_passive', desc: `${unit.name} empoisonne ${killer.name} en mourant !` });
+          }
+        }
+        // Scarabee de Lave : explosion — 1 degat a tous les ennemis
+        if (unit.name === 'Scarabee de Lave') {
+          getEnemies().forEach(e => {
+            e.currentHp = Math.max(0, e.currentHp - 1);
+            if (e.currentHp <= 0 && e.alive) { e.alive = false; events.push({ type: 'ko', unit: e.name }); }
+          });
+          events.push({ type: 'type_passive', desc: `${unit.name} explose ! 1 degat a tous les ennemis !` });
+        }
+        // Paladin Sacre : +2 DEF permanent a l allie le plus faible
+        if (unit.name === 'Paladin Sacre') {
+          const allies = getAllies();
+          if (allies.length > 0) {
+            const weakest = allies.sort((a, b) => a.currentHp - b.currentHp)[0];
+            weakest.permanentBonusDef = (weakest.permanentBonusDef || 0) + 2;
+            events.push({ type: 'type_passive', desc: `${unit.name} tombe ! +2 DEF permanent a ${weakest.name}` });
+          }
+        }
+        // Valkyrie Dechue : quand un ALLIE meurt, elle gagne +1 ATK
+        // (trigger on any ally death for all alive Valkyries)
+        getAllies().filter(a => a.name === 'Valkyrie Dechue' && a.alive).forEach(v => {
+          v.permanentBonusAtk = (v.permanentBonusAtk || 0) + 1;
+          events.push({ type: 'type_passive', desc: `${v.name} : vengeance ! +1 ATK permanent` });
+        });
+        // Izanami : quand un ENNEMI meurt, elle gagne +2 HP et +1 ATK permanent
+        // (trigger for Izanami on the OTHER side)
+        const izanamiSide = unit.side === 'player' ? 'enemy' : 'player';
+        const izanamiField = battle.isDeckBattle
+          ? (izanamiSide === 'player' ? battle.playerField : battle.enemyField)
+          : (izanamiSide === 'player' ? battle.playerTeam : battle.enemyTeam);
+        if (izanamiField) {
+          (Array.isArray(izanamiField) ? izanamiField : []).filter(u => u && u.alive && u.name === 'Izanami').forEach(iz => {
+            iz.currentHp = Math.min(iz.maxHp, iz.currentHp + 2);
+            iz.permanentBonusAtk = (iz.permanentBonusAtk || 0) + 1;
+            events.push({ type: 'type_passive', desc: `Izanami absorbe l ame de ${unit.name} ! +2 PV, +1 ATK` });
+          });
+        }
+        // Abyssia : quand un allie Eau meurt, +2 ATK permanent
+        if (unit.element === 'eau') {
+          getAllies().filter(a => a.name === 'Abyssia' && a.alive).forEach(ab => {
+            ab.permanentBonusAtk = (ab.permanentBonusAtk || 0) + 2;
+            events.push({ type: 'type_passive', desc: `Abyssia : vague de colere ! +2 ATK permanent` });
+          });
+        }
+      }
+
       // Cartes TEMP : tracker pour suppression en fin de combat
       if (battle && unit.is_temp && unit.userCardId) {
         battle.deadTempCards.push(unit.userCardId);
@@ -2894,6 +3191,22 @@ function aiDeckTurn(battle) {
         unit.justDeployed = false;
         events.push({ type: 'type_passive', desc: `${unit.name} pret au combat ! Peut attaquer immediatement` });
       }
+      // Passif Spectre Glacial / Espion des Brumes ennemi : intangible 1 tour
+      if (unit.name === 'Spectre Glacial' || unit.name === 'Espion des Brumes') {
+        unit.untargetable = true;
+        unit.untargetableTurns = 1;
+        events.push({ type: 'type_passive', desc: `${unit.name} est intangible pour 1 tour !` });
+      }
+      // Passif Champignon Toxique ennemi
+      if (unit.name === 'Champignon Toxique') {
+        unit.cannotAttack = true;
+        unit.deathTimer = 3;
+      }
+      // Passif Le Neant Originel ennemi
+      if (unit.name === 'Le Neant Originel') {
+        unit.cannotAttack = true;
+        unit.untargetable = true;
+      }
 
       keepDeploying = true;
     }
@@ -2973,6 +3286,7 @@ function aiDeckTurn(battle) {
 
     // Summoning sickness: skip attack if just deployed
     if (unit.justDeployed) continue;
+    if (unit.cannotAttack) continue;
 
     if (unit.stunned) {
       unit.stunned = false;
@@ -2990,7 +3304,7 @@ function aiDeckTurn(battle) {
       events.push({ type: 'type_passive', desc: `${unit.name} active Fortification ! +2 DEF` });
     }
 
-    const playerAlive = getFieldAlive(battle.playerField);
+    const playerAlive = getFieldAlive(battle.playerField).filter(u => !u.untargetable);
 
     if (playerAlive.length === 0) {
       // No player cards on field: attack player avatar
@@ -3148,6 +3462,23 @@ app.get('/api/me', requireAuth, (req, res) => {
 
   const bp = db.prepare('SELECT xp, current_tier FROM battle_pass WHERE user_id = ?').get(req.session.userId);
 
+  // Calculate current tier XP progress
+  let currentTierXP = bp?.xp || 0;
+  let currentTierRequired = BATTLEPASS_TIERS[0]?.xp_required || 100;
+  if (bp && bp.xp > 0) {
+    let cumXP = 0;
+    for (let i = 0; i < BATTLEPASS_TIERS.length; i++) {
+      if (bp.xp >= cumXP + BATTLEPASS_TIERS[i].xp_required) {
+        cumXP += BATTLEPASS_TIERS[i].xp_required;
+      } else {
+        currentTierXP = bp.xp - cumXP;
+        currentTierRequired = BATTLEPASS_TIERS[i].xp_required;
+        break;
+      }
+    }
+    if ((bp?.current_tier || 0) >= 30) currentTierXP = currentTierRequired;
+  }
+
   res.json({
     username: user.username,
     displayName: user.display_name || user.username,
@@ -3163,7 +3494,9 @@ app.get('/api/me', requireAuth, (req, res) => {
     profileFrame: user.profile_frame || 'none',
     unlockedFrames: JSON.parse(user.unlocked_frames || '["none"]'),
     battlePassTier: bp?.current_tier || 0,
-    battlePassXP: bp?.xp || 0
+    battlePassXP: bp?.xp || 0,
+    currentTierXP,
+    currentTierRequired
   });
 });
 
@@ -3778,6 +4111,27 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
     events.push({ type: 'type_passive', desc: `${unit.name} pret au combat ! Peut attaquer immediatement` });
   }
 
+  // Passif Spectre Glacial / Espion des Brumes : ne peut pas etre cible au premier tour
+  if (unit.name === 'Spectre Glacial' || unit.name === 'Espion des Brumes') {
+    unit.untargetable = true;
+    unit.untargetableTurns = 1;
+    events.push({ type: 'type_passive', desc: `${unit.name} est intangible pour 1 tour !` });
+  }
+
+  // Passif Champignon Toxique : ne peut pas attaquer, meurt au bout de 3 tours
+  if (unit.name === 'Champignon Toxique') {
+    unit.cannotAttack = true;
+    unit.deathTimer = 3;
+    events.push({ type: 'type_passive', desc: `${unit.name} ne peut pas attaquer. Meurt dans 3 tours.` });
+  }
+
+  // Passif Le Neant Originel : ne peut pas attaquer ni etre attaque
+  if (unit.name === 'Le Neant Originel') {
+    unit.cannotAttack = true;
+    unit.untargetable = true;
+    events.push({ type: 'type_passive', desc: `${unit.name} accumule sa puissance...` });
+  }
+
   res.json({ events, ...getDeckBattleSnapshot(battle) });
 });
 
@@ -3796,11 +4150,13 @@ app.post('/api/battle/attack-card', requireAuth, (req, res) => {
   if (!attacker || !attacker.alive) return res.status(400).json({ error: 'Pas de carte dans ce slot' });
   if (attacker.stunned) return res.status(400).json({ error: 'Carte etourdie' });
   if (attacker.justDeployed) return res.status(400).json({ error: 'Carte vient d etre posee (sommeil d invocation)' });
+  if (attacker.cannotAttack) return res.status(400).json({ error: 'Cette carte ne peut pas attaquer' });
   if (battle.attackedThisTurn.includes(fieldSlot)) return res.status(400).json({ error: 'Deja attaque ce tour' });
   if (battle.playerEnergy < 1) return res.status(400).json({ error: 'Pas assez d energie pour attaquer' });
 
   const target = battle.enemyField[targetSlot];
   if (!target || !target.alive) return res.status(400).json({ error: 'Pas de cible dans ce slot' });
+  if (target.untargetable) return res.status(400).json({ error: 'Cette carte ne peut pas etre ciblee' });
 
   // Attacks cost 1 energy
   if (!battle.testMode) battle.playerEnergy -= 1;
@@ -4113,7 +4469,27 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       const earthCount = getFieldAlive(battle.playerField).filter(a => a.alive && a.element === 'terre' && a !== unit).length;
       unit.buffAtk += earthCount;
     }
+    // Tick untargetable countdown
+    if (unit.untargetable && unit.untargetableTurns > 0) {
+      unit.untargetableTurns--;
+      if (unit.untargetableTurns <= 0 && unit.name !== 'Le Neant Originel') unit.untargetable = false;
+    }
+    // Tick deathTimer (Champignon Toxique)
+    if (unit.deathTimer > 0) {
+      unit.deathTimer--;
+      if (unit.deathTimer <= 0) {
+        unit.currentHp = 0;
+        events.push({ type: 'type_passive', desc: `${unit.name} se decompose et meurt !` });
+        checkKO(unit, events, battle);
+      }
+    }
+    // Passif Assassin Nocturne : +1 ATK si ennemi n'a qu'une seule carte
+    if (unit.name === 'Assassin Nocturne' && getFieldAlive(battle.enemyField).length === 1) {
+      unit.buffAtk += 1;
+      events.push({ type: 'type_passive', desc: `${unit.name} : cible isolee ! +1 ATK` });
+    }
   }
+  cleanDeadFromField(battle.playerField);
 
   if (checkDeckWin(battle)) {
     return res.json({ events, ...getDeckBattleSnapshot(battle) });
@@ -4122,10 +4498,30 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // 3. Enemy turn
   battle.phase = 'enemy_turn';
 
-  // Clear summoning sickness on enemy units
+  // Clear summoning sickness on enemy units + tick passives
   for (const unit of getFieldAlive(battle.enemyField)) {
     unit.justDeployed = false;
+    // Tick untargetable
+    if (unit.untargetable && unit.untargetableTurns > 0) {
+      unit.untargetableTurns--;
+      if (unit.untargetableTurns <= 0 && unit.name !== 'Le Neant Originel') unit.untargetable = false;
+    }
+    // Tick deathTimer (Champignon Toxique)
+    if (unit.deathTimer > 0) {
+      unit.deathTimer--;
+      if (unit.deathTimer <= 0) {
+        unit.currentHp = 0;
+        events.push({ type: 'type_passive', desc: `${unit.name} ennemi se decompose et meurt !` });
+        checkKO(unit, events, battle);
+      }
+    }
+    // Passif Assassin Nocturne ennemi : +1 ATK si joueur n'a qu'une seule carte
+    if (unit.name === 'Assassin Nocturne' && getFieldAlive(battle.playerField).length === 1) {
+      unit.buffAtk += 1;
+      events.push({ type: 'type_passive', desc: `${unit.name} ennemi : cible isolee ! +1 ATK` });
+    }
   }
+  cleanDeadFromField(battle.enemyField);
 
   // Enemy energy for this turn (new mana progression)
   battle.enemyMaxEnergy = getManaForTurn(battle.turn);
@@ -4140,13 +4536,17 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   }
 
   // Enemy turn-start passives
-  // Esprit des Forets ennemi : +1 DEF Terre
+  // Esprit des Forets ennemi : +1 DEF Terre + soin 1 PV/tour
   const espritCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Esprit des Forets').length;
   if (espritCountE > 0) {
     getFieldAlive(battle.enemyField).filter(u => u.element === 'terre').forEach(u => {
       u.buffDef += espritCountE;
     });
     events.push({ type: 'type_passive', desc: `Esprit des Forets ennemi : +${espritCountE} DEF aux Terre` });
+    // Soin 1 PV par Esprit des Forets
+    getFieldAlive(battle.enemyField).filter(u => u.name === 'Esprit des Forets').forEach(u => {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + 1);
+    });
   }
 
   // Passif Eclaireur des Dunes ennemi : +2 DEF si seule
@@ -4188,6 +4588,58 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       }
     }
   }
+
+  // === PASSIFS v1.4.0/v1.5.0 ENNEMIS ===
+  // Dragon des Abysses ennemi : +1 ATK allies Eau
+  const dragonAbyssesCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Dragon des Abysses').length;
+  if (dragonAbyssesCountE > 0) {
+    getFieldAlive(battle.enemyField).filter(u => u.element === 'eau').forEach(u => { u.buffAtk += dragonAbyssesCountE; });
+    events.push({ type: 'type_passive', desc: `Dragon des Abysses ennemi : +${dragonAbyssesCountE} ATK Eau` });
+  }
+  // Ombre Mimetique ennemie : -1 HP par tour (instable)
+  getFieldAlive(battle.enemyField).filter(u => u.name === 'Ombre Mimetique').forEach(u => {
+    u.currentHp = Math.max(1, u.currentHp - 1);
+    events.push({ type: 'type_passive', desc: `${u.name} ennemi perd 1 PV (instable)` });
+  });
+  // Abyssia ennemie : soigne 1 HP allies Eau
+  const abyssiaCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Abyssia').length;
+  if (abyssiaCountE > 0) {
+    getFieldAlive(battle.enemyField).filter(u => u.element === 'eau').forEach(u => {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + abyssiaCountE);
+    });
+    events.push({ type: 'type_passive', desc: `Abyssia ennemie : +${abyssiaCountE} PV aux Eau` });
+  }
+  // Le De du Destin ennemi : ATK et DEF aleatoires (0-4)
+  getFieldAlive(battle.enemyField).filter(u => u.name === 'Le De du Destin').forEach(u => {
+    const newAtk = Math.floor(Math.random() * 5);
+    const newDef = Math.floor(Math.random() * 5);
+    u.buffAtk = newAtk - ((u.effectiveStats?.attack || u.attack || 0) + (u.permanentBonusAtk || 0));
+    u.buffDef = newDef - ((u.effectiveStats?.defense || u.defense || 0) + (u.permanentBonusDef || 0));
+    events.push({ type: 'type_passive', desc: `${u.name} ennemi : ATK=${newAtk}, DEF=${newDef} (aleatoire)` });
+  });
+  // Le Neant Originel ennemi : +1 ATK permanent par tour, auto-trigger a 5+ ATK
+  getFieldAlive(battle.enemyField).filter(u => u.name === 'Le Neant Originel').forEach(u => {
+    u.permanentBonusAtk = (u.permanentBonusAtk || 0) + 1;
+    const totalAtk = (u.effectiveStats?.attack || u.attack || 0) + (u.buffAtk || 0) + (u.permanentBonusAtk || 0);
+    events.push({ type: 'type_passive', desc: `${u.name} ennemi gagne en puissance ! ATK ${totalAtk}` });
+    if (totalAtk >= 5 && !u.usedAbility) {
+      const ae = resolveAbility(u, getFieldAlive(battle.playerField), getFieldAlive(battle.enemyField), getFieldAlive(battle.playerField), battle);
+      events.push(...ae);
+      cleanDeadFromField(battle.playerField);
+      cleanDeadFromField(battle.enemyField);
+    }
+  });
+  // Chronos ennemi : retire un buff aleatoire d un joueur
+  getFieldAlive(battle.enemyField).filter(u => u.name === 'Chronos').forEach(() => {
+    const buffed = getFieldAlive(battle.playerField).filter(p => p.buffAtk > 0 || p.buffDef > 0 || (p.permanentBonusAtk || 0) > 0);
+    if (buffed.length > 0) {
+      const t = buffed[Math.floor(Math.random() * buffed.length)];
+      if (t.buffAtk > 0) t.buffAtk = Math.max(0, t.buffAtk - 1);
+      else if ((t.permanentBonusAtk || 0) > 0) t.permanentBonusAtk -= 1;
+      else if (t.buffDef > 0) t.buffDef = Math.max(0, t.buffDef - 1);
+      events.push({ type: 'type_passive', desc: `Chronos ennemi neutralise un buff de ${t.name}` });
+    }
+  });
 
   if (checkDeckWin(battle)) {
     return res.json({ events, ...getDeckBattleSnapshot(battle) });
@@ -4313,6 +4765,10 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       u.buffDef += espritCountP;
     });
     events.push({ type: 'type_passive', desc: `Esprit des Forets : +${espritCountP} DEF aux unites Terre` });
+    // Soin 1 PV par Esprit des Forets
+    getFieldAlive(battle.playerField).filter(u => u.name === 'Esprit des Forets').forEach(u => {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + 1);
+    });
   }
 
   // Passif Eclaireur des Dunes : +2 DEF si seule sur le terrain
@@ -4354,6 +4810,58 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       }
     }
   }
+
+  // === PASSIFS v1.4.0/v1.5.0 JOUEUR ===
+  // Dragon des Abysses joueur : +1 ATK allies Eau
+  const dragonAbyssesCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Dragon des Abysses').length;
+  if (dragonAbyssesCountP > 0) {
+    getFieldAlive(battle.playerField).filter(u => u.element === 'eau').forEach(u => { u.buffAtk += dragonAbyssesCountP; });
+    events.push({ type: 'type_passive', desc: `Dragon des Abysses : +${dragonAbyssesCountP} ATK Eau` });
+  }
+  // Ombre Mimetique joueur : -1 HP par tour (instable)
+  getFieldAlive(battle.playerField).filter(u => u.name === 'Ombre Mimetique').forEach(u => {
+    u.currentHp = Math.max(1, u.currentHp - 1);
+    events.push({ type: 'type_passive', desc: `${u.name} perd 1 PV (instable)` });
+  });
+  // Abyssia joueur : soigne 1 HP allies Eau
+  const abyssiaCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Abyssia').length;
+  if (abyssiaCountP > 0) {
+    getFieldAlive(battle.playerField).filter(u => u.element === 'eau').forEach(u => {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + abyssiaCountP);
+    });
+    events.push({ type: 'type_passive', desc: `Abyssia : +${abyssiaCountP} PV aux Eau` });
+  }
+  // Le De du Destin joueur : ATK et DEF aleatoires (0-4)
+  getFieldAlive(battle.playerField).filter(u => u.name === 'Le De du Destin').forEach(u => {
+    const newAtk = Math.floor(Math.random() * 5);
+    const newDef = Math.floor(Math.random() * 5);
+    u.buffAtk = newAtk - ((u.effectiveStats?.attack || u.attack || 0) + (u.permanentBonusAtk || 0));
+    u.buffDef = newDef - ((u.effectiveStats?.defense || u.defense || 0) + (u.permanentBonusDef || 0));
+    events.push({ type: 'type_passive', desc: `${u.name} : ATK=${newAtk}, DEF=${newDef} (aleatoire)` });
+  });
+  // Le Neant Originel joueur : +1 ATK permanent par tour, auto-trigger a 5+ ATK
+  getFieldAlive(battle.playerField).filter(u => u.name === 'Le Neant Originel').forEach(u => {
+    u.permanentBonusAtk = (u.permanentBonusAtk || 0) + 1;
+    const totalAtk = (u.effectiveStats?.attack || u.attack || 0) + (u.buffAtk || 0) + (u.permanentBonusAtk || 0);
+    events.push({ type: 'type_passive', desc: `${u.name} gagne en puissance ! ATK ${totalAtk}` });
+    if (totalAtk >= 5 && !u.usedAbility) {
+      const ae = resolveAbility(u, getFieldAlive(battle.enemyField), getFieldAlive(battle.playerField), getFieldAlive(battle.enemyField), battle);
+      events.push(...ae);
+      cleanDeadFromField(battle.playerField);
+      cleanDeadFromField(battle.enemyField);
+    }
+  });
+  // Chronos joueur : retire un buff aleatoire d un ennemi
+  getFieldAlive(battle.playerField).filter(u => u.name === 'Chronos').forEach(() => {
+    const buffed = getFieldAlive(battle.enemyField).filter(e => e.buffAtk > 0 || e.buffDef > 0 || (e.permanentBonusAtk || 0) > 0);
+    if (buffed.length > 0) {
+      const t = buffed[Math.floor(Math.random() * buffed.length)];
+      if (t.buffAtk > 0) t.buffAtk = Math.max(0, t.buffAtk - 1);
+      else if ((t.permanentBonusAtk || 0) > 0) t.permanentBonusAtk -= 1;
+      else if (t.buffDef > 0) t.buffDef = Math.max(0, t.buffDef - 1);
+      events.push({ type: 'type_passive', desc: `Chronos neutralise un buff de ${t.name}` });
+    }
+  });
 
   // Check turn limit
   checkDeckWin(battle);

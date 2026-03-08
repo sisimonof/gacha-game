@@ -7,26 +7,31 @@ async function loadUser() {
 
     const displayName = data.displayName || data.username;
 
-    // Navbar stats
-    document.getElementById('username-display').textContent = displayName;
-    document.getElementById('stat-credits').textContent = data.credits;
-    document.getElementById('stat-cards').textContent = data.cardCount;
-
     // Profile sidebar
     const profileUser = document.getElementById('profile-username');
     if (profileUser) profileUser.textContent = displayName;
     const profileAvatar = document.getElementById('profile-avatar');
     if (profileAvatar) profileAvatar.textContent = data.avatar || '⚔';
-    const profileCards = document.getElementById('profile-cards');
-    if (profileCards) profileCards.textContent = data.cardCount;
-    const profileCredits = document.getElementById('profile-credits');
-    if (profileCredits) profileCredits.textContent = data.credits;
-    const collDesc = document.getElementById('collection-desc');
-    if (collDesc) collDesc.textContent = data.cardCount + ' cartes collectees';
+
+    // Sidebar resources
+    document.getElementById('stat-credits').textContent = data.credits;
+    document.getElementById('stat-cards').textContent = data.cardCount;
+    const essenceEl = document.getElementById('stat-essence');
+    if (essenceEl) essenceEl.textContent = data.essence || 0;
+
+    // XP Progress bar
+    const bpTier = data.battlePassTier || 0;
+    const tierXP = data.currentTierXP || 0;
+    const tierReq = data.currentTierRequired || 100;
+    document.getElementById('sidebar-bp-tier').textContent = bpTier;
+    document.getElementById('sidebar-bp-xp').textContent = tierXP;
+    document.getElementById('sidebar-bp-req').textContent = tierReq;
+    const xpPct = bpTier >= 30 ? 100 : Math.min(100, Math.floor((tierXP / tierReq) * 100));
+    document.getElementById('sidebar-xp-bar').style.width = xpPct + '%';
 
     // Apply profile frame on avatar
     const frameClass = data.profileFrame && data.profileFrame !== 'none' ? 'frame-' + data.profileFrame : '';
-    const avatarEl = document.querySelector('.dash-avatar');
+    const avatarEl = document.querySelector('.dash-profile-card .dash-avatar');
     if (avatarEl) {
       avatarEl.className = 'dash-avatar';
       if (frameClass) avatarEl.classList.add(frameClass);
@@ -41,8 +46,6 @@ async function loadUser() {
 
     // Apply username effect
     if (data.usernameEffect) {
-      const usernameEl = document.getElementById('username-display');
-      if (usernameEl) usernameEl.classList.add(data.usernameEffect);
       if (profileUser) profileUser.classList.add(data.usernameEffect);
     }
 
@@ -70,7 +73,6 @@ async function checkAdminAccess() {
 
 function updateRank(cardCount) {
   const rankLabels = document.querySelectorAll('.rank-label');
-  const profileRank = document.getElementById('profile-rank');
   let rank = 'RECRUE';
 
   if (cardCount >= 100) rank = 'MAITRE';
@@ -78,7 +80,170 @@ function updateRank(cardCount) {
   else if (cardCount >= 20) rank = 'SOLDAT';
 
   rankLabels.forEach(el => el.textContent = rank);
-  if (profileRank) profileRank.textContent = rank;
+}
+
+// === COMBAT STATS ===
+async function loadCombatStats() {
+  try {
+    const res = await fetch('/api/stats');
+    if (!res.ok) return;
+    const data = await res.json();
+    document.getElementById('combat-wins').textContent = data.combat.wins;
+    document.getElementById('combat-losses').textContent = data.combat.losses;
+    document.getElementById('combat-winrate').textContent = data.combat.winRate + '%';
+  } catch {}
+}
+
+// === DECKS PREVIEW ===
+async function loadDecksPreview() {
+  try {
+    const res = await fetch('/api/decks');
+    if (!res.ok) return;
+    const decks = await res.json();
+    const container = document.getElementById('decks-preview-list');
+
+    if (decks.length === 0) {
+      container.innerHTML = '<div class="dash-deck-empty" onclick="window.location.href=\'/decks\'">+ CREER UN DECK</div>';
+      return;
+    }
+
+    container.innerHTML = decks.map(deck => {
+      const preview = deck.cards.slice(0, 3).map(c => c.emoji || '🃏').join(' ');
+      const cardCount = deck.cards.length;
+      return `
+        <div class="dash-deck-card" onclick="window.location.href='/decks'">
+          <div class="dash-deck-name">${deck.name}</div>
+          <div class="dash-deck-preview">${preview} <span class="dash-deck-count">(${cardCount})</span></div>
+        </div>
+      `;
+    }).join('');
+  } catch {}
+}
+
+// === QUETES ===
+let questData = { daily: [], weekly: [] };
+let activeQuestTab = 'daily';
+
+async function loadQuests() {
+  try {
+    const res = await fetch('/api/quests');
+    if (!res.ok) return;
+    questData = await res.json();
+    renderActiveQuests();
+  } catch {}
+}
+
+function switchQuestTab(tab) {
+  activeQuestTab = tab;
+  document.getElementById('tab-daily').classList.toggle('quests-tab--active', tab === 'daily');
+  document.getElementById('tab-weekly').classList.toggle('quests-tab--active', tab === 'weekly');
+  renderActiveQuests();
+}
+
+function renderActiveQuests() {
+  const quests = activeQuestTab === 'daily' ? questData.daily : questData.weekly;
+  const container = document.getElementById('quests-grid');
+
+  if (!quests || quests.length === 0) {
+    container.innerHTML = '<div class="quest-empty">Aucune quete</div>';
+    return;
+  }
+
+  container.innerHTML = quests.map(q => {
+    const pct = Math.min(100, Math.floor((q.progress / q.goal) * 100));
+    const done = q.progress >= q.goal;
+    const claimed = q.claimed;
+
+    return `
+      <div class="quest-card ${claimed ? 'quest-claimed' : ''} ${done && !claimed ? 'quest-done' : ''}">
+        <div class="quest-info">
+          <div class="quest-label">${q.label}</div>
+          <div class="quest-progress-text">${q.progress}/${q.goal}</div>
+        </div>
+        <div class="quest-bar-bg">
+          <div class="quest-bar-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="quest-reward">
+          <span class="quest-reward-cr">+${q.reward_credits} CR</span>
+          <span class="quest-reward-xp">+${q.reward_xp} XP</span>
+          ${q.canClaim ? `<button class="quest-claim-btn" onclick="claimQuest(${q.id})">RECLAMER</button>` : ''}
+          ${claimed ? '<span class="quest-check">&#10003;</span>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function claimQuest(questId) {
+  try {
+    const res = await fetch('/api/quests/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questId })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      document.getElementById('stat-credits').textContent = data.credits;
+      loadQuests();
+    }
+  } catch {}
+}
+
+// === SUCCES ===
+async function loadAchievements() {
+  try {
+    const res = await fetch('/api/achievements');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderAchievements(data.achievements);
+  } catch {}
+}
+
+function renderAchievements(achievements) {
+  const grid = document.getElementById('achievements-grid');
+  grid.innerHTML = achievements.map(a => {
+    let cls = 'achievement-badge';
+    if (a.unlocked && a.claimed) cls += ' achievement--claimed';
+    else if (a.unlocked) cls += ' achievement--unlocked';
+    else cls += ' achievement--locked';
+
+    return `
+      <div class="${cls}">
+        <div class="achievement-icon">${a.icon}</div>
+        <div class="achievement-info">
+          <div class="achievement-label">${a.label}</div>
+          <div class="achievement-desc">${a.desc}</div>
+          <div class="achievement-reward">+${a.credits} CR</div>
+        </div>
+        ${a.canClaim ? `<button class="achievement-claim-btn" onclick="claimAchievement('${a.key}')">RECLAMER</button>` : ''}
+        ${a.claimed ? '<div class="achievement-check">&#10003;</div>' : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function claimAchievement(key) {
+  try {
+    const res = await fetch('/api/achievements/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ achievementKey: key })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      document.getElementById('stat-credits').textContent = data.credits;
+      loadAchievements();
+    }
+  } catch {}
+}
+
+function openAchievements() {
+  loadAchievements();
+  document.getElementById('achievements-overlay').classList.add('active');
+}
+
+function closeAchievements() {
+  document.getElementById('achievements-overlay').classList.remove('active');
 }
 
 // === SETTINGS MODAL ===
@@ -93,7 +258,6 @@ let selectedAvatar = null;
 
 const BP_AVATARS = ['🎖','🐲','👁‍🗨','🐦‍🔥','🏴‍☠️','🔱','👾'];
 
-// === PROFILE FRAMES ===
 const PROFILE_FRAMES = {
   none:    { label: 'Aucun',       emoji: '⬜' },
   flames:  { label: 'Flammes',     emoji: '🔥' },
@@ -133,13 +297,11 @@ function initFrameGrid() {
 
 function selectFrame(key) {
   selectedFrame = key;
-  // Update preview avatar with frame
   const previewAvatar = document.getElementById('settings-frame-preview-avatar');
   if (previewAvatar) {
     previewAvatar.className = 'dash-avatar settings-frame-avatar';
     if (key !== 'none') previewAvatar.classList.add('frame-' + key);
   }
-  // Highlight selected
   document.querySelectorAll('.frame-option').forEach(btn => {
     btn.classList.toggle('frame-selected', btn.dataset.frame === key);
   });
@@ -152,7 +314,6 @@ function initSettingsModal() {
   grid.innerHTML = '';
   const unlockedAvatars = window._unlockedAvatars || ['⚔'];
 
-  // Free avatars
   AVATAR_LIST.forEach(emoji => {
     const btn = document.createElement('button');
     btn.className = 'avatar-option';
@@ -161,7 +322,6 @@ function initSettingsModal() {
     grid.appendChild(btn);
   });
 
-  // BP exclusive avatars
   BP_AVATARS.forEach(emoji => {
     const btn = document.createElement('button');
     btn.className = 'avatar-option avatar-option--bp';
@@ -195,7 +355,6 @@ function openSettings() {
     btn.classList.toggle('avatar-selected', btn.textContent === selectedAvatar);
   });
 
-  // Frame preview
   const previewIcon = document.getElementById('settings-frame-preview-icon');
   if (previewIcon) previewIcon.textContent = selectedAvatar;
   const previewAvatar = document.getElementById('settings-frame-preview-avatar');
@@ -258,10 +417,8 @@ async function saveSettings() {
 
     document.getElementById('profile-avatar').textContent = data.avatar;
     document.getElementById('profile-username').textContent = data.displayName;
-    document.getElementById('username-display').textContent = data.displayName;
 
-    // Apply frame on main avatar
-    const mainAvatar = document.querySelector('.dash-avatar');
+    const mainAvatar = document.querySelector('.dash-profile-card .dash-avatar');
     if (mainAvatar) {
       mainAvatar.className = 'dash-avatar';
       if (window._currentFrame && window._currentFrame !== 'none') {
@@ -278,123 +435,6 @@ async function saveSettings() {
   } finally {
     saveBtn.disabled = false;
   }
-}
-
-// === QUETES ===
-async function loadQuests() {
-  try {
-    const res = await fetch('/api/quests');
-    if (!res.ok) return;
-    const data = await res.json();
-    renderQuests('daily-quests', data.daily);
-    renderQuests('weekly-quests', data.weekly);
-  } catch {}
-}
-
-function renderQuests(containerId, quests) {
-  const container = document.getElementById(containerId);
-  if (!quests || quests.length === 0) {
-    container.innerHTML = '<div class="quest-empty">Aucune quete</div>';
-    return;
-  }
-
-  container.innerHTML = quests.map(q => {
-    const pct = Math.min(100, Math.floor((q.progress / q.goal) * 100));
-    const done = q.progress >= q.goal;
-    const claimed = q.claimed;
-
-    return `
-      <div class="quest-card ${claimed ? 'quest-claimed' : ''} ${done && !claimed ? 'quest-done' : ''}">
-        <div class="quest-info">
-          <div class="quest-label">${q.label}</div>
-          <div class="quest-progress-text">${q.progress}/${q.goal}</div>
-        </div>
-        <div class="quest-bar-bg">
-          <div class="quest-bar-fill" style="width:${pct}%"></div>
-        </div>
-        <div class="quest-reward">
-          <span class="quest-reward-cr">+${q.reward_credits} CR</span>
-          <span class="quest-reward-xp">+${q.reward_xp} XP</span>
-          ${q.canClaim ? `<button class="quest-claim-btn" onclick="claimQuest(${q.id})">RECLAMER</button>` : ''}
-          ${claimed ? '<span class="quest-check">&#10003;</span>' : ''}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-async function claimQuest(questId) {
-  try {
-    const res = await fetch('/api/quests/claim', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ questId })
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      document.getElementById('stat-credits').textContent = data.credits;
-      document.getElementById('profile-credits').textContent = data.credits;
-      loadQuests();
-    }
-  } catch {}
-}
-
-// === SUCCES ===
-async function loadAchievements() {
-  try {
-    const res = await fetch('/api/achievements');
-    if (!res.ok) return;
-    const data = await res.json();
-    renderAchievements(data.achievements);
-  } catch {}
-}
-
-function renderAchievements(achievements) {
-  const grid = document.getElementById('achievements-grid');
-  grid.innerHTML = achievements.map(a => {
-    let cls = 'achievement-badge';
-    if (a.unlocked && a.claimed) cls += ' achievement--claimed';
-    else if (a.unlocked) cls += ' achievement--unlocked';
-    else cls += ' achievement--locked';
-
-    return `
-      <div class="${cls}">
-        <div class="achievement-icon">${a.icon}</div>
-        <div class="achievement-info">
-          <div class="achievement-label">${a.label}</div>
-          <div class="achievement-desc">${a.desc}</div>
-          <div class="achievement-reward">+${a.credits} CR</div>
-        </div>
-        ${a.canClaim ? `<button class="achievement-claim-btn" onclick="claimAchievement('${a.key}')">RECLAMER</button>` : ''}
-        ${a.claimed ? '<div class="achievement-check">&#10003;</div>' : ''}
-      </div>
-    `;
-  }).join('');
-}
-
-async function claimAchievement(key) {
-  try {
-    const res = await fetch('/api/achievements/claim', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ achievementKey: key })
-    });
-    const data = await res.json();
-    if (res.ok && data.success) {
-      document.getElementById('stat-credits').textContent = data.credits;
-      document.getElementById('profile-credits').textContent = data.credits;
-      loadAchievements();
-    }
-  } catch {}
-}
-
-function openAchievements() {
-  loadAchievements();
-  document.getElementById('achievements-overlay').classList.add('active');
-}
-
-function closeAchievements() {
-  document.getElementById('achievements-overlay').classList.remove('active');
 }
 
 // === EVENT LISTENERS ===
@@ -454,3 +494,5 @@ initSettingsModal();
 updateThemeButtons();
 loadUser();
 loadQuests();
+loadCombatStats();
+loadDecksPreview();
