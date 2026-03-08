@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const session = require('express-session');
+const SqliteStore = require('better-sqlite3-session-store')(session);
 const bcrypt = require('bcryptjs');
 const Database = require('better-sqlite3');
 const path = require('path');
@@ -2520,11 +2521,13 @@ function generateEnemies(node) {
 // --- Middleware ---
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+const sessionDb = new Database(path.join(__dirname, 'sessions.db'));
 const sessionMiddleware = session({
+  store: new SqliteStore({ client: sessionDb, expired: { clear: true, intervalMs: 900000 } }),
   secret: 'gacha-secret-key-change-me',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 24 * 60 * 60 * 1000 }
+  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
 });
 app.use(sessionMiddleware);
 
@@ -4060,6 +4063,12 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
   const resetTx = db.transaction(() => {
+    // Supprimer deck_cards d'abord (reference user_cards et decks)
+    const deckIds = db.prepare('SELECT id FROM decks WHERE user_id = ?').all(userId).map(d => d.id);
+    for (const dId of deckIds) {
+      db.prepare('DELETE FROM deck_cards WHERE deck_id = ?').run(dId);
+    }
+    db.prepare('DELETE FROM decks WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM user_cards WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM campaign_progress WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM pvp_teams WHERE user_id = ?').run(userId);

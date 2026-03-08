@@ -2,6 +2,7 @@ node_modules/
 gacha.db
 gacha.db-shm
 gacha.db-wal
+sessions.db
 .env
 .DS_Store
 backups/
