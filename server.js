@@ -4059,11 +4059,17 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
   const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
-  db.prepare('DELETE FROM user_cards WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM campaign_progress WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM pvp_teams WHERE user_id = ?').run(userId);
-  db.prepare('DELETE FROM battle_log WHERE user_id = ?').run(userId);
-  db.prepare('UPDATE users SET credits = 1000 WHERE id = ?').run(userId);
+  const resetTx = db.transaction(() => {
+    db.prepare('DELETE FROM user_cards WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM campaign_progress WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM pvp_teams WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM battle_log WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM mine_state WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM mine_upgrades WHERE user_id = ?').run(userId);
+    db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0 WHERE id = ?').run(userId);
+  });
+  resetTx();
   res.json({ success: true, username: user.username });
 });
 
