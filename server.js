@@ -630,6 +630,46 @@ function getManaForTurn(turn) {
   if (addedCount > 0) console.log('Migration: ' + addedCount + ' nouvelles cartes v1.4.0 ajoutees');
 }
 
+// --- Migration : 14 nouvelles cartes v1.5.0 ---
+{
+  const newCards2 = [
+    // COMMUNES (5)
+    ['Rat des Egouts', 'commune', 'bete', 'ombre', 2, 0, 1, 1, 'Morsure infectee', 'Empoisonne la cible (1 degat/tour, 2 tours)', '🐀', 'Si le Rat meurt, empoisonne son tueur (1 degat/tour, 2 tours)', 1.0],
+    ['Moine Errant', 'commune', 'divin', 'lumiere', 0, 2, 4, 2, 'Meditation', 'Se soigne 2 HP et gagne +1 DEF permanent', '🧘', '', 1.0],
+    ['Scarabee de Lave', 'commune', 'bete', 'feu', 2, 2, 2, 2, 'Aucun', 'Aucun', '🪲', 'Quand il meurt, inflige 1 degat a toutes les cartes ennemies (explosion)', 1.0],
+    ['Espion des Brumes', 'commune', 'creature', 'eau', 1, 1, 2, 1, 'Infiltration', 'Pioche 1 carte supplementaire', '🌫️', 'Ne peut pas etre cible au premier tour', 1.0],
+    ['Champignon Toxique', 'commune', 'creature', 'terre', 0, 0, 3, 1, 'Spores', 'Empoisonne tous les ennemis (1 degat, 1 tour)', '🍄', 'Ne peut pas attaquer. Meurt au bout de 3 tours', 1.0],
+    // RARES (4)
+    ['Valkyrie Dechue', 'rare', 'guerrier', 'lumiere', 3, 2, 4, 3, 'Jugement guerrier', 'Attaque un ennemi ; si elle le tue, se soigne 3 HP', '🪽', '+1 ATK quand un allie meurt (vengeance)', 1.0],
+    ['Alchimiste Fou', 'rare', 'mage', 'feu', 2, 1, 3, 3, 'Transmutation', 'Transforme 2 HP d un allie en +2 ATK permanent pour cet allie', '⚗️', 'Si l allie booste tue un ennemi ce tour, l Alchimiste recupere 2 HP', 1.0],
+    ['Ombre Mimetique', 'rare', 'creature', 'ombre', 0, 0, 3, 2, 'Copie', 'Copie l ATK et la DEF de n importe quelle carte sur le terrain', '🪞', 'Perd 1 HP par tour (instable)', 1.0],
+    // EPIQUES (2)
+    ['Chimere Elementaire', 'epique', 'bete', 'feu', 3, 3, 6, 5, 'Souffle triple', 'Inflige 3 degats a un ennemi (1 Feu + 1 Eau + 1 Terre, ignore resistances elementaires)', '🐲', 'Compte comme Feu, Eau ET Terre pour les synergies d elements', 1.5],
+    ['Oracle du Temps', 'epique', 'divin', 'lumiere', 2, 3, 5, 4, 'Distorsion temporelle', 'Annule la derniere action de l adversaire et rejoue votre tour (1x/combat)', '⏳', '', 1.5],
+    ['Colosse de Corail', 'epique', 'guerrier', 'eau', 3, 5, 8, 5, 'Recif vivant', 'Invoque un token Corail (0/2/2) sur chaque slot vide allie avec taunt', '🪸', '+1 DEF pour chaque token Corail en vie', 1.5],
+    // LEGENDAIRES (2)
+    ['Chronos', 'legendaire', 'divin', 'lumiere', 3, 4, 8, 7, 'Boucle temporelle', 'Reinitialise TOUTES les cartes du terrain a leurs stats d origine, annule tous les buffs/debuffs/poison/shield', '⌛', 'Immunise au stun, silence et poison. Debut de tour : un ennemi aleatoire perd son dernier buff', 2.0],
+    ['Abyssia', 'legendaire', 'divin', 'eau', 4, 5, 8, 6, 'Maree montante', 'Inflige 2 degats a tous les ennemis. Les survivants ne peuvent pas attaquer au prochain tour', '🌊', 'Soigne 1 HP a tous les allies Eau en debut de tour. Quand un allie Eau meurt, gagne +2 ATK permanent', 2.0],
+    // CHAOS (1)
+    ['Le De du Destin', 'chaos', 'creature', 'neutre', 1, 1, 6, 3, 'Lancer divin', 'Lance un de (1-6) : 1=se tue, 2=rien, 3=+3 ATK, 4=3 degats AoE, 5=soigne tout le monde de 4 HP, 6=tue un ennemi aleatoire', '🎲', 'Debut de tour : ATK et DEF changent aleatoirement (0-4). Max 1 sur le terrain', 1.0],
+  ];
+
+  const insertCard2 = db.prepare(`
+    INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  let addedCount2 = 0;
+  for (const card of newCards2) {
+    const exists = db.prepare("SELECT id FROM cards WHERE name = ?").get(card[0]);
+    if (!exists) {
+      insertCard2.run(...card);
+      addedCount2++;
+    }
+  }
+  if (addedCount2 > 0) console.log('Migration: ' + addedCount2 + ' nouvelles cartes v1.5.0 ajoutees');
+}
+
 // --- Tables Decks ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS decks (
@@ -1447,6 +1487,21 @@ const ABILITY_MAP = {
   'Souffle du Yomi':      { type: 'combo',  effects: [{ type: 'debuff_atk_all', value: 1 }, { type: 'debuff_def_all', value: 1 }, { type: 'reap', threshold: 2 }] }, // Izanami
   'Effondrement cosmique': { type: 'apocalypse' },                              // Le Neant Originel (detruit tout + degats directs)
   'Sacrifice radieux':    { type: 'delayed_sacrifice', directDamage: 5 },       // Lumis (suicide + 5 degats joueur)
+
+  // ===== NOUVELLES CARTES v1.5.0 =====
+  'Morsure infectee':     { type: 'combo', effects: [{ type: 'direct_damage', value: 2 }, { type: 'poison', damage: 1, duration: 2 }] },  // Rat des Egouts
+  'Meditation':           { type: 'combo', effects: [{ type: 'heal_self', value: 2 }, { type: 'buff_def_lasting', value: 1 }] },           // Moine Errant
+  'Infiltration':         { type: 'draw_card', value: 1 },                              // Espion des Brumes (pioche 1 carte)
+  'Spores':               { type: 'poison_all', damage: 1, duration: 1 },               // Champignon Toxique (empoisonne tous ennemis)
+  'Jugement guerrier':    { type: 'combo', effects: [{ type: 'direct_damage', value: 3 }, { type: 'heal_on_kill', value: 3 }] },           // Valkyrie Dechue
+  'Transmutation':        { type: 'transfer_hp_to_atk', hpCost: 2, atkGain: 2, target: 'ally' },  // Alchimiste Fou
+  'Copie':                { type: 'copy_stats', target: 'any' },                        // Ombre Mimetique (copie ATK/DEF d'une carte)
+  'Souffle triple':       { type: 'direct_damage', value: 3, ignoreResistance: true },  // Chimere Elementaire
+  'Distorsion temporelle': { type: 'undo_last_action', uses: 1 },                       // Oracle du Temps (annule derniere action, 1x/combat)
+  'Recif vivant':         { type: 'summon_token', token: { name: 'Corail', atk: 0, def: 2, hp: 2, taunt: true } },  // Colosse de Corail
+  'Boucle temporelle':    { type: 'reset_all_stats' },                                  // Chronos (reinitialise toutes les cartes)
+  'Maree montante':       { type: 'combo', effects: [{ type: 'aoe_damage', value: 2 }, { type: 'stun_all', duration: 1 }] },              // Abyssia
+  'Lancer divin':         { type: 'dice_roll', outcomes: { 1: 'self_kill', 2: 'nothing', 3: { type: 'buff_atk', value: 3 }, 4: { type: 'aoe_damage', value: 3 }, 5: { type: 'heal_all', value: 4 }, 6: 'kill_random_enemy' } },  // Le De du Destin
 };
 
 // ============================================
