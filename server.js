@@ -495,10 +495,10 @@ const BOOSTERS = [
 // SYSTEME DE MINE
 // ============================================
 const MINE_RESOURCES = {
-  charbon: { name: 'Charbon', price: 5, weight: 60, resistMult: 1 },
-  fer:     { name: 'Fer',     price: 15, weight: 25, resistMult: 1.2 },
-  or:      { name: 'Or',      price: 50, weight: 12, resistMult: 1.5 },
-  diamant: { name: 'Diamant', price: 100, weight: 3, resistMult: 2 }
+  charbon: { name: 'Charbon', price: 3, weight: 60, resistMult: 1 },
+  fer:     { name: 'Fer',     price: 12, weight: 25, resistMult: 1.2 },
+  or:      { name: 'Or',      price: 20, weight: 12, resistMult: 1.5 },
+  diamant: { name: 'Diamant', price: 50, weight: 3, resistMult: 2 }
 };
 
 const MINE_UPGRADES_CONFIG = {
@@ -4414,15 +4414,29 @@ app.post('/api/mine/sell-all', requireAuth, (req, res) => {
   let totalPrice = 0;
   items.forEach(item => { totalPrice += MINE_RESOURCES[item.resource]?.price || 0; });
 
+  // Vend tout + auto-reset la mine
+  const upgrades = getMineUpgrades(userId);
+  const { grid, counts } = generateMineGrid(upgrades.luck);
+
   const sellAllTx = db.transaction(() => {
     db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
     db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(totalPrice, userId);
+    db.prepare('UPDATE mine_state SET grid = ?, hidden_charbon = ?, hidden_fer = ?, hidden_or = ?, hidden_diamant = ?, created_at = CURRENT_TIMESTAMP WHERE user_id = ?')
+      .run(JSON.stringify(grid), counts.charbon, counts.fer, counts.or, counts.diamant, userId);
   });
   sellAllTx();
 
   const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
 
-  res.json({ success: true, credits, totalSold: totalPrice, itemsSold: items.length });
+  const clientGrid = grid.map(b => ({
+    resistance: b.resistance,
+    hits: b.hits,
+    mined: b.mined,
+    collected: b.collected,
+    resource: null
+  }));
+
+  res.json({ success: true, credits, totalSold: totalPrice, itemsSold: items.length, grid: clientGrid, hiddenResources: counts });
 });
 
 // POST reset mine

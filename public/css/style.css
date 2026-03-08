@@ -5925,6 +5925,15 @@ body.mine-page {
   aspect-ratio: 1;
 }
 
+.mine-grid {
+  -webkit-user-select: none;
+  user-select: none;
+}
+.mine-grid img {
+  -webkit-user-drag: none;
+  user-drag: none;
+  pointer-events: none;
+}
 .mine-block {
   background: #2a2a2a;
   background-image: url('/img/mine/block.png');
@@ -5938,6 +5947,8 @@ body.mine-page {
   justify-content: center;
   position: relative;
   overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .mine-block:hover:not(.mine-block--mined) {
   filter: brightness(1.3);

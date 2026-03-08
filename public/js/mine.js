@@ -13,10 +13,10 @@ const RESOURCE_NAMES = {
 };
 
 const RESOURCE_PRICES = {
-  charbon: 5,
-  fer: 15,
-  or: 50,
-  diamant: 100
+  charbon: 3,
+  fer: 12,
+  or: 20,
+  diamant: 50
 };
 
 // === INIT ===
@@ -307,12 +307,21 @@ async function sellAll() {
     const data = await res.json();
 
     if (data.success) {
-      showNotification(`+${data.totalSold} CR (${data.itemsSold} minerais vendus)`, 'sell');
+      showNotification(`+${data.totalSold} CR (${data.itemsSold} minerais vendus) — Nouvelle mine !`, 'sell');
       currentCredits = data.credits;
       document.getElementById('nav-credits').textContent = currentCredits;
       mineState.inventory = [];
       renderInventory([], mineState.maxSlots);
       showInventoryWarning(false);
+
+      // Auto-reset: nouvelle mine incluse dans la reponse
+      if (data.grid) {
+        mineState.grid = data.grid;
+        mineState.hiddenResources = data.hiddenResources;
+        renderMineGrid(data.grid);
+        renderHiddenResources(data.hiddenResources);
+      }
+
       updateButtons();
 
       // Update collecter tab if visible
