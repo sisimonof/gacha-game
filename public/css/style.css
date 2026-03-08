@@ -7075,3 +7075,472 @@ body.bp-page {
   background: rgba(255, 204, 0, 0.2);
   box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
 }
+
+/* ============================================
+   QUETES - Dashboard Panel
+   ============================================ */
+.quests-panel {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.quests-section {
+  flex: 1;
+  background: rgba(0, 255, 65, 0.03);
+  border: 1px solid rgba(0, 255, 65, 0.15);
+  border-radius: 12px;
+  padding: 16px;
+}
+.quests-section-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #00ff41;
+  margin-bottom: 12px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+.quests-weekly-title {
+  color: #ffaa00;
+}
+.quests-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.quest-card {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 255, 65, 0.1);
+  border-radius: 8px;
+  padding: 10px 12px;
+  transition: all 0.2s;
+}
+.quest-card.quest-done {
+  border-color: #00ff41;
+  box-shadow: 0 0 8px rgba(0, 255, 65, 0.2);
+}
+.quest-card.quest-claimed {
+  opacity: 0.5;
+  border-color: rgba(0, 255, 65, 0.05);
+}
+.quest-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.quest-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #cccccc;
+}
+.quest-progress-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #00ff41;
+}
+.quest-bar-bg {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.quest-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #00ff41, #00cc33);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+}
+.quest-reward {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+}
+.quest-reward-cr {
+  color: #ffcc00;
+}
+.quest-reward-xp {
+  color: #66aaff;
+}
+.quest-claim-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 4px 10px;
+  background: #00ff41;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-left: auto;
+  transition: all 0.2s;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+.quest-claim-btn:hover {
+  background: #33ff66;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+}
+.quest-check {
+  color: #00ff41;
+  font-size: 12px;
+  margin-left: auto;
+}
+.quest-loading, .quest-empty {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #555;
+  text-align: center;
+  padding: 10px;
+}
+
+/* ============================================
+   SUCCES / ACHIEVEMENTS Modal
+   ============================================ */
+.dash-achievements-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #ffcc00;
+  background: rgba(255, 204, 0, 0.1);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-top: 10px;
+}
+.dash-achievements-btn:hover {
+  background: rgba(255, 204, 0, 0.2);
+  box-shadow: 0 0 15px rgba(255, 204, 0, 0.3);
+  transform: translateY(-2px);
+}
+.achievements-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+.achievements-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+.achievements-modal {
+  background: #0a0a0a;
+  border: 2px solid #ffcc00;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 700px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 30px;
+  position: relative;
+}
+.achievements-close {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+}
+.achievements-close:hover { color: #fff; }
+.achievements-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: #ffcc00;
+  text-align: center;
+  margin-bottom: 25px;
+  text-shadow: 0 0 15px rgba(255, 204, 0, 0.5);
+}
+.achievements-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.achievement-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  transition: all 0.2s;
+}
+.achievement--locked {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+.achievement--unlocked {
+  border-color: #ffcc00;
+  background: rgba(255, 204, 0, 0.08);
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.15);
+}
+.achievement--claimed {
+  border-color: rgba(0, 255, 65, 0.3);
+  background: rgba(0, 255, 65, 0.05);
+  opacity: 0.7;
+}
+.achievement-icon {
+  font-size: 28px;
+  min-width: 40px;
+  text-align: center;
+}
+.achievement-info {
+  flex: 1;
+}
+.achievement-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: #fff;
+  margin-bottom: 3px;
+}
+.achievement-desc {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #888;
+  margin-bottom: 3px;
+}
+.achievement-reward {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ffcc00;
+}
+.achievement-claim-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 6px 12px;
+  background: #ffcc00;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  animation: pulse-glow 1.5s ease-in-out infinite;
+  transition: all 0.2s;
+}
+.achievement-claim-btn:hover {
+  background: #ffdd33;
+  box-shadow: 0 0 10px rgba(255, 204, 0, 0.5);
+}
+.achievement-check {
+  color: #00ff41;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+/* ============================================
+   CASINO PAGE
+   ============================================ */
+body.casino-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.dash-nav-link--casino {
+  color: #ff4444 !important;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+}
+
+.casino-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  width: 100%;
+}
+.casino-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 24px;
+  color: #ff4444;
+  text-align: center;
+  margin-bottom: 30px;
+  text-shadow: 0 0 20px rgba(255, 68, 68, 0.6);
+  letter-spacing: 4px;
+}
+.casino-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+.casino-wheel-area {
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+.casino-pointer {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 28px;
+  color: #ff4444;
+  z-index: 10;
+  filter: drop-shadow(0 0 8px rgba(255, 68, 68, 0.8));
+  text-shadow: 0 0 10px rgba(255, 68, 68, 0.8);
+}
+.casino-wheel-wrap {
+  display: inline-block;
+  border-radius: 50%;
+  box-shadow: 0 0 30px rgba(255, 68, 68, 0.3), inset 0 0 20px rgba(0, 0, 0, 0.5);
+  border: 3px solid #ff4444;
+}
+.casino-wheel-wrap canvas {
+  display: block;
+  border-radius: 50%;
+}
+.casino-controls {
+  text-align: center;
+}
+.casino-cost {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #888;
+  margin-bottom: 12px;
+}
+.casino-cost-amount {
+  color: #ffcc00;
+}
+.casino-spin-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  padding: 14px 40px;
+  background: linear-gradient(135deg, #ff4444, #cc0000);
+  color: #fff;
+  border: 2px solid #ff6666;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 0 20px rgba(255, 68, 68, 0.4);
+}
+.casino-spin-btn:hover {
+  background: linear-gradient(135deg, #ff6666, #ee2222);
+  box-shadow: 0 0 30px rgba(255, 68, 68, 0.6);
+  transform: scale(1.05);
+}
+.casino-spin-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+.casino-spin-icon {
+  font-size: 16px;
+}
+.casino-credits {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #888;
+  margin-top: 12px;
+}
+.casino-credits span {
+  color: #ffcc00;
+}
+
+/* Casino Result */
+.casino-result {
+  text-align: center;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  animation: result-pop 0.5s ease;
+}
+@keyframes result-pop {
+  0% { transform: scale(0.5); opacity: 0; }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.casino-result--win {
+  background: rgba(0, 255, 65, 0.1);
+  border: 1px solid #00ff41;
+}
+.casino-result--lose {
+  background: rgba(255, 0, 0, 0.1);
+  border: 1px solid #ff4444;
+}
+.casino-result--xp {
+  background: rgba(102, 170, 255, 0.1);
+  border: 1px solid #66aaff;
+}
+.casino-result--card {
+  background: rgba(255, 204, 0, 0.15);
+  border: 2px solid #ffcc00;
+  box-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
+}
+.casino-result-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: #fff;
+  margin-bottom: 8px;
+}
+.casino-result-detail {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #aaa;
+}
+
+/* Casino History */
+.casino-history {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+}
+.casino-history-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #888;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.casino-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.casino-history-empty {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #444;
+  text-align: center;
+  padding: 10px;
+}
+.casino-hist-item {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  padding: 6px 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.hist-win { color: #00ff41; }
+.hist-lose { color: #ff4444; }
+.hist-xp { color: #66aaff; }
+.hist-card { color: #ffcc00; }
+
+/* Quests panel responsive */
+@media (max-width: 768px) {
+  .quests-panel {
+    flex-direction: column;
+  }
+  .casino-container {
+    padding: 10px;
+  }
+  .casino-wheel-wrap canvas {
+    width: 300px;
+    height: 300px;
+  }
+}

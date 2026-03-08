@@ -188,6 +188,53 @@ db.exec(`
   }
 }
 
+// === QUETES & SUCCES ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_quests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    quest_key TEXT NOT NULL,
+    type TEXT NOT NULL,
+    progress INTEGER DEFAULT 0,
+    goal INTEGER NOT NULL,
+    reward_credits INTEGER DEFAULT 0,
+    reward_xp INTEGER DEFAULT 0,
+    claimed INTEGER DEFAULT 0,
+    assigned_date TEXT NOT NULL,
+    UNIQUE(user_id, quest_key, assigned_date)
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_achievements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    achievement_key TEXT NOT NULL,
+    unlocked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    claimed INTEGER DEFAULT 0,
+    UNIQUE(user_id, achievement_key)
+  )
+`);
+
+// Migration: stat columns on users
+{
+  const statCols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  const statMigrations = [
+    ['stat_boosters_opened', 'INTEGER DEFAULT 0'],
+    ['stat_pvp_wins', 'INTEGER DEFAULT 0'],
+    ['stat_diamonds_mined', 'INTEGER DEFAULT 0'],
+    ['stat_fusions', 'INTEGER DEFAULT 0'],
+    ['stat_casino_spins', 'INTEGER DEFAULT 0'],
+    ['stat_credits_spent', 'INTEGER DEFAULT 0']
+  ];
+  for (const [col, type] of statMigrations) {
+    if (!statCols.includes(col)) {
+      db.exec(`ALTER TABLE users ADD COLUMN ${col} ${type}`);
+      console.log(`Migration: ${col} ajouté`);
+    }
+  }
+}
+
 // === GIFT CODES ===
 db.exec(`
   CREATE TABLE IF NOT EXISTS gift_codes (
@@ -627,6 +674,77 @@ const BP_XP = {
   fusion:           15
 };
 
+// ============================================
+// QUETES JOURNALIERES / HEBDOMADAIRES
+// ============================================
+const QUEST_POOL = {
+  daily: [
+    { key: 'open_boosters',  label: 'Ouvre {goal} booster(s)',        goal: [1,2,3], credits: 150, xp: 30, track: 'booster_open' },
+    { key: 'win_pvp',        label: 'Gagne {goal} combat(s) PVP',    goal: [1,2],   credits: 200, xp: 40, track: 'pvp_win' },
+    { key: 'mine_diamonds',  label: 'Mine {goal} diamant(s)',         goal: [3,5,8], credits: 150, xp: 25, track: 'diamond_mine' },
+    { key: 'do_fusions',     label: 'Fais {goal} fusion(s)',          goal: [1,2],   credits: 100, xp: 20, track: 'fusion' },
+    { key: 'earn_credits',   label: 'Gagne {goal} credits',          goal: [500,1000], credits: 200, xp: 35, track: 'credits_earned' },
+    { key: 'claim_daily',    label: 'Recupere ton bonus du jour',    goal: [1],     credits: 50,  xp: 15, track: 'daily_claim' },
+    { key: 'play_casino',    label: 'Joue {goal} fois au casino',    goal: [1,3],   credits: 100, xp: 20, track: 'casino_spin' },
+  ],
+  weekly: [
+    { key: 'open_boosters_w', label: 'Ouvre {goal} boosters',        goal: [10,15], credits: 500, xp: 100, track: 'booster_open' },
+    { key: 'win_pvp_w',       label: 'Gagne {goal} PVP',            goal: [5,10],  credits: 600, xp: 120, track: 'pvp_win' },
+    { key: 'mine_diamonds_w', label: 'Mine {goal} diamants',        goal: [20,30], credits: 400, xp: 80,  track: 'diamond_mine' },
+    { key: 'spend_credits_w', label: 'Depense {goal} credits',      goal: [2000,5000], credits: 500, xp: 90, track: 'credits_spent' },
+    { key: 'casino_spins_w',  label: 'Joue {goal} fois au casino',  goal: [10,15], credits: 400, xp: 70,  track: 'casino_spin' },
+  ]
+};
+
+// ============================================
+// SUCCES / ACHIEVEMENTS
+// ============================================
+const ACHIEVEMENTS = [
+  // Collection
+  { key: 'collector_10',   label: 'Collectionneur Novice',   desc: '10 cartes',           icon: '🃏', check: (s) => s.cardCount >= 10,       credits: 200 },
+  { key: 'collector_50',   label: 'Collectionneur Avance',   desc: '50 cartes',           icon: '📚', check: (s) => s.cardCount >= 50,       credits: 500 },
+  { key: 'collector_100',  label: 'Maitre Collectionneur',   desc: '100 cartes',          icon: '👑', check: (s) => s.cardCount >= 100,      credits: 1000 },
+  // Combat
+  { key: 'first_pvp_win',  label: 'Premiere Victoire',       desc: '1 victoire PVP',      icon: '⚔',  check: (s) => s.pvpWins >= 1,         credits: 100 },
+  { key: 'pvp_10',         label: 'Gladiateur',              desc: '10 victoires PVP',    icon: '🏆', check: (s) => s.pvpWins >= 10,        credits: 500 },
+  { key: 'pvp_50',         label: 'Champion',                desc: '50 victoires PVP',    icon: '🥇', check: (s) => s.pvpWins >= 50,        credits: 1500 },
+  // Mine
+  { key: 'diamonds_10',    label: 'Chercheur',               desc: '10 diamants mines',   icon: '⛏',  check: (s) => s.diamondsMined >= 10,  credits: 200 },
+  { key: 'diamonds_50',    label: 'Mineur Expert',           desc: '50 diamants mines',   icon: '💎', check: (s) => s.diamondsMined >= 50,  credits: 600 },
+  // Boosters
+  { key: 'boosters_10',    label: 'Deballeur',               desc: '10 boosters ouverts', icon: '📦', check: (s) => s.boostersOpened >= 10, credits: 200 },
+  { key: 'boosters_50',    label: 'Accro aux Boosters',      desc: '50 boosters ouverts', icon: '🎁', check: (s) => s.boostersOpened >= 50, credits: 700 },
+  // Fusion
+  { key: 'fusion_first',   label: 'Alchimiste',              desc: '1 fusion',            icon: '🔮', check: (s) => s.fusions >= 1,         credits: 100 },
+  { key: 'fusion_20',      label: 'Maitre Alchimiste',       desc: '20 fusions',          icon: '⚗',  check: (s) => s.fusions >= 20,        credits: 500 },
+  // Casino
+  { key: 'casino_first',   label: 'Parieur',                 desc: '1 spin casino',       icon: '🎰', check: (s) => s.casinoSpins >= 1,     credits: 50 },
+  { key: 'casino_50',      label: 'Flambeur',                desc: '50 spins casino',     icon: '🎲', check: (s) => s.casinoSpins >= 50,    credits: 500 },
+  // Passe
+  { key: 'bp_max',         label: 'Combattant Ultime',       desc: 'Palier 30 du Passe',  icon: '🎖',  check: (s) => s.bpTier >= 30,         credits: 2000 },
+  // Richesse
+  { key: 'rich_5000',      label: 'Riche',                   desc: '5000 credits',        icon: '💰', check: (s) => s.credits >= 5000,      credits: 300 },
+  { key: 'rich_20000',     label: 'Millionnaire',            desc: '20000 credits',       icon: '🏦', check: (s) => s.credits >= 20000,     credits: 1000 },
+];
+
+// ============================================
+// CASINO
+// ============================================
+const CASINO_COST = 200;
+const CASINO_SEGMENTS = [
+  { label: 'PERDU',            color: '#333333', weight: 30,  reward: { type: 'nothing' } },
+  { label: '50 CR',            color: '#2a5a2a', weight: 20,  reward: { type: 'credits', amount: 50 } },
+  { label: '100 CR',           color: '#1a4a3a', weight: 15,  reward: { type: 'credits', amount: 100 } },
+  { label: '200 CR',           color: '#3a7a3a', weight: 10,  reward: { type: 'credits', amount: 200 } },
+  { label: '500 CR',           color: '#4a8a2a', weight: 6,   reward: { type: 'credits', amount: 500 } },
+  { label: '1000 CR',          color: '#6aaa2a', weight: 3,   reward: { type: 'credits', amount: 1000 } },
+  { label: '25 XP',            color: '#2a4a6a', weight: 8,   reward: { type: 'xp', amount: 25 } },
+  { label: '50 XP',            color: '#3a5a8a', weight: 4,   reward: { type: 'xp', amount: 50 } },
+  { label: 'CARTE RARE',       color: '#0066ff', weight: 2,   reward: { type: 'card', rarity: 'rare' } },
+  { label: 'CARTE EPIQUE',     color: '#aa00ff', weight: 1,   reward: { type: 'card', rarity: 'epique' } },
+  { label: 'JACKPOT SECRET',   color: '#ff0000', weight: 0.5, reward: { type: 'card', rarity: 'secret' } },
+];
+
 function getBattlePass(userId) {
   let bp = db.prepare('SELECT * FROM battle_pass WHERE user_id = ?').get(userId);
   if (!bp) {
@@ -652,6 +770,110 @@ function addBattlePassXP(userId, amount) {
   db.prepare('UPDATE battle_pass SET xp = ?, current_tier = ? WHERE user_id = ?')
     .run(newXP, newTier, userId);
   return { xp: newXP, tier: newTier, xpGained: amount };
+}
+
+// ============================================
+// HELPERS QUETES / SUCCES
+// ============================================
+
+function getISOWeek(d) {
+  const date = new Date(d);
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+  const week1 = new Date(date.getFullYear(), 0, 4);
+  const weekNum = 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+  return `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+}
+
+function assignQuests(userId) {
+  const today = new Date().toISOString().split('T')[0];
+  const week = getISOWeek(new Date());
+
+  // Check if daily quests already assigned today
+  const dailyCount = db.prepare('SELECT COUNT(*) as c FROM user_quests WHERE user_id = ? AND type = ? AND assigned_date = ?').get(userId, 'daily', today).c;
+  if (dailyCount === 0) {
+    // Pick 3 random daily quests
+    const pool = [...QUEST_POOL.daily];
+    const selected = [];
+    for (let i = 0; i < 3 && pool.length > 0; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      selected.push(pool.splice(idx, 1)[0]);
+    }
+    const insert = db.prepare('INSERT OR IGNORE INTO user_quests (user_id, quest_key, type, goal, reward_credits, reward_xp, assigned_date) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    for (const q of selected) {
+      const goal = q.goal[Math.floor(Math.random() * q.goal.length)];
+      insert.run(userId, q.key, 'daily', goal, q.credits, q.xp, today);
+    }
+  }
+
+  // Check if weekly quests already assigned this week
+  const weeklyCount = db.prepare('SELECT COUNT(*) as c FROM user_quests WHERE user_id = ? AND type = ? AND assigned_date = ?').get(userId, 'weekly', week).c;
+  if (weeklyCount === 0) {
+    const pool = [...QUEST_POOL.weekly];
+    const selected = [];
+    for (let i = 0; i < 2 && pool.length > 0; i++) {
+      const idx = Math.floor(Math.random() * pool.length);
+      selected.push(pool.splice(idx, 1)[0]);
+    }
+    const insert = db.prepare('INSERT OR IGNORE INTO user_quests (user_id, quest_key, type, goal, reward_credits, reward_xp, assigned_date) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    for (const q of selected) {
+      const goal = q.goal[Math.floor(Math.random() * q.goal.length)];
+      insert.run(userId, q.key, 'weekly', goal, q.credits, q.xp, week);
+    }
+  }
+}
+
+function updateQuestProgress(userId, trackKey, amount = 1) {
+  const today = new Date().toISOString().split('T')[0];
+  const week = getISOWeek(new Date());
+
+  // Find all active quests matching this trackKey
+  const allQuestDefs = [...QUEST_POOL.daily, ...QUEST_POOL.weekly];
+  const matchingKeys = allQuestDefs.filter(q => q.track === trackKey).map(q => q.key);
+  if (matchingKeys.length === 0) return;
+
+  for (const qk of matchingKeys) {
+    // Update daily
+    db.prepare('UPDATE user_quests SET progress = MIN(progress + ?, goal) WHERE user_id = ? AND quest_key = ? AND assigned_date = ? AND claimed = 0')
+      .run(amount, userId, qk, today);
+    // Update weekly
+    db.prepare('UPDATE user_quests SET progress = MIN(progress + ?, goal) WHERE user_id = ? AND quest_key = ? AND assigned_date = ? AND claimed = 0')
+      .run(amount, userId, qk, week);
+  }
+}
+
+function getAchievementStats(userId) {
+  const user = db.prepare('SELECT credits, stat_boosters_opened, stat_pvp_wins, stat_diamonds_mined, stat_fusions, stat_casino_spins, stat_credits_spent FROM users WHERE id = ?').get(userId);
+  const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(userId).c;
+  const bp = db.prepare('SELECT current_tier FROM battle_pass WHERE user_id = ?').get(userId);
+
+  return {
+    credits: user?.credits || 0,
+    cardCount,
+    pvpWins: user?.stat_pvp_wins || 0,
+    diamondsMined: user?.stat_diamonds_mined || 0,
+    boostersOpened: user?.stat_boosters_opened || 0,
+    fusions: user?.stat_fusions || 0,
+    casinoSpins: user?.stat_casino_spins || 0,
+    creditsSpent: user?.stat_credits_spent || 0,
+    bpTier: bp?.current_tier || 0
+  };
+}
+
+function checkAchievements(userId) {
+  const stats = getAchievementStats(userId);
+  const already = db.prepare('SELECT achievement_key FROM user_achievements WHERE user_id = ?').all(userId).map(a => a.achievement_key);
+  const insert = db.prepare('INSERT OR IGNORE INTO user_achievements (user_id, achievement_key) VALUES (?, ?)');
+
+  const newlyUnlocked = [];
+  for (const ach of ACHIEVEMENTS) {
+    if (already.includes(ach.key)) continue;
+    if (ach.check(stats)) {
+      insert.run(userId, ach.key);
+      newlyUnlocked.push(ach);
+    }
+  }
+  return newlyUnlocked;
 }
 
 function generateMineGrid(luckLevel = 0) {
@@ -2795,6 +3017,9 @@ app.post('/api/daily', requireAuth, (req, res) => {
   db.prepare('UPDATE users SET credits = credits + ?, last_daily = ? WHERE id = ?')
     .run(DAILY_AMOUNT, today, req.session.userId);
   addBattlePassXP(req.session.userId, BP_XP.daily_login);
+  updateQuestProgress(req.session.userId, 'daily_claim', 1);
+  updateQuestProgress(req.session.userId, 'credits_earned', DAILY_AMOUNT);
+  checkAchievements(req.session.userId);
 
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
   res.json({ success: true, amount: DAILY_AMOUNT, credits: newCredits });
@@ -2814,10 +3039,13 @@ app.post('/api/boosters/:id/open', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Pas assez de credits !' });
   }
 
-  db.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').run(booster.price, req.session.userId);
+  db.prepare('UPDATE users SET credits = credits - ?, stat_boosters_opened = stat_boosters_opened + 1, stat_credits_spent = stat_credits_spent + ? WHERE id = ?').run(booster.price, booster.price, req.session.userId);
   const cards = openBooster(booster.id, req.session.userId);
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
   addBattlePassXP(req.session.userId, BP_XP.booster_open);
+  updateQuestProgress(req.session.userId, 'booster_open', 1);
+  updateQuestProgress(req.session.userId, 'credits_spent', booster.price);
+  checkAchievements(req.session.userId);
 
   res.json({ success: true, cards, credits: newCredits });
 });
@@ -2941,6 +3169,9 @@ app.post('/api/fusion', requireAuth, (req, res) => {
     return res.status(500).json({ error: 'Erreur lors de la fusion' });
   }
   addBattlePassXP(req.session.userId, BP_XP.fusion);
+  db.prepare('UPDATE users SET stat_fusions = stat_fusions + 1 WHERE id = ?').run(req.session.userId);
+  updateQuestProgress(req.session.userId, 'fusion', 1);
+  checkAchievements(req.session.userId);
 
   res.json({ success: true, fused: success, card });
 });
@@ -3250,6 +3481,15 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
   } else if (battle.battleType === 'pvp') {
     addBattlePassXP(req.session.userId, battle.result === 'victory' ? BP_XP.pvp_win : BP_XP.pvp_lose);
   }
+  // Quest/achievement hooks
+  if (battle.result === 'victory' && (battle.battleType === 'pvp')) {
+    db.prepare('UPDATE users SET stat_pvp_wins = stat_pvp_wins + 1 WHERE id = ?').run(req.session.userId);
+    updateQuestProgress(req.session.userId, 'pvp_win', 1);
+  }
+  if (reward > 0) {
+    updateQuestProgress(req.session.userId, 'credits_earned', reward);
+  }
+  checkAchievements(req.session.userId);
 
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
 
@@ -4231,7 +4471,9 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
     db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM mine_upgrades WHERE user_id = ?').run(userId);
     db.prepare('DELETE FROM battle_pass WHERE user_id = ?').run(userId);
-    db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0, unlocked_avatars = \'["⚔"]\', username_effect = \'\', avatar = \'⚔\' WHERE id = ?').run(userId);
+    db.prepare('DELETE FROM user_quests WHERE user_id = ?').run(userId);
+    db.prepare('DELETE FROM user_achievements WHERE user_id = ?').run(userId);
+    db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0, unlocked_avatars = \'["⚔"]\', username_effect = \'\', avatar = \'⚔\', stat_boosters_opened = 0, stat_pvp_wins = 0, stat_diamonds_mined = 0, stat_fusions = 0, stat_casino_spins = 0, stat_credits_spent = 0 WHERE id = ?').run(userId);
   });
   resetTx();
   res.json({ success: true, username: user.username });
@@ -4599,6 +4841,13 @@ app.post('/api/mine/hit', requireAuth, (req, res) => {
       // Update hidden count
       const col = 'hidden_' + block.resource;
       db.prepare(`UPDATE mine_state SET ${col} = ${col} - 1 WHERE user_id = ?`).run(userId);
+
+      // Track diamond mining for quests/achievements
+      if (block.resource === 'diamant') {
+        db.prepare('UPDATE users SET stat_diamonds_mined = stat_diamonds_mined + 1 WHERE id = ?').run(userId);
+        updateQuestProgress(userId, 'diamond_mine', 1);
+        checkAchievements(userId);
+      }
     } else {
       inventoryFull = true;
     }
@@ -4707,6 +4956,8 @@ app.post('/api/mine/sell-all', requireAuth, (req, res) => {
   });
   sellAllTx();
   addBattlePassXP(userId, BP_XP.mine_sell);
+  updateQuestProgress(userId, 'credits_earned', totalPrice);
+  checkAchievements(userId);
 
   const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
 
@@ -4930,6 +5181,173 @@ app.post('/api/battlepass/set-effect', requireAuth, (req, res) => {
 });
 
 // ============================================
+// QUETES ROUTES
+// ============================================
+
+app.get('/api/quests', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  assignQuests(userId);
+
+  const today = new Date().toISOString().split('T')[0];
+  const week = getISOWeek(new Date());
+
+  const daily = db.prepare('SELECT * FROM user_quests WHERE user_id = ? AND type = ? AND assigned_date = ? ORDER BY id').all(userId, 'daily', today);
+  const weekly = db.prepare('SELECT * FROM user_quests WHERE user_id = ? AND type = ? AND assigned_date = ? ORDER BY id').all(userId, 'weekly', week);
+
+  // Attach labels from QUEST_POOL
+  const addLabel = (q) => {
+    const allDefs = [...QUEST_POOL.daily, ...QUEST_POOL.weekly];
+    const def = allDefs.find(d => d.key === q.quest_key);
+    return {
+      ...q,
+      label: def ? def.label.replace('{goal}', q.goal) : q.quest_key,
+      canClaim: q.progress >= q.goal && !q.claimed
+    };
+  };
+
+  res.json({
+    daily: daily.map(addLabel),
+    weekly: weekly.map(addLabel)
+  });
+});
+
+app.post('/api/quests/claim', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { questId } = req.body;
+  if (!questId) return res.status(400).json({ error: 'questId requis' });
+
+  const quest = db.prepare('SELECT * FROM user_quests WHERE id = ? AND user_id = ?').get(questId, userId);
+  if (!quest) return res.status(404).json({ error: 'Quete introuvable' });
+  if (quest.claimed) return res.status(400).json({ error: 'Deja reclamee' });
+  if (quest.progress < quest.goal) return res.status(400).json({ error: 'Quete pas terminee' });
+
+  db.prepare('UPDATE user_quests SET claimed = 1 WHERE id = ?').run(questId);
+  db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(quest.reward_credits, userId);
+  addBattlePassXP(userId, quest.reward_xp);
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  checkAchievements(userId);
+
+  res.json({ success: true, credits: newCredits, xpGained: quest.reward_xp, creditsGained: quest.reward_credits });
+});
+
+// ============================================
+// ACHIEVEMENTS ROUTES
+// ============================================
+
+app.get('/api/achievements', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const stats = getAchievementStats(userId);
+  const unlocked = db.prepare('SELECT * FROM user_achievements WHERE user_id = ?').all(userId);
+  const unlockedMap = {};
+  for (const u of unlocked) {
+    unlockedMap[u.achievement_key] = u;
+  }
+
+  const result = ACHIEVEMENTS.map(ach => ({
+    key: ach.key,
+    label: ach.label,
+    desc: ach.desc,
+    icon: ach.icon,
+    credits: ach.credits,
+    unlocked: !!unlockedMap[ach.key],
+    claimed: unlockedMap[ach.key]?.claimed === 1,
+    canClaim: !!unlockedMap[ach.key] && unlockedMap[ach.key].claimed === 0
+  }));
+
+  res.json({ achievements: result, stats });
+});
+
+app.post('/api/achievements/claim', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { achievementKey } = req.body;
+  if (!achievementKey) return res.status(400).json({ error: 'achievementKey requis' });
+
+  const ach = db.prepare('SELECT * FROM user_achievements WHERE user_id = ? AND achievement_key = ?').get(userId, achievementKey);
+  if (!ach) return res.status(404).json({ error: 'Succes non debloque' });
+  if (ach.claimed) return res.status(400).json({ error: 'Deja reclame' });
+
+  const achDef = ACHIEVEMENTS.find(a => a.key === achievementKey);
+  if (!achDef) return res.status(404).json({ error: 'Succes inconnu' });
+
+  db.prepare('UPDATE user_achievements SET claimed = 1 WHERE id = ?').run(ach.id);
+  db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(achDef.credits, userId);
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ success: true, credits: newCredits, creditsGained: achDef.credits });
+});
+
+// ============================================
+// CASINO ROUTES
+// ============================================
+
+app.get('/api/casino/info', requireAuth, (req, res) => {
+  const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId);
+  res.json({
+    segments: CASINO_SEGMENTS.map(s => ({ label: s.label, color: s.color })),
+    cost: CASINO_COST,
+    credits: user.credits
+  });
+});
+
+app.post('/api/casino/spin', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId);
+  if (user.credits < CASINO_COST) return res.status(400).json({ error: 'Pas assez de credits (200 CR)' });
+
+  // Deduct cost
+  db.prepare('UPDATE users SET credits = credits - ?, stat_credits_spent = stat_credits_spent + ?, stat_casino_spins = stat_casino_spins + 1 WHERE id = ?')
+    .run(CASINO_COST, CASINO_COST, userId);
+
+  // Weighted random selection
+  const totalWeight = CASINO_SEGMENTS.reduce((a, s) => a + s.weight, 0);
+  let roll = Math.random() * totalWeight;
+  let selectedIdx = 0;
+  for (let i = 0; i < CASINO_SEGMENTS.length; i++) {
+    roll -= CASINO_SEGMENTS[i].weight;
+    if (roll <= 0) { selectedIdx = i; break; }
+  }
+
+  const segment = CASINO_SEGMENTS[selectedIdx];
+  let rewardInfo = { label: segment.label, type: segment.reward.type };
+  let cardGiven = null;
+
+  if (segment.reward.type === 'credits' && segment.reward.amount > 0) {
+    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(segment.reward.amount, userId);
+    rewardInfo.amount = segment.reward.amount;
+  } else if (segment.reward.type === 'xp') {
+    addBattlePassXP(userId, segment.reward.amount);
+    rewardInfo.amount = segment.reward.amount;
+  } else if (segment.reward.type === 'card') {
+    const cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(segment.reward.rarity);
+    if (cards.length > 0) {
+      const card = cards[Math.floor(Math.random() * cards.length)];
+      db.prepare('INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)').run(userId, card.id);
+      cardGiven = { name: card.name, rarity: card.rarity, emoji: card.emoji };
+      rewardInfo.card = cardGiven;
+    }
+  }
+
+  // Quest/achievement hooks
+  updateQuestProgress(userId, 'casino_spin', 1);
+  updateQuestProgress(userId, 'credits_spent', CASINO_COST);
+  if (segment.reward.type === 'credits' && segment.reward.amount > 0) {
+    updateQuestProgress(userId, 'credits_earned', segment.reward.amount);
+  }
+  checkAchievements(userId);
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+
+  res.json({
+    success: true,
+    segmentIndex: selectedIdx,
+    reward: rewardInfo,
+    cardGiven,
+    credits: newCredits
+  });
+});
+
+// ============================================
 // PAGE ROUTES
 // ============================================
 app.get('/intro', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'intro.html')); });
@@ -4944,6 +5362,7 @@ app.get('/battle', requireAuth, (req, res) => { res.sendFile(path.join(__dirname
 app.get('/pvp', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'pvp.html')); });
 app.get('/decks', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'decks.html')); });
 app.get('/battlepass', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battlepass.html')); });
+app.get('/casino', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'casino.html')); });
 app.get('/admin', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.get('/wiki', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'wiki.html')); });
 
@@ -5189,6 +5608,13 @@ function finalizePvpBattle(battle) {
       db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)')
         .run(player.userId, 'pvp_realtime', battle[oppSide].username, result, reward);
       addBattlePassXP(player.userId, result === 'victory' ? BP_XP.pvp_realtime_win : result === 'defeat' ? BP_XP.pvp_realtime_lose : BP_XP.pvp_lose);
+      // Quest/achievement hooks
+      if (result === 'victory') {
+        db.prepare('UPDATE users SET stat_pvp_wins = stat_pvp_wins + 1 WHERE id = ?').run(player.userId);
+        updateQuestProgress(player.userId, 'pvp_win', 1);
+      }
+      if (reward > 0) updateQuestProgress(player.userId, 'credits_earned', reward);
+      checkAchievements(player.userId);
     } catch(e) { console.error('[PVP] DB error:', e.message); }
 
     const sock = userSocketMap.get(player.userId);

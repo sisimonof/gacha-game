@@ -191,6 +191,123 @@ async function saveSettings() {
   }
 }
 
+// === QUETES ===
+async function loadQuests() {
+  try {
+    const res = await fetch('/api/quests');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderQuests('daily-quests', data.daily);
+    renderQuests('weekly-quests', data.weekly);
+  } catch {}
+}
+
+function renderQuests(containerId, quests) {
+  const container = document.getElementById(containerId);
+  if (!quests || quests.length === 0) {
+    container.innerHTML = '<div class="quest-empty">Aucune quete</div>';
+    return;
+  }
+
+  container.innerHTML = quests.map(q => {
+    const pct = Math.min(100, Math.floor((q.progress / q.goal) * 100));
+    const done = q.progress >= q.goal;
+    const claimed = q.claimed;
+
+    return `
+      <div class="quest-card ${claimed ? 'quest-claimed' : ''} ${done && !claimed ? 'quest-done' : ''}">
+        <div class="quest-info">
+          <div class="quest-label">${q.label}</div>
+          <div class="quest-progress-text">${q.progress}/${q.goal}</div>
+        </div>
+        <div class="quest-bar-bg">
+          <div class="quest-bar-fill" style="width:${pct}%"></div>
+        </div>
+        <div class="quest-reward">
+          <span class="quest-reward-cr">+${q.reward_credits} CR</span>
+          <span class="quest-reward-xp">+${q.reward_xp} XP</span>
+          ${q.canClaim ? `<button class="quest-claim-btn" onclick="claimQuest(${q.id})">RECLAMER</button>` : ''}
+          ${claimed ? '<span class="quest-check">&#10003;</span>' : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function claimQuest(questId) {
+  try {
+    const res = await fetch('/api/quests/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ questId })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      document.getElementById('stat-credits').textContent = data.credits;
+      document.getElementById('profile-credits').textContent = data.credits;
+      loadQuests();
+    }
+  } catch {}
+}
+
+// === SUCCES ===
+async function loadAchievements() {
+  try {
+    const res = await fetch('/api/achievements');
+    if (!res.ok) return;
+    const data = await res.json();
+    renderAchievements(data.achievements);
+  } catch {}
+}
+
+function renderAchievements(achievements) {
+  const grid = document.getElementById('achievements-grid');
+  grid.innerHTML = achievements.map(a => {
+    let cls = 'achievement-badge';
+    if (a.unlocked && a.claimed) cls += ' achievement--claimed';
+    else if (a.unlocked) cls += ' achievement--unlocked';
+    else cls += ' achievement--locked';
+
+    return `
+      <div class="${cls}">
+        <div class="achievement-icon">${a.icon}</div>
+        <div class="achievement-info">
+          <div class="achievement-label">${a.label}</div>
+          <div class="achievement-desc">${a.desc}</div>
+          <div class="achievement-reward">+${a.credits} CR</div>
+        </div>
+        ${a.canClaim ? `<button class="achievement-claim-btn" onclick="claimAchievement('${a.key}')">RECLAMER</button>` : ''}
+        ${a.claimed ? '<div class="achievement-check">&#10003;</div>' : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+async function claimAchievement(key) {
+  try {
+    const res = await fetch('/api/achievements/claim', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ achievementKey: key })
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      document.getElementById('stat-credits').textContent = data.credits;
+      document.getElementById('profile-credits').textContent = data.credits;
+      loadAchievements();
+    }
+  } catch {}
+}
+
+function openAchievements() {
+  loadAchievements();
+  document.getElementById('achievements-overlay').classList.add('active');
+}
+
+function closeAchievements() {
+  document.getElementById('achievements-overlay').classList.remove('active');
+}
+
 // === EVENT LISTENERS ===
 
 // Logout
@@ -218,6 +335,12 @@ document.getElementById('settings-overlay').addEventListener('click', (e) => {
 });
 document.getElementById('settings-save').addEventListener('click', saveSettings);
 
+// Achievements overlay
+document.getElementById('achievements-overlay').addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeAchievements();
+});
+
 // Init
 initSettingsModal();
 loadUser();
+loadQuests();

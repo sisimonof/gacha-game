@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Casino</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="casino-page">
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
+
+  <!-- NAVBAR -->
+  <nav class="dash-navbar">
+    <div class="dash-navbar-inner">
+      <div class="dash-nav-logo" data-text="GACHA CARDS">GACHA CARDS</div>
+      <div class="dash-nav-links">
+        <a href="/menu" class="dash-nav-link">ACCUEIL</a>
+        <a href="/shop" class="dash-nav-link dash-nav-link--shop">BOUTIQUE</a>
+        <a href="/collection" class="dash-nav-link">COLLECTION</a>
+        <a href="/mine" class="dash-nav-link dash-nav-link--mine">MINE</a>
+        <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
+        <a href="/battlepass" class="dash-nav-link dash-nav-link--bp">PASSE</a>
+        <a href="/casino" class="dash-nav-link dash-nav-link--active dash-nav-link--casino">CASINO</a>
+        <a href="/wiki" class="dash-nav-link">WIKI</a>
+      </div>
+      <div class="dash-nav-user">
+        <span class="dash-nav-stat" title="Credits">&#128176; <span id="nav-credits">0</span></span>
+        <span class="dash-nav-username" id="nav-username">???</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- CASINO CONTENT -->
+  <div class="casino-container">
+    <h1 class="casino-title">CASINO</h1>
+
+    <div class="casino-main">
+      <!-- Wheel area -->
+      <div class="casino-wheel-area">
+        <div class="casino-pointer">&#9660;</div>
+        <div class="casino-wheel-wrap" id="casino-wheel-wrap">
+          <canvas id="casino-wheel" width="400" height="400"></canvas>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="casino-controls">
+        <div class="casino-cost">COUT: <span class="casino-cost-amount">200 CR</span></div>
+        <button class="casino-spin-btn" id="spin-btn" onclick="spin()">
+          <span class="casino-spin-icon">&#127922;</span> TOURNER
+        </button>
+        <div class="casino-credits">TES CREDITS: <span id="casino-credits">0</span></div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="casino-result hidden" id="casino-result">
+      <div class="casino-result-label" id="result-label">PERDU</div>
+      <div class="casino-result-detail" id="result-detail"></div>
+    </div>
+
+    <!-- History -->
+    <div class="casino-history">
+      <h3 class="casino-history-title">DERNIERS RESULTATS</h3>
+      <div class="casino-history-list" id="history-list">
+        <div class="casino-history-empty">Aucun resultat</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Flash ecran -->
+  <div class="screen-flash hidden" id="screen-flash"></div>
+
+  <div class="version-tag">v1.2.0</div>
+  <script src="/js/casino.js"></script>
+</body>
+</html>
