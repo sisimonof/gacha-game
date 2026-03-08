@@ -688,6 +688,66 @@ function getManaForTurn(turn) {
   if (addedCount2 > 0) console.log('Migration: ' + addedCount2 + ' nouvelles cartes v1.5.0 ajoutees');
 }
 
+// --- Migration : 10 nouvelles cartes v0.2.3 ---
+{
+  const newCards3 = [
+    // COMMUNES (2)
+    ['Plante Carnivore', 'commune', 'bete', 'terre', 2, 1, 3, 2, 'Digestion', 'Inflige 2 degats et se soigne de 2 PV', '🌿', 'Regenere 1 PV par tour', 1.0],
+    ['Mouette Pirate', 'commune', 'bete', 'eau', 2, 0, 2, 1, 'Pillage', 'Vole 1 ATK a un ennemi', '🦅', 'Deploy : vole 1 mana a l adversaire', 1.0],
+    // RARES (2)
+    ['Forgeron Nain', 'rare', 'guerrier', 'terre', 2, 3, 5, 3, 'Forge ardente', 'Donne +2 DEF a un allie et gagne +1 ATK', '🔨', 'Deploy : allies Terre gagnent +1 DEF', 1.0],
+    ['Pyromane', 'rare', 'mage', 'feu', 3, 0, 3, 2, 'Cocktail Molotov', 'Inflige 2 degats a tous les ennemis mais subit 1 degat', '🧨', 'Chaque kill : +1 ATK permanent', 1.0],
+    // EPIQUES (2)
+    ['Golem de Miroir', 'epique', 'guerrier', 'lumiere', 0, 6, 8, 5, 'Reflet parfait', 'Renvoie 100% des degats recus jusqu au tour suivant', '🪞', 'Renvoie 1 degat a chaque attaquant (permanent)', 1.5],
+    ['Hydre Venimeuse', 'epique', 'bete', 'ombre', 3, 2, 6, 5, 'Morsure triple', 'Mord 3 ennemis aleatoires (2 degats chacun) et les empoisonne', '🐍', 'Quand touchee, empoisonne l attaquant (1 degat/tour, 2 tours)', 1.5],
+    // LEGENDAIRES (3)
+    ['Marionnettiste', 'legendaire', 'mage', 'ombre', 1, 2, 4, 3, 'Fils du marionnettiste', 'Echange une de vos cartes avec une carte ennemie pendant 3 tours', '🎭', 'Les cartes volees ont -1 ATK', 2.0],
+    ['Anubis', 'legendaire', 'divin', 'ombre', 4, 4, 8, 7, 'Jugement final', 'Ressuscite un allie mort a 50% PV et inflige 3 degats a un ennemi', '🐺', 'Chaque mort alliee : +1 ATK permanent', 2.0],
+    ['Yggdrasil', 'legendaire', 'divin', 'terre', 0, 8, 12, 8, 'Benediction mondiale', 'Soigne tous les allies de 3 PV et purifie tous les effets negatifs', '🌳', 'Regenere 2 PV par tour a tous les allies', 2.0],
+    // CHAOS (1)
+    ['Le Parasite', 'chaos', 'creature', 'ombre', 1, 0, 4, 2, 'Infection', 'Infecte un ennemi (1 degat/tour, 3 tours). Si la cible meurt, l infection se propage', '🦠', 'Deploy : s attache a l ennemi le plus fort (infection permanente)', 1.0],
+  ];
+
+  const insertCard3 = db.prepare(`
+    INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  let addedCount3 = 0;
+  for (const card of newCards3) {
+    const exists = db.prepare("SELECT id FROM cards WHERE name = ?").get(card[0]);
+    if (!exists) {
+      insertCard3.run(...card);
+      addedCount3++;
+    }
+  }
+  if (addedCount3 > 0) console.log('Migration: ' + addedCount3 + ' nouvelles cartes v0.2.3 ajoutees');
+}
+
+// --- Migration : 3 nouvelles cartes v0.2.4 ---
+{
+  const newCards4 = [
+    ['Crabe Blinde', 'rare', 'bete', 'eau', 1, 3, 3, 2, 'Pincement', 'Inflige 1 degat et retire 1 DEF permanent a la cible', '🦀', '+1 DEF quand il est attaque (max 3 stacks)', 1.0],
+    ['Tortue Bombe', 'rare', 'bete', 'feu', 0, 4, 5, 3, 'Carapace piegee', 'Se sacrifie et inflige ses DEF actuels en degats a tous les ennemis', '💣', '+1 DEF par tour (accumule la puissance)', 1.0],
+    ['Tisseuse d Ames', 'epique', 'creature', 'ombre', 2, 2, 5, 4, 'Lien vital', 'Lie 2 ennemis : les degats subis par l un sont aussi subis par l autre (3 tours)', '🕸️', 'Quand un ennemi lie meurt, vole 2 ATK permanent', 1.5],
+  ];
+
+  const insertCard4 = db.prepare(`
+    INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  let addedCount4 = 0;
+  for (const card of newCards4) {
+    const exists = db.prepare("SELECT id FROM cards WHERE name = ?").get(card[0]);
+    if (!exists) {
+      insertCard4.run(...card);
+      addedCount4++;
+    }
+  }
+  if (addedCount4 > 0) console.log('Migration: ' + addedCount4 + ' nouvelles cartes v0.2.4 ajoutees');
+}
+
 // --- Tables Decks ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS decks (
@@ -1527,6 +1587,23 @@ const ABILITY_MAP = {
   'Boucle temporelle':    { type: 'reset_all_stats' },                                  // Chronos (reinitialise toutes les cartes)
   'Maree montante':       { type: 'combo', effects: [{ effect: 'aoe_damage', value: 2 }, { effect: 'stun_all', duration: 1 }] },     // Abyssia
   'Lancer divin':         { type: 'dice_roll', outcomes: { 1: 'self_kill', 2: 'nothing', 3: { type: 'buff_atk', value: 3 }, 4: { type: 'aoe_damage', value: 3 }, 5: { type: 'heal_all', value: 4 }, 6: 'kill_random_enemy' } },  // Le De du Destin
+
+  // ===== NOUVELLES CARTES v0.2.3 =====
+  'Digestion':              { type: 'drain', damage: 2, heal: 2 },                              // Plante Carnivore
+  'Pillage':                { type: 'steal_atk', value: 1 },                                    // Mouette Pirate
+  'Forge ardente':          { type: 'combo', effects: [{ effect: 'buff_ally_def', value: 2 }, { effect: 'buff_atk', value: 1 }] },  // Forgeron Nain
+  'Cocktail Molotov':       { type: 'aoe_damage_self', aoeDamage: 2, selfDamage: 1 },           // Pyromane
+  'Reflet parfait':         { type: 'reflect_all', duration: 1 },                               // Golem de Miroir
+  'Morsure triple':         { type: 'random_damage_poison', hits: 3, damage: 2, poisonTurns: 2 },  // Hydre Venimeuse
+  'Fils du marionnettiste': { type: 'swap_card', duration: 3 },                                 // Marionnettiste
+  'Jugement final':         { type: 'combo', effects: [{ effect: 'revive_ally', hpPercent: 0.5 }, { effect: 'damage', value: 3 }] },  // Anubis
+  'Benediction mondiale':   { type: 'combo', effects: [{ effect: 'team_heal', value: 3 }, { effect: 'cleanse_all' }] },  // Yggdrasil
+  'Infection':              { type: 'infect', dot: 1, duration: 3 },                            // Le Parasite
+
+  // ===== NOUVELLES CARTES v0.2.4 =====
+  'Pincement':              { type: 'damage_debuff_def', damage: 1, defDebuff: 1 },             // Crabe Blinde
+  'Carapace piegee':        { type: 'sacrifice_aoe_def' },                                      // Tortue Bombe
+  'Lien vital':             { type: 'link_enemies', duration: 3 },                              // Tisseuse d Ames
 };
 
 // ============================================
@@ -1610,7 +1687,7 @@ function calcDamage(attacker, defender, ignoreDef, attackerField) {
 }
 
 // Helper pour appliquer des degats avec shield, counter, grace
-function applyDamage(target, damage, events, source, battle) {
+function applyDamage(target, damage, events, source, battle, isLinkedDamage) {
   // Track last attacker for death-trigger passives (Rat des Egouts)
   if (source && source.name) target.lastAttacker = source.name;
   let remaining = damage;
@@ -1646,6 +1723,48 @@ function applyDamage(target, damage, events, source, battle) {
     source.currentHp = Math.max(0, source.currentHp - 1);
     events.push({ type: 'type_passive', desc: `${target.name} brule ${source.name} ! 1 degat` });
     if (source.currentHp <= 0) checkKO(source, events, battle);
+  }
+
+  // Passif Golem de Miroir : renvoie 1 degat permanent aux attaquants
+  if (target.alive && target.currentHp > 0 && target.name === 'Golem de Miroir' && source && source.alive) {
+    source.currentHp = Math.max(0, source.currentHp - 1);
+    events.push({ type: 'type_passive', desc: `${target.name} renvoie 1 degat a ${source.name} !` });
+    if (source.currentHp <= 0) checkKO(source, events, battle);
+  }
+
+  // Reflect (Reflet parfait) : renvoie un % des degats
+  if (target.alive && target.currentHp > 0 && (target.reflectDamage || 0) > 0 && source && source.alive) {
+    const reflected = Math.max(1, Math.floor(remaining * target.reflectDamage));
+    source.currentHp = Math.max(0, source.currentHp - reflected);
+    events.push({ type: 'type_passive', desc: `${target.name} renvoie ${reflected} degats a ${source.name} !` });
+    if (source.currentHp <= 0) checkKO(source, events, battle);
+  }
+
+  // Passif Hydre Venimeuse : empoisonne l'attaquant
+  if (target.alive && target.currentHp > 0 && target.name === 'Hydre Venimeuse' && source && source.alive) {
+    source.poisonDot = (source.poisonDot || 0) + 1;
+    source.poisonDotTurns = Math.max(source.poisonDotTurns || 0, 2);
+    events.push({ type: 'type_passive', desc: `${target.name} empoisonne ${source.name} ! (1 degat/tour, 2 tours)` });
+  }
+
+  // Passif Crabe Blinde : +1 DEF quand attaque (max 3 stacks)
+  if (target.alive && target.currentHp > 0 && target.name === 'Crabe Blinde' && (target.crabDefStacks || 0) < 3) {
+    target.permanentBonusDef = (target.permanentBonusDef || 0) + 1;
+    target.crabDefStacks = (target.crabDefStacks || 0) + 1;
+    events.push({ type: 'type_passive', desc: `Crabe Blinde se renforce ! +1 DEF (${target.crabDefStacks}/3)` });
+  }
+
+  // Lien vital : l'ennemi lie subit les memes degats
+  if (!isLinkedDamage && target.linkedTo && battle) {
+    const allUnits = [...(battle.playerField || []), ...(battle.enemyField || [])];
+    const linked = allUnits.find(u => u && u.alive && u.name === target.linkedTo);
+    if (linked) {
+      const linkedDmg = Math.max(0, damage - (target.shield || 0));
+      if (linkedDmg > 0) {
+        applyDamage(linked, linkedDmg, events, source, battle, true);
+        events.push({ type: 'type_passive', desc: `Lien vital : ${linked.name} subit ${linkedDmg} degats !` });
+      }
+    }
   }
 
   if (target.currentHp <= 0) checkKO(target, events, battle);
@@ -2429,6 +2548,137 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       }
       break;
     }
+    // === NOUVELLES ABILITIES v0.2.3 ===
+    case 'steal_atk': {
+      // Mouette Pirate : vole ATK a un ennemi
+      const target = pickTarget();
+      if (target) {
+        target.permanentBonusAtk = (target.permanentBonusAtk || 0) - ability.value;
+        unit.permanentBonusAtk = (unit.permanentBonusAtk || 0) + ability.value;
+        events.push({ type: 'ability', unit: unit.name, target: target.name, ability: abilityName, desc: `Vole ${ability.value} ATK a ${target.name} !` });
+      }
+      break;
+    }
+    case 'aoe_damage_self': {
+      // Pyromane : AoE + self-damage
+      const dmg = scaleDmg(ability.aoeDamage);
+      allEnemies.filter(e => e.alive).forEach(e => {
+        applyDamage(e, dmg, events, unit, battle);
+        events.push({ type: 'ability_aoe', unit: unit.name, target: e.name, ability: abilityName, damage: dmg });
+      });
+      // Self-damage
+      unit.currentHp = Math.max(0, unit.currentHp - ability.selfDamage);
+      events.push({ type: 'ability_damage', unit: unit.name, target: unit.name, ability: abilityName, damage: ability.selfDamage, desc: `${unit.name} subit ${ability.selfDamage} degat(s) !` });
+      if (unit.currentHp <= 0) checkKO(unit, events, battle);
+      break;
+    }
+    case 'reflect_all': {
+      // Golem de Miroir : reflect 100% des degats pendant N tours
+      unit.reflectDamage = 1.0;
+      unit.reflectTurns = ability.duration;
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Renvoie 100% des degats pendant ${ability.duration} tour(s) !` });
+      break;
+    }
+    case 'random_damage_poison': {
+      // Hydre Venimeuse : N hits random + poison
+      for (let i = 0; i < ability.hits; i++) {
+        const alive = allEnemies.filter(e => e.alive);
+        if (alive.length === 0) break;
+        const t = alive[Math.floor(Math.random() * alive.length)];
+        const d = scaleDmg(ability.damage);
+        applyDamage(t, d, events, unit, battle);
+        t.poisonDot = (t.poisonDot || 0) + 1;
+        t.poisonDotTurns = Math.max(t.poisonDotTurns || 0, ability.poisonTurns);
+        events.push({ type: 'ability_damage', unit: unit.name, target: t.name, ability: abilityName, damage: d, desc: `Morsure ${i + 1} ! ${d} degats + poison` });
+      }
+      break;
+    }
+    case 'swap_card': {
+      // Marionnettiste : echange une carte alliee avec une carte ennemie
+      const allyField = unit.side === 'player' ? battle.playerField : battle.enemyField;
+      const enemyField = unit.side === 'player' ? battle.enemyField : battle.playerField;
+      const swappableAllies = allyField.filter(u => u && u.alive && u !== unit && !u.swappedOriginalSide);
+      const swappableEnemies = enemyField.filter(u => u && u.alive && !u.swappedOriginalSide);
+      if (swappableAllies.length > 0 && swappableEnemies.length > 0) {
+        const allyCard = swappableAllies[Math.floor(Math.random() * swappableAllies.length)];
+        const enemyCard = swappableEnemies[Math.floor(Math.random() * swappableEnemies.length)];
+        const allyIdx = allyField.indexOf(allyCard);
+        const enemyIdx = enemyField.indexOf(enemyCard);
+        // Save original sides
+        allyCard.swappedOriginalSide = allyCard.side;
+        enemyCard.swappedOriginalSide = enemyCard.side;
+        // Swap sides
+        allyCard.side = enemyCard.side === 'player' ? 'player' : 'enemy';
+        enemyCard.side = allyCard.swappedOriginalSide;
+        // Swap positions
+        allyField[allyIdx] = enemyCard;
+        enemyField[enemyIdx] = allyCard;
+        // Set timers
+        allyCard.swapTimer = ability.duration;
+        enemyCard.swapTimer = ability.duration;
+        // Marionnettiste debuff : -1 ATK aux cartes volees
+        enemyCard.permanentBonusAtk = (enemyCard.permanentBonusAtk || 0) - 1;
+        allyCard.permanentBonusAtk = (allyCard.permanentBonusAtk || 0) - 1;
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${allyCard.name} et ${enemyCard.name} echanges pour ${ability.duration} tours ! (-1 ATK)` });
+      } else {
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Pas assez de cibles pour l echange !' });
+      }
+      break;
+    }
+    case 'infect': {
+      // Le Parasite : infecte un ennemi
+      const target = pickTarget();
+      if (target) {
+        target.infectedDot = ability.dot;
+        target.infectedDotTurns = ability.duration;
+        events.push({ type: 'ability', unit: unit.name, target: target.name, ability: abilityName, desc: `${target.name} infecte ! (${ability.dot} degat/tour, ${ability.duration} tours)` });
+      }
+      break;
+    }
+
+    // === NOUVELLES ABILITIES v0.2.4 ===
+    case 'damage_debuff_def': {
+      // Crabe Blinde : 1 dmg + retire DEF permanent
+      const target = pickTarget();
+      if (target) {
+        const dmg = scaleDmg(ability.damage);
+        applyDamage(target, dmg, events, unit, battle);
+        target.permanentBonusDef = Math.max(-(target.effectiveStats?.defense || 0), (target.permanentBonusDef || 0) - ability.defDebuff);
+        events.push({ type: 'ability', unit: unit.name, target: target.name, ability: abilityName, desc: `${dmg} degats + ${target.name} perd ${ability.defDebuff} DEF permanent !` });
+      }
+      break;
+    }
+    case 'sacrifice_aoe_def': {
+      // Tortue Bombe : DEF totale en AoE puis suicide
+      const totalDef = (unit.effectiveStats?.defense || unit.defense || 0) + (unit.buffDef || 0) + (unit.permanentBonusDef || 0);
+      const dmg = Math.max(1, totalDef);
+      allEnemies.filter(e => e.alive).forEach(e => {
+        applyDamage(e, dmg, events, unit, battle);
+        events.push({ type: 'ability_aoe', unit: unit.name, target: e.name, ability: abilityName, damage: dmg });
+      });
+      events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${unit.name} explose ! ${dmg} degats a tous les ennemis !` });
+      unit.currentHp = 0;
+      checkKO(unit, events, battle);
+      break;
+    }
+    case 'link_enemies': {
+      // Tisseuse d Ames : lie 2 ennemis
+      const alive = allEnemies.filter(e => e.alive && !e.linkedTo);
+      if (alive.length >= 2) {
+        const t1 = alive[Math.floor(Math.random() * alive.length)];
+        const remaining = alive.filter(e => e !== t1);
+        const t2 = remaining[Math.floor(Math.random() * remaining.length)];
+        t1.linkedTo = t2.name;
+        t1.linkedTurns = ability.duration;
+        t2.linkedTo = t1.name;
+        t2.linkedTurns = ability.duration;
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${t1.name} et ${t2.name} sont lies ! (${ability.duration} tours)` });
+      } else if (alive.length === 1) {
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Pas assez de cibles pour le lien !' });
+      }
+      break;
+    }
+
     case 'combo':
       for (const fx of ability.effects) {
         switch (fx.effect) {
@@ -2557,6 +2807,58 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
             events.push({ type: 'ability', unit: unit.name, target: ally.name, ability: abilityName, desc: `+${fx.value} DEF permanent a ${ally.name}` });
             break;
           }
+          case 'buff_ally_def': {
+            // Forgeron Nain : buff DEF d un allie
+            const ally = allAllies.filter(a => a.alive && a !== unit).sort((a, b) => a.currentHp - b.currentHp)[0];
+            if (ally) {
+              ally.permanentBonusDef = (ally.permanentBonusDef || 0) + fx.value;
+              events.push({ type: 'ability', unit: unit.name, target: ally.name, ability: abilityName, desc: `+${fx.value} DEF permanent a ${ally.name}` });
+            } else {
+              unit.permanentBonusDef = (unit.permanentBonusDef || 0) + fx.value;
+              events.push({ type: 'ability', unit: unit.name, target: unit.name, ability: abilityName, desc: `+${fx.value} DEF permanent a ${unit.name}` });
+            }
+            break;
+          }
+          case 'revive_ally': {
+            // Anubis : ressuscite un allie mort
+            if (battle && battle.isDeckBattle) {
+              const deadList = unit.side === 'player' ? battle.playerDeadAllies : battle.enemyDeadAllies;
+              const field = unit.side === 'player' ? battle.playerField : battle.enemyField;
+              const emptySlot = field.findIndex(s => s === null || (s && !s.alive));
+              if (deadList && deadList.length > 0 && emptySlot !== -1) {
+                const revived = deadList.pop();
+                const reviveHp = Math.max(1, Math.floor(revived.maxHp * (fx.hpPercent || 0.5)));
+                revived.currentHp = reviveHp;
+                revived.alive = true;
+                revived.stunned = false;
+                revived.poisoned = 0;
+                revived.poisonDot = 0;
+                revived.poisonDotTurns = 0;
+                revived.usedAbility = false;
+                revived.hasAttacked = false;
+                revived.side = unit.side;
+                field[emptySlot] = revived;
+                events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${revived.name} ressuscite avec ${reviveHp} PV !` });
+              } else {
+                events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Aucun allie a ressusciter ou pas de place !' });
+              }
+            }
+            break;
+          }
+          case 'cleanse_all': {
+            // Yggdrasil : purifie tous les allies
+            allAllies.filter(a => a.alive).forEach(a => {
+              a.poisoned = 0;
+              a.poisonDot = 0;
+              a.poisonDotTurns = 0;
+              a.stunned = false;
+              a.marked = 0;
+              a.infectedDot = 0;
+              a.infectedDotTurns = 0;
+            });
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Purification ! Tous les effets negatifs retires !' });
+            break;
+          }
         }
       }
       break;
@@ -2678,6 +2980,53 @@ function checkKO(unit, events, battle) {
             killer.boostedByAlchimiste = null;
           }
         }
+
+        // === PASSIFS MORT v0.2.3 ===
+        // Pyromane : le tueur gagne +1 ATK permanent s'il est Pyromane
+        if (unit.lastAttacker) {
+          const killer = [...getAllies(), ...getEnemies()].find(u => u && u.alive && u.name === unit.lastAttacker);
+          if (killer && killer.name === 'Pyromane') {
+            killer.permanentBonusAtk = (killer.permanentBonusAtk || 0) + 1;
+            events.push({ type: 'type_passive', desc: `Pyromane : +1 ATK permanent ! (kill bonus)` });
+          }
+        }
+        // Anubis : quand un ALLIE meurt, Anubis gagne +1 ATK permanent
+        getAllies().filter(a => a.name === 'Anubis' && a.alive).forEach(anubis => {
+          anubis.permanentBonusAtk = (anubis.permanentBonusAtk || 0) + 1;
+          events.push({ type: 'type_passive', desc: `Anubis : +1 ATK permanent (mort alliee)` });
+        });
+        // Infection spread : si un infecte meurt, propager a un allie vivant
+        if ((unit.infectedDot || 0) > 0) {
+          const allies = getAllies();
+          const uninfected = allies.filter(a => (a.infectedDot || 0) === 0);
+          if (uninfected.length > 0) {
+            const target = uninfected[Math.floor(Math.random() * uninfected.length)];
+            target.infectedDot = unit.infectedDot;
+            target.infectedDotTurns = 3;
+            events.push({ type: 'type_passive', desc: `L infection se propage a ${target.name} !` });
+          }
+        }
+        // Tisseuse d Ames : quand un ennemi lie meurt, la Tisseuse du camp oppose gagne +2 ATK
+        if (unit.linkedTo) {
+          const enemies = getEnemies();
+          const tisseuse = enemies.find(a => a.name === "Tisseuse d Ames" && a.alive);
+          if (tisseuse) {
+            tisseuse.permanentBonusAtk = (tisseuse.permanentBonusAtk || 0) + 2;
+            events.push({ type: 'type_passive', desc: `Tisseuse d Ames vole 2 ATK ! (lien brise)` });
+          }
+          // Nettoyer le lien du partenaire
+          const partner = [...getAllies(), ...getEnemies()].find(u => u && u.alive && u.linkedTo === unit.name);
+          if (partner) {
+            partner.linkedTo = null;
+            partner.linkedTurns = 0;
+          }
+        }
+      }
+
+      // Sauvegarder les morts pour Anubis revive
+      if (battle && battle.isDeckBattle) {
+        const deadList = unit.side === 'player' ? battle.playerDeadAllies : battle.enemyDeadAllies;
+        if (deadList && !unit.isToken) deadList.push(unit);
       }
 
       // Cartes TEMP : tracker pour suppression en fin de combat
@@ -2918,6 +3267,17 @@ function makeDeckFieldUnit(handCard, side) {
     rankBonusAtk: 0,
     rankBonusDef: 0,
     comboKillBonusAtk: 0, // Combo kill temp bonus
+    // v0.2.3 new properties
+    reflectDamage: 0,
+    reflectTurns: 0,
+    infectedDot: 0,
+    infectedDotTurns: 0,
+    swappedOriginalSide: null,
+    swapTimer: 0,
+    // v0.2.4 new properties
+    linkedTo: null,
+    linkedTurns: 0,
+    crabDefStacks: 0,
   };
 }
 
@@ -2968,6 +3328,9 @@ function createDeckBattleState(playerCards, enemyCards, battleType) {
     playerKillsThisTurn: 0, // Combo kill tracking
     enemyKillsThisTurn: 0,
     comboKillActive: false, // Whether combo kill bonus is active this turn
+    // v0.2.3
+    playerDeadAllies: [],
+    enemyDeadAllies: [],
   };
 
   activeBattles.set(battleId, state);
@@ -3263,6 +3626,39 @@ function aiDeckTurn(battle) {
         unit.untargetable = true;
       }
 
+      // === PASSIFS DEPLOY v0.2.3 (AI) ===
+      // Mouette Pirate ennemi : vole 1 mana au joueur
+      if (unit.name === 'Mouette Pirate') {
+        if (battle.playerEnergy > 0) {
+          battle.playerEnergy -= 1;
+          battle.enemyEnergy += 1;
+          events.push({ type: 'type_passive', desc: `${unit.name} ennemi vole 1 mana !` });
+        }
+      }
+
+      // Forgeron Nain ennemi : allies Terre +1 DEF
+      if (unit.name === 'Forgeron Nain') {
+        getFieldAlive(battle.enemyField).filter(u => hasElement(u, 'terre') && u !== unit).forEach(u => {
+          u.permanentBonusDef = (u.permanentBonusDef || 0) + 1;
+          events.push({ type: 'type_passive', desc: `Forgeron Nain ennemi : +1 DEF a ${u.name}` });
+        });
+      }
+
+      // Le Parasite ennemi : s'attache a votre unite la plus forte
+      if (unit.name === 'Le Parasite') {
+        const playerUnits = getFieldAlive(battle.playerField);
+        if (playerUnits.length > 0) {
+          const strongest = playerUnits.reduce((a, b) => {
+            const atkA = (a.effectiveStats?.attack || a.attack || 0) + (a.buffAtk || 0) + (a.permanentBonusAtk || 0);
+            const atkB = (b.effectiveStats?.attack || b.attack || 0) + (b.buffAtk || 0) + (b.permanentBonusAtk || 0);
+            return atkA > atkB ? a : b;
+          });
+          strongest.infectedDot = 1;
+          strongest.infectedDotTurns = 99;
+          events.push({ type: 'type_passive', desc: `${unit.name} ennemi s attache a ${strongest.name} !` });
+        }
+      }
+
       keepDeploying = true;
     }
   }
@@ -3282,7 +3678,7 @@ function aiDeckTurn(battle) {
     const enemyAlive = getFieldAlive(battle.enemyField);
 
     // Skip offensive abilities if no player targets
-    if (playerAlive.length === 0 && !['buff_atk', 'buff_def', 'buff_team_atk', 'buff_team_def', 'shield', 'heal_ally', 'counter', 'lifesteal_attack', 'revive'].includes(ability.type)) continue;
+    if (playerAlive.length === 0 && !['buff_atk', 'buff_def', 'buff_team_atk', 'buff_team_def', 'shield', 'heal_ally', 'counter', 'lifesteal_attack', 'revive', 'reflect_all'].includes(ability.type)) continue;
 
     const abilityEvents = resolveAbility(unit, playerAlive, enemyAlive, playerAlive, battle);
     events.push(...abilityEvents);
@@ -4204,6 +4600,39 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
     events.push({ type: 'type_passive', desc: `${unit.name} accumule sa puissance...` });
   }
 
+  // === PASSIFS DEPLOY v0.2.3 ===
+  // Mouette Pirate : vole 1 mana a l adversaire
+  if (unit.name === 'Mouette Pirate') {
+    if (battle.enemyEnergy > 0) {
+      battle.enemyEnergy -= 1;
+      battle.playerEnergy += 1;
+      events.push({ type: 'type_passive', desc: `${unit.name} vole 1 mana a l adversaire !` });
+    }
+  }
+
+  // Forgeron Nain : allies Terre +1 DEF
+  if (unit.name === 'Forgeron Nain') {
+    getFieldAlive(battle.playerField).filter(u => hasElement(u, 'terre') && u !== unit).forEach(u => {
+      u.permanentBonusDef = (u.permanentBonusDef || 0) + 1;
+      events.push({ type: 'type_passive', desc: `Forgeron Nain : +1 DEF a ${u.name}` });
+    });
+  }
+
+  // Le Parasite : s'attache a l'ennemi le plus fort
+  if (unit.name === 'Le Parasite') {
+    const enemies = getFieldAlive(battle.enemyField);
+    if (enemies.length > 0) {
+      const strongest = enemies.reduce((a, b) => {
+        const atkA = (a.effectiveStats?.attack || a.attack || 0) + (a.buffAtk || 0) + (a.permanentBonusAtk || 0);
+        const atkB = (b.effectiveStats?.attack || b.attack || 0) + (b.buffAtk || 0) + (b.permanentBonusAtk || 0);
+        return atkA > atkB ? a : b;
+      });
+      strongest.infectedDot = 1;
+      strongest.infectedDotTurns = 99;
+      events.push({ type: 'type_passive', desc: `${unit.name} s attache a ${strongest.name} ! (1 degat/tour)` });
+    }
+  }
+
   res.json({ events, ...getDeckBattleSnapshot(battle) });
 });
 
@@ -4721,6 +5150,30 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
     }
   });
 
+  // === PASSIFS TURN-START v0.2.3 ENNEMIS ===
+  // Plante Carnivore ennemie : regen 1 PV/tour
+  getFieldAlive(battle.enemyField).filter(u => u.name === 'Plante Carnivore').forEach(u => {
+    if (u.currentHp < u.maxHp) {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + 1);
+      events.push({ type: 'type_passive', desc: `Plante Carnivore ennemie regenere 1 PV` });
+    }
+  });
+  // Yggdrasil ennemi : regen 2 PV a tous les allies ennemis
+  const yggCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Yggdrasil').length;
+  if (yggCountE > 0) {
+    getFieldAlive(battle.enemyField).forEach(u => {
+      if (u.currentHp < u.maxHp) {
+        u.currentHp = Math.min(u.maxHp, u.currentHp + 2 * yggCountE);
+      }
+    });
+    events.push({ type: 'type_passive', desc: `Yggdrasil ennemi regenere ${2 * yggCountE} PV a tous` });
+  }
+  // Tortue Bombe ennemie : +1 DEF/tour
+  getFieldAlive(battle.enemyField).filter(u => u.name === 'Tortue Bombe').forEach(u => {
+    u.permanentBonusDef = (u.permanentBonusDef || 0) + 1;
+    events.push({ type: 'type_passive', desc: `Tortue Bombe ennemie accumule sa puissance ! +1 DEF` });
+  });
+
   if (checkDeckWin(battle)) {
     return res.json({ events, ...getDeckBattleSnapshot(battle) });
   }
@@ -4950,6 +5403,96 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       events.push({ type: 'type_passive', desc: `Colosse de Corail : +${tokenCount} DEF (tokens Corail)` });
     }
   });
+
+  // === PASSIFS TURN-START v0.2.3 JOUEUR ===
+  // Plante Carnivore : regen 1 PV/tour
+  getFieldAlive(battle.playerField).filter(u => u.name === 'Plante Carnivore').forEach(u => {
+    if (u.currentHp < u.maxHp) {
+      u.currentHp = Math.min(u.maxHp, u.currentHp + 1);
+      events.push({ type: 'type_passive', desc: `Plante Carnivore regenere 1 PV` });
+    }
+  });
+  // Yggdrasil : regen 2 PV a tous les allies
+  const yggCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Yggdrasil').length;
+  if (yggCountP > 0) {
+    getFieldAlive(battle.playerField).forEach(u => {
+      if (u.currentHp < u.maxHp) {
+        u.currentHp = Math.min(u.maxHp, u.currentHp + 2 * yggCountP);
+      }
+    });
+    events.push({ type: 'type_passive', desc: `Yggdrasil regenere ${2 * yggCountP} PV a tous les allies` });
+  }
+  // Tortue Bombe joueur : +1 DEF/tour
+  getFieldAlive(battle.playerField).filter(u => u.name === 'Tortue Bombe').forEach(u => {
+    u.permanentBonusDef = (u.permanentBonusDef || 0) + 1;
+    events.push({ type: 'type_passive', desc: `Tortue Bombe accumule sa puissance ! +1 DEF` });
+  });
+  // Infection tick (joueur) : les unites infectees perdent des PV
+  for (const unit of getFieldAlive(battle.playerField)) {
+    if (unit.infectedDot > 0 && unit.infectedDotTurns > 0) {
+      unit.currentHp = Math.max(1, unit.currentHp - unit.infectedDot);
+      events.push({ type: 'poison_tick', unit: unit.name, damage: unit.infectedDot, desc: `Infection ! (${unit.infectedDotTurns} tours)` });
+      unit.infectedDotTurns--;
+      if (unit.infectedDotTurns <= 0) unit.infectedDot = 0;
+      if (unit.currentHp <= 0) checkKO(unit, events, battle);
+    }
+  }
+  cleanDeadFromField(battle.playerField);
+  // Infection tick (ennemi) : les unites ennemies infectees perdent des PV
+  for (const unit of getFieldAlive(battle.enemyField)) {
+    if (unit.infectedDot > 0 && unit.infectedDotTurns > 0) {
+      unit.currentHp = Math.max(1, unit.currentHp - unit.infectedDot);
+      events.push({ type: 'poison_tick', unit: unit.name, damage: unit.infectedDot, desc: `Infection ! (${unit.infectedDotTurns} tours)` });
+      unit.infectedDotTurns--;
+      if (unit.infectedDotTurns <= 0) unit.infectedDot = 0;
+      if (unit.currentHp <= 0) checkKO(unit, events, battle);
+    }
+  }
+  cleanDeadFromField(battle.enemyField);
+  // Reflect decay (tous) : expiration du reflect
+  for (const unit of [...getFieldAlive(battle.playerField), ...getFieldAlive(battle.enemyField)]) {
+    if (unit.reflectTurns > 0) {
+      unit.reflectTurns--;
+      if (unit.reflectTurns <= 0) {
+        unit.reflectDamage = 0;
+        events.push({ type: 'type_passive', desc: `${unit.name} : le reflet s estompe` });
+      }
+    }
+  }
+  // Swap timer decay : decrémenter les echanges du Marionnettiste
+  for (const unit of [...getFieldAlive(battle.playerField), ...getFieldAlive(battle.enemyField)]) {
+    if (unit.swapTimer > 0) {
+      unit.swapTimer--;
+      if (unit.swapTimer <= 0 && unit.swappedOriginalSide) {
+        // Re-swap : remettre la carte a sa place
+        const currentField = unit.side === 'player' ? battle.playerField : battle.enemyField;
+        const originalField = unit.swappedOriginalSide === 'player' ? battle.playerField : battle.enemyField;
+        const currentIdx = currentField.indexOf(unit);
+        if (currentIdx !== -1) {
+          // Trouver un slot vide dans le champ d'origine
+          const emptySlot = originalField.findIndex(s => s === null || (s && !s.alive));
+          if (emptySlot !== -1) {
+            currentField[currentIdx] = null;
+            unit.side = unit.swappedOriginalSide;
+            unit.swappedOriginalSide = null;
+            originalField[emptySlot] = unit;
+            events.push({ type: 'type_passive', desc: `${unit.name} retourne dans son camp !` });
+          }
+        }
+      }
+    }
+  }
+
+  // Link decay (lien vital) : decrémenter les liens
+  for (const unit of [...getFieldAlive(battle.playerField), ...getFieldAlive(battle.enemyField)]) {
+    if (unit.linkedTurns > 0) {
+      unit.linkedTurns--;
+      if (unit.linkedTurns <= 0) {
+        unit.linkedTo = null;
+        events.push({ type: 'type_passive', desc: `${unit.name} : le lien se brise` });
+      }
+    }
+  }
 
   // Check turn limit
   checkDeckWin(battle);

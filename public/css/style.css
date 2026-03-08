@@ -786,6 +786,21 @@ body.dashboard-page {
   cursor: default;
   position: relative;
 }
+.beta-badge {
+  position: absolute;
+  top: -6px;
+  right: -32px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ff4444;
+  background: rgba(255, 68, 68, 0.15);
+  border: 1px solid #ff4444;
+  padding: 2px 5px;
+  border-radius: 3px;
+  transform: rotate(12deg);
+  letter-spacing: 1px;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.6);
+}
 
 .dash-nav-links {
   display: flex;
