@@ -585,6 +585,8 @@ function getManaForTurn(turn) {
   db.prepare("UPDATE cards SET rarity = 'legendaire' WHERE name = 'Archange Dechu'").run();
   // v1.5.0 fix: rename Meditation -> Meditation interieure for Moine Errant (conflict with Moine)
   db.prepare("UPDATE cards SET ability_name = 'Meditation interieure' WHERE name = 'Moine Errant' AND ability_name = 'Meditation'").run();
+  // v2.1.1 fix: rename Souffle triple -> Souffle tri-elementaire for Chimere Elementaire (conflict with Hydre de feu)
+  db.prepare("UPDATE cards SET ability_name = 'Souffle tri-elementaire' WHERE name = 'Chimere Elementaire' AND ability_name = 'Souffle triple'").run();
 }
 
 // --- Migration : La Voie Lactee → rareté SECRET ---
@@ -660,7 +662,7 @@ function getManaForTurn(turn) {
     ['Alchimiste Fou', 'rare', 'mage', 'feu', 2, 1, 3, 3, 'Transmutation', 'Transforme 2 HP d un allie en +2 ATK permanent pour cet allie', '⚗️', 'Si l allie booste tue un ennemi ce tour, l Alchimiste recupere 2 HP', 1.0],
     ['Ombre Mimetique', 'rare', 'creature', 'ombre', 0, 0, 3, 2, 'Copie', 'Copie l ATK et la DEF de n importe quelle carte sur le terrain', '🪞', 'Perd 1 HP par tour (instable)', 1.0],
     // EPIQUES (2)
-    ['Chimere Elementaire', 'epique', 'bete', 'feu', 3, 3, 6, 5, 'Souffle triple', 'Inflige 3 degats a un ennemi (1 Feu + 1 Eau + 1 Terre, ignore resistances elementaires)', '🐲', 'Compte comme Feu, Eau ET Terre pour les synergies d elements', 1.5],
+    ['Chimere Elementaire', 'epique', 'bete', 'feu', 3, 3, 6, 5, 'Souffle tri-elementaire', 'Inflige 3 degats a un ennemi (ignore DEF)', '🐲', 'Compte comme Feu, Eau ET Terre pour les synergies d elements', 1.5],
     ['Oracle du Temps', 'epique', 'divin', 'lumiere', 2, 3, 5, 4, 'Distorsion temporelle', 'Annule la derniere action de l adversaire et rejoue votre tour (1x/combat)', '⏳', '', 1.5],
     ['Colosse de Corail', 'epique', 'guerrier', 'eau', 3, 5, 8, 5, 'Recif vivant', 'Invoque un token Corail (0/2/2) sur chaque slot vide allie avec taunt', '🪸', '+1 DEF pour chaque token Corail en vie', 1.5],
     // LEGENDAIRES (2)
@@ -1080,9 +1082,8 @@ function generateMineGrid(luckLevel = 0) {
       if (roll <= 0) { resource = key; break; }
     }
 
-    // Resistance based on resource rarity
-    const mult = MINE_RESOURCES[resource].resistMult;
-    const resistance = Math.max(3, Math.floor((3 + Math.random() * 7) * mult));
+    // Resistance aleatoire independante de la ressource (3-10 pour toutes)
+    const resistance = 3 + Math.floor(Math.random() * 8);
 
     grid.push({ resource, resistance, hits: 0, mined: false, collected: false });
     counts[resource]++;
@@ -1520,7 +1521,7 @@ const ABILITY_MAP = {
   'Jugement guerrier':    { type: 'combo', effects: [{ effect: 'damage', value: 3 }, { effect: 'heal_on_kill', value: 3 }] },        // Valkyrie Dechue
   'Transmutation':        { type: 'transfer_hp_to_atk', hpCost: 2, atkGain: 2, target: 'ally' },  // Alchimiste Fou
   'Copie':                { type: 'copy_stats' },                                       // Ombre Mimetique (copie ATK/DEF d'une carte)
-  'Souffle triple':       { type: 'direct_damage', value: 3 },                          // Chimere Elementaire
+  'Souffle tri-elementaire': { type: 'direct_damage_ignore_def', value: 3 },              // Chimere Elementaire (ignore resistances)
   'Distorsion temporelle': { type: 'undo_last_action' },                                // Oracle du Temps (annule debuffs allies + buffs ennemis)
   'Recif vivant':         { type: 'summon_token', token: { name: 'Corail', atk: 0, def: 2, hp: 2 } },  // Colosse de Corail
   'Boucle temporelle':    { type: 'reset_all_stats' },                                  // Chronos (reinitialise toutes les cartes)
@@ -1581,6 +1582,12 @@ function calcDamage(attacker, defender, ignoreDef, attackerField) {
   if (attacker.name === 'Goblin' && attackerField) {
     const otherGoblins = attackerField.filter(u => u && u.alive && u.name === 'Goblin' && u !== attacker).length;
     if (otherGoblins > 0) atkVal += 1;
+  }
+
+  // Passif Louveteau Sauvage : +1 ATK si un autre allie Bete est sur le terrain
+  if (attacker.name === 'Louveteau Sauvage' && attackerField) {
+    const otherBetes = attackerField.filter(u => u && u.alive && u.type === 'bete' && u !== attacker).length;
+    if (otherBetes > 0) atkVal += 1;
   }
 
   let baseDamage = Math.max(1, atkVal - defVal);
@@ -1853,7 +1860,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
     case 'ralliement_status': {
       // Guerrier des Falaises : statut Ralliement (+1 ATK par Terre allie)
       unit.ralliement = true;
-      const earthAllies = allAllies.filter(a => a.alive && a.element === ability.element && a !== unit).length;
+      const earthAllies = allAllies.filter(a => a.alive && hasElement(a, ability.element) && a !== unit).length;
       unit.buffAtk += earthAllies * ability.value;
       events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Ralliement ! +${earthAllies} ATK (${earthAllies} Terre allies)` });
       break;
@@ -2203,6 +2210,11 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       ally.permanentBonusDef = (ally.permanentBonusDef || 0) + ability.value;
       ally.lastingDefBuff = (ally.lastingDefBuff || 0) + ability.value;
       events.push({ type: 'ability', unit: unit.name, target: ally.name, ability: abilityName, desc: `+${ability.value} DEF a ${ally.name} (jusqu'au prochain tour)` });
+      // Sentinelle de Pierre : taunt (les ennemis doivent l'attaquer en priorite)
+      if (unit.name === 'Sentinelle de Pierre') {
+        unit.taunt = true;
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${unit.name} provoque les ennemis ! (taunt)` });
+      }
       break;
     }
     case 'reactive_armor': {
@@ -2304,6 +2316,10 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       const ally = ability.target === 'ally' ? (weakestAlly() || unit) : unit;
       unit.currentHp = Math.max(1, unit.currentHp - ability.hpCost);
       ally.buffAtk += ability.atkGain;
+      // Track boosted ally for Alchimiste Fou passive (heal if boosted ally kills)
+      if (unit.name === 'Alchimiste Fou' && ally !== unit) {
+        ally.boostedByAlchimiste = unit;
+      }
       events.push({ type: 'ability', unit: unit.name, target: ally.name, ability: abilityName, desc: `Transmutation ! -${ability.hpCost} PV, ${ally.name} +${ability.atkGain} ATK` });
       break;
     }
@@ -2338,22 +2354,27 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       break;
     }
     case 'summon_token': {
-      // Colosse de Corail : invoque un token sur le terrain
+      // Colosse de Corail : invoque un token sur CHAQUE slot vide
       if (battle && battle.isDeckBattle) {
         const field = unit.side === 'player' ? battle.playerField : battle.enemyField;
-        const emptyIdx = field.indexOf(null);
-        if (emptyIdx !== -1) {
-          const token = {
-            name: ability.token.name, emoji: '🪸',
-            attack: ability.token.atk, defense: ability.token.def,
-            hp: ability.token.hp, currentHp: ability.token.hp, maxHp: ability.token.hp,
-            alive: true, side: unit.side, ability_name: null, usedAbility: true,
-            buffAtk: 0, buffDef: 0, permanentBonusAtk: 0, permanentBonusDef: 0,
-            element: unit.element, type: unit.type,
-            effectiveStats: { attack: ability.token.atk, defense: ability.token.def }
-          };
-          field[emptyIdx] = token;
-          events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Invoque ${ability.token.name} !` });
+        let summoned = 0;
+        for (let si = 0; si < field.length; si++) {
+          if (field[si] === null || (field[si] && !field[si].alive)) {
+            const token = {
+              name: ability.token.name, emoji: '🪸',
+              attack: ability.token.atk, defense: ability.token.def,
+              hp: ability.token.hp, currentHp: ability.token.hp, maxHp: ability.token.hp,
+              alive: true, side: unit.side, ability_name: null, usedAbility: true,
+              buffAtk: 0, buffDef: 0, permanentBonusAtk: 0, permanentBonusDef: 0,
+              element: unit.element, type: unit.type, isToken: true, taunt: true,
+              effectiveStats: { attack: ability.token.atk, defense: ability.token.def }
+            };
+            field[si] = token;
+            summoned++;
+          }
+        }
+        if (summoned > 0) {
+          events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Invoque ${summoned} ${ability.token.name}(s) avec taunt !` });
         } else {
           events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Pas de place pour invoquer !' });
         }
@@ -2641,11 +2662,21 @@ function checkKO(unit, events, battle) {
           });
         }
         // Abyssia : quand un allie Eau meurt, +2 ATK permanent
-        if (unit.element === 'eau') {
+        if (hasElement(unit, 'eau')) {
           getAllies().filter(a => a.name === 'Abyssia' && a.alive).forEach(ab => {
             ab.permanentBonusAtk = (ab.permanentBonusAtk || 0) + 2;
             events.push({ type: 'type_passive', desc: `Abyssia : vague de colere ! +2 ATK permanent` });
           });
+        }
+        // Alchimiste Fou : si le tueur a ete booste par Transmutation, heal 2 PV
+        if (unit.lastAttacker) {
+          const killer = [...getAllies(), ...getEnemies()].find(u => u && u.alive && u.name === unit.lastAttacker);
+          if (killer && killer.boostedByAlchimiste && killer.boostedByAlchimiste.alive) {
+            const alch = killer.boostedByAlchimiste;
+            alch.currentHp = Math.min(alch.maxHp, alch.currentHp + 2);
+            events.push({ type: 'type_passive', desc: `Alchimiste Fou recupere 2 PV ! (${killer.name} a tue)` });
+            killer.boostedByAlchimiste = null;
+          }
         }
       }
 
@@ -2690,7 +2721,7 @@ function aiTurn(battle) {
   // Passif Leviathan Abyssal ennemi : +1 ATK aux allies Eau
   const leviathanCountEC = battle.enemyTeam.filter(u => u.alive && u.name === 'Leviathan Abyssal').length;
   if (leviathanCountEC > 0) {
-    battle.enemyTeam.filter(u => u.alive && u.element === 'eau').forEach(u => {
+    battle.enemyTeam.filter(u => u.alive && hasElement(u, 'eau')).forEach(u => {
       u.buffAtk += leviathanCountEC;
     });
     events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : +${leviathanCountEC} ATK aux unites Eau` });
@@ -2977,6 +3008,13 @@ function getDeckBattleSnapshot(battle) {
   };
 }
 
+// Chimere Elementaire compte comme Feu, Eau ET Terre pour les synergies
+function hasElement(unit, element) {
+  if (unit.element === element) return true;
+  if (unit.name === 'Chimere Elementaire') return ['feu', 'eau', 'terre'].includes(element);
+  return false;
+}
+
 function getFieldAlive(field) {
   return field.filter(u => u !== null && u.alive);
 }
@@ -3001,6 +3039,16 @@ function checkDeckWin(battle) {
   }
 
   if (battle.playerHp <= 0) {
+    battle.result = 'defeat';
+    return 'defeat';
+  }
+
+  // Deck exhaustion: no cards in hand + deck + field = lose
+  if (battle.enemyHand && battle.enemyHand.length === 0 && battle.enemyDeck && battle.enemyDeck.length === 0 && getFieldAlive(battle.enemyField).length === 0) {
+    battle.result = 'victory';
+    return 'victory';
+  }
+  if (battle.playerHand && battle.playerHand.length === 0 && battle.playerDeck && battle.playerDeck.length === 0 && getFieldAlive(battle.playerField).length === 0) {
     battle.result = 'defeat';
     return 'defeat';
   }
@@ -3112,7 +3160,7 @@ function aiDeckTurn(battle) {
   // Passif Esprit des Forets : +1 DEF pour les unites Terre ennemies
   const espritCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Esprit des Forets').length;
   if (espritCountE > 0) {
-    getFieldAlive(battle.enemyField).filter(u => u.element === 'terre').forEach(u => {
+    getFieldAlive(battle.enemyField).filter(u => hasElement(u, 'terre')).forEach(u => {
       u.buffDef += espritCountE;
     });
     events.push({ type: 'type_passive', desc: `Esprit des Forets ennemi : +${espritCountE} DEF Terre` });
@@ -3140,8 +3188,10 @@ function aiDeckTurn(battle) {
     }
     if (emptySlots.length === 0) break;
 
+    const MAX_ONE_AI = ['La Voie Lactee', 'Le Neant Originel', 'Le De du Destin'];
     const creatures = battle.enemyHand
       .filter(c => c.type !== 'objet' && c.mana_cost <= battle.enemyEnergy)
+      .filter(c => !MAX_ONE_AI.includes(c.name) || !getFieldAlive(battle.enemyField).some(u => u.name === c.name))
       .sort((a, b) => b.mana_cost - a.mana_cost);
 
     if (creatures.length > 0) {
@@ -3169,7 +3219,7 @@ function aiDeckTurn(battle) {
       events.push({ type: 'enemy_deploy', slot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost, rankBonus: eRankName });
 
       // Passif Tortue : unites Eau invoquees +1 PV
-      if (unit.element === 'eau') {
+      if (hasElement(unit, 'eau')) {
         const tortueCount = getFieldAlive(battle.enemyField).filter(u => u.name === 'Tortue des Rivieres' && u !== unit).length;
         if (tortueCount > 0) {
           unit.maxHp += tortueCount;
@@ -3190,6 +3240,11 @@ function aiDeckTurn(battle) {
       if (unit.name === 'Poisson Combattant') {
         unit.justDeployed = false;
         events.push({ type: 'type_passive', desc: `${unit.name} pret au combat ! Peut attaquer immediatement` });
+      }
+      // Passif Louveteau Sauvage : pas de summoning sickness
+      if (unit.name === 'Louveteau Sauvage') {
+        unit.justDeployed = false;
+        events.push({ type: 'type_passive', desc: `${unit.name} bondit ! Peut attaquer immediatement` });
       }
       // Passif Spectre Glacial / Espion des Brumes ennemi : intangible 1 tour
       if (unit.name === 'Spectre Glacial' || unit.name === 'Espion des Brumes') {
@@ -3317,7 +3372,11 @@ function aiDeckTurn(battle) {
       continue;
     }
 
-    const target = playerAlive.reduce((a, b) => a.currentHp < b.currentHp ? a : b);
+    // Taunt: priorite aux unites avec taunt
+    const taunters = playerAlive.filter(u => u.taunt);
+    const target = taunters.length > 0
+      ? taunters.reduce((a, b) => a.currentHp < b.currentHp ? a : b)
+      : playerAlive.reduce((a, b) => a.currentHp < b.currentHp ? a : b);
 
     const ignoreDef = ABILITY_MAP[unit.ability_name]?.type === 'ignore_def';
 
@@ -3802,7 +3861,7 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
   // Passif Leviathan Abyssal : +1 ATK aux allies Eau
   const leviathanCountPC = battle.playerTeam.filter(u => u.alive && u.name === 'Leviathan Abyssal').length;
   if (leviathanCountPC > 0) {
-    battle.playerTeam.filter(u => u.alive && u.element === 'eau').forEach(u => {
+    battle.playerTeam.filter(u => u.alive && hasElement(u, 'eau')).forEach(u => {
       u.buffAtk += leviathanCountPC;
     });
     events.push({ type: 'type_passive', desc: `Leviathan Abyssal : +${leviathanCountPC} ATK aux unites Eau` });
@@ -3919,7 +3978,7 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
     // Ralliement : recalculer +ATK par Terre allie
     if (u.ralliement && u.alive) {
       const allies = u.side === 'player' ? battle.playerTeam : battle.enemyTeam;
-      const earthCount = allies.filter(a => a.alive && a.element === 'terre' && a !== u).length;
+      const earthCount = allies.filter(a => a.alive && hasElement(a, 'terre') && a !== u).length;
       u.buffAtk += earthCount;
     }
   };
@@ -4066,6 +4125,13 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
   }
   if (card.mana_cost > battle.playerEnergy) return res.status(400).json({ error: 'Pas assez d energie' });
 
+  // Max 1 on field restriction
+  const MAX_ONE_CARDS = ['La Voie Lactee', 'Le Neant Originel', 'Le De du Destin'];
+  if (MAX_ONE_CARDS.includes(card.name)) {
+    const alreadyOnField = getFieldAlive(battle.playerField).some(u => u.name === card.name);
+    if (alreadyOnField) return res.status(400).json({ error: `${card.name} : max 1 sur le terrain !` });
+  }
+
   // Deploy
   battle.playerHand.splice(handIndex, 1);
   battle.playerField[fieldSlot] = null; // clean dead
@@ -4088,7 +4154,7 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
   const events = [{ type: 'deploy', slot: fieldSlot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost, rankBonus: rankName }];
 
   // Passif Tortue des Rivieres : unites Eau invoquees gagnent +1 PV
-  if (unit.element === 'eau') {
+  if (hasElement(unit, 'eau')) {
     const tortueCount = getFieldAlive(battle.playerField).filter(u => u.name === 'Tortue des Rivieres' && u !== unit).length;
     if (tortueCount > 0) {
       unit.maxHp += tortueCount;
@@ -4109,6 +4175,12 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
   if (unit.name === 'Poisson Combattant') {
     unit.justDeployed = false;
     events.push({ type: 'type_passive', desc: `${unit.name} pret au combat ! Peut attaquer immediatement` });
+  }
+
+  // Passif Louveteau Sauvage : pas de summoning sickness
+  if (unit.name === 'Louveteau Sauvage') {
+    unit.justDeployed = false;
+    events.push({ type: 'type_passive', desc: `${unit.name} bondit ! Peut attaquer immediatement` });
   }
 
   // Passif Spectre Glacial / Espion des Brumes : ne peut pas etre cible au premier tour
@@ -4466,7 +4538,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       }
     }
     if (unit.ralliement && unit.alive) {
-      const earthCount = getFieldAlive(battle.playerField).filter(a => a.alive && a.element === 'terre' && a !== unit).length;
+      const earthCount = getFieldAlive(battle.playerField).filter(a => a.alive && hasElement(a, 'terre') && a !== unit).length;
       unit.buffAtk += earthCount;
     }
     // Tick untargetable countdown
@@ -4539,7 +4611,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // Esprit des Forets ennemi : +1 DEF Terre + soin 1 PV/tour
   const espritCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Esprit des Forets').length;
   if (espritCountE > 0) {
-    getFieldAlive(battle.enemyField).filter(u => u.element === 'terre').forEach(u => {
+    getFieldAlive(battle.enemyField).filter(u => hasElement(u, 'terre')).forEach(u => {
       u.buffDef += espritCountE;
     });
     events.push({ type: 'type_passive', desc: `Esprit des Forets ennemi : +${espritCountE} DEF aux Terre` });
@@ -4572,7 +4644,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // Leviathan Abyssal ennemi : +1 ATK aux allies Eau ennemis
   const leviathanCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Leviathan Abyssal').length;
   if (leviathanCountE > 0) {
-    getFieldAlive(battle.enemyField).filter(u => u.element === 'eau').forEach(u => {
+    getFieldAlive(battle.enemyField).filter(u => hasElement(u, 'eau')).forEach(u => {
       u.buffAtk += leviathanCountE;
     });
     events.push({ type: 'type_passive', desc: `Leviathan Abyssal ennemi : +${leviathanCountE} ATK aux unites Eau` });
@@ -4593,7 +4665,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // Dragon des Abysses ennemi : +1 ATK allies Eau
   const dragonAbyssesCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Dragon des Abysses').length;
   if (dragonAbyssesCountE > 0) {
-    getFieldAlive(battle.enemyField).filter(u => u.element === 'eau').forEach(u => { u.buffAtk += dragonAbyssesCountE; });
+    getFieldAlive(battle.enemyField).filter(u => hasElement(u, 'eau')).forEach(u => { u.buffAtk += dragonAbyssesCountE; });
     events.push({ type: 'type_passive', desc: `Dragon des Abysses ennemi : +${dragonAbyssesCountE} ATK Eau` });
   }
   // Ombre Mimetique ennemie : -1 HP par tour (instable)
@@ -4604,7 +4676,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // Abyssia ennemie : soigne 1 HP allies Eau
   const abyssiaCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Abyssia').length;
   if (abyssiaCountE > 0) {
-    getFieldAlive(battle.enemyField).filter(u => u.element === 'eau').forEach(u => {
+    getFieldAlive(battle.enemyField).filter(u => hasElement(u, 'eau')).forEach(u => {
       u.currentHp = Math.min(u.maxHp, u.currentHp + abyssiaCountE);
     });
     events.push({ type: 'type_passive', desc: `Abyssia ennemie : +${abyssiaCountE} PV aux Eau` });
@@ -4638,6 +4710,14 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       else if ((t.permanentBonusAtk || 0) > 0) t.permanentBonusAtk -= 1;
       else if (t.buffDef > 0) t.buffDef = Math.max(0, t.buffDef - 1);
       events.push({ type: 'type_passive', desc: `Chronos ennemi neutralise un buff de ${t.name}` });
+    }
+  });
+  // Colosse de Corail ennemi : +1 DEF par token Corail en vie
+  getFieldAlive(battle.enemyField).filter(u => u.name === 'Colosse de Corail').forEach(colosse => {
+    const tokenCount = getFieldAlive(battle.enemyField).filter(u => u.isToken && u.name === 'Corail').length;
+    if (tokenCount > 0) {
+      colosse.buffDef += tokenCount;
+      events.push({ type: 'type_passive', desc: `Colosse de Corail ennemi : +${tokenCount} DEF (tokens Corail)` });
     }
   });
 
@@ -4688,7 +4768,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       }
     }
     if (unit.ralliement && unit.alive) {
-      const earthCount = getFieldAlive(battle.enemyField).filter(a => a.alive && a.element === 'terre' && a !== unit).length;
+      const earthCount = getFieldAlive(battle.enemyField).filter(a => a.alive && hasElement(a, 'terre') && a !== unit).length;
       unit.buffAtk += earthCount;
     }
   }
@@ -4761,7 +4841,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // Passif Esprit des Forets : +1 DEF pour toutes les unites Terre alliees (buff temporaire)
   const espritCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Esprit des Forets').length;
   if (espritCountP > 0) {
-    getFieldAlive(battle.playerField).filter(u => u.element === 'terre').forEach(u => {
+    getFieldAlive(battle.playerField).filter(u => hasElement(u, 'terre')).forEach(u => {
       u.buffDef += espritCountP;
     });
     events.push({ type: 'type_passive', desc: `Esprit des Forets : +${espritCountP} DEF aux unites Terre` });
@@ -4794,7 +4874,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // Passif Leviathan Abyssal : +1 ATK aux allies Eau en debut de tour
   const leviathanCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Leviathan Abyssal').length;
   if (leviathanCountP > 0) {
-    getFieldAlive(battle.playerField).filter(u => u.element === 'eau').forEach(u => {
+    getFieldAlive(battle.playerField).filter(u => hasElement(u, 'eau')).forEach(u => {
       u.buffAtk += leviathanCountP;
     });
     events.push({ type: 'type_passive', desc: `Leviathan Abyssal : +${leviathanCountP} ATK aux unites Eau` });
@@ -4815,7 +4895,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // Dragon des Abysses joueur : +1 ATK allies Eau
   const dragonAbyssesCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Dragon des Abysses').length;
   if (dragonAbyssesCountP > 0) {
-    getFieldAlive(battle.playerField).filter(u => u.element === 'eau').forEach(u => { u.buffAtk += dragonAbyssesCountP; });
+    getFieldAlive(battle.playerField).filter(u => hasElement(u, 'eau')).forEach(u => { u.buffAtk += dragonAbyssesCountP; });
     events.push({ type: 'type_passive', desc: `Dragon des Abysses : +${dragonAbyssesCountP} ATK Eau` });
   }
   // Ombre Mimetique joueur : -1 HP par tour (instable)
@@ -4826,7 +4906,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // Abyssia joueur : soigne 1 HP allies Eau
   const abyssiaCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Abyssia').length;
   if (abyssiaCountP > 0) {
-    getFieldAlive(battle.playerField).filter(u => u.element === 'eau').forEach(u => {
+    getFieldAlive(battle.playerField).filter(u => hasElement(u, 'eau')).forEach(u => {
       u.currentHp = Math.min(u.maxHp, u.currentHp + abyssiaCountP);
     });
     events.push({ type: 'type_passive', desc: `Abyssia : +${abyssiaCountP} PV aux Eau` });
@@ -4860,6 +4940,14 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
       else if ((t.permanentBonusAtk || 0) > 0) t.permanentBonusAtk -= 1;
       else if (t.buffDef > 0) t.buffDef = Math.max(0, t.buffDef - 1);
       events.push({ type: 'type_passive', desc: `Chronos neutralise un buff de ${t.name}` });
+    }
+  });
+  // Colosse de Corail joueur : +1 DEF par token Corail en vie
+  getFieldAlive(battle.playerField).filter(u => u.name === 'Colosse de Corail').forEach(colosse => {
+    const tokenCount = getFieldAlive(battle.playerField).filter(u => u.isToken && u.name === 'Corail').length;
+    if (tokenCount > 0) {
+      colosse.buffDef += tokenCount;
+      events.push({ type: 'type_passive', desc: `Colosse de Corail : +${tokenCount} DEF (tokens Corail)` });
     }
   });
 
