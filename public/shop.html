@@ -27,6 +27,19 @@
         </div>
         <button class="shop-daily-btn" id="daily-btn" onclick="claimDaily()">RECUPERER</button>
       </div>
+
+      <!-- CODE CADEAU -->
+      <div class="shop-giftcode">
+        <div class="shop-giftcode-icon">🎟</div>
+        <div class="shop-giftcode-form">
+          <h3 class="shop-giftcode-title">CODE CADEAU</h3>
+          <div class="shop-giftcode-input-row">
+            <input type="text" id="giftcode-input" class="shop-giftcode-input" placeholder="GACHA-XXXX-XXXX" maxlength="30" autocomplete="off" spellcheck="false">
+            <button class="shop-giftcode-btn" id="giftcode-btn" onclick="redeemGiftCode()">UTILISER</button>
+          </div>
+          <p class="shop-giftcode-msg hidden" id="giftcode-msg"></p>
+        </div>
+      </div>
     </div>
 
     <!-- VUE OUVERTURE -->

@@ -329,5 +329,68 @@ document.getElementById('done-btn').addEventListener('click', () => {
   document.querySelectorAll('.booster-full').forEach(b => b.style.pointerEvents = '');
 });
 
+// ==========================================
+//  CODE CADEAU
+// ==========================================
+
+async function redeemGiftCode() {
+  const input = document.getElementById('giftcode-input');
+  const btn = document.getElementById('giftcode-btn');
+  const msg = document.getElementById('giftcode-msg');
+  const code = input.value.trim().toUpperCase();
+
+  if (!code) { showGiftMsg('Entre un code !', false); return; }
+
+  btn.disabled = true;
+  btn.textContent = '...';
+
+  try {
+    const res = await fetch('/api/redeem-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      let rewardText = '';
+      if (data.creditsGiven > 0) rewardText += `+${data.creditsGiven} CR`;
+      if (data.cardsGiven > 0) {
+        if (rewardText) rewardText += ' + ';
+        rewardText += `${data.cardsGiven} carte(s)`;
+      }
+      showGiftMsg(`✓ ${rewardText}`, true);
+      input.value = '';
+      currentCredits = data.newCredits;
+      document.getElementById('credits-count').textContent = data.newCredits;
+      screenFlash();
+    } else {
+      showGiftMsg(data.error, false);
+    }
+  } catch {
+    showGiftMsg('Erreur serveur', false);
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'UTILISER';
+}
+
+function showGiftMsg(text, success) {
+  const msg = document.getElementById('giftcode-msg');
+  msg.textContent = text;
+  msg.className = 'shop-giftcode-msg ' + (success ? 'gift-success' : 'gift-error');
+  setTimeout(() => msg.classList.add('hidden'), 4000);
+}
+
+// Enter key to submit gift code
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('giftcode-input');
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') redeemGiftCode();
+    });
+  }
+});
+
 loadCredits();
 loadBoosters();

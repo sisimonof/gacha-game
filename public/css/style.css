@@ -2171,6 +2171,58 @@ body.collection-page .screen-flash.flash-active {
   color: #444; border-color: #333; background: transparent; cursor: default;
 }
 
+/* Gift Code Section */
+.shop-giftcode {
+  display: flex; align-items: center; gap: 16px;
+  background: rgba(0, 20, 0, 0.7); border: 1px solid #1a3a1a;
+  border-radius: 8px; padding: 14px 24px; max-width: 500px; width: 100%;
+  margin-top: 12px; transition: all 0.3s ease;
+}
+.shop-giftcode:hover {
+  border-color: #ffaa00; box-shadow: 0 0 15px rgba(255, 170, 0, 0.1);
+}
+.shop-giftcode-icon { font-size: 32px; flex-shrink: 0; }
+.shop-giftcode-form { flex: 1; }
+.shop-giftcode-title {
+  font-family: 'Press Start 2P', monospace; font-size: 11px;
+  color: #ffaa00; margin: 0 0 8px;
+}
+.shop-giftcode-input-row {
+  display: flex; gap: 8px; align-items: center;
+}
+.shop-giftcode-input {
+  flex: 1; padding: 8px 12px; background: rgba(0, 40, 0, 0.6);
+  border: 1px solid #336633; border-radius: 4px;
+  color: #00ff41; font-family: 'VT323', monospace; font-size: 20px;
+  letter-spacing: 2px; text-transform: uppercase; outline: none;
+}
+.shop-giftcode-input:focus {
+  border-color: #ffaa00; box-shadow: 0 0 10px rgba(255, 170, 0, 0.2);
+}
+.shop-giftcode-input::placeholder {
+  color: #336633; letter-spacing: 2px;
+}
+.shop-giftcode-btn {
+  font-family: 'Press Start 2P', monospace; font-size: 9px;
+  color: #ffaa00; background: rgba(255, 170, 0, 0.1);
+  border: 1px solid #ffaa00; border-radius: 4px;
+  padding: 8px 14px; cursor: pointer; transition: all 0.2s;
+  white-space: nowrap;
+}
+.shop-giftcode-btn:hover:not(:disabled) {
+  background: rgba(255, 170, 0, 0.25); box-shadow: 0 0 10px rgba(255, 170, 0, 0.3);
+}
+.shop-giftcode-btn:disabled {
+  opacity: 0.5; cursor: default;
+}
+.shop-giftcode-msg {
+  font-family: 'VT323', monospace; font-size: 16px; margin: 6px 0 0;
+  transition: opacity 0.3s;
+}
+.shop-giftcode-msg.gift-success { color: #44dd44; }
+.shop-giftcode-msg.gift-error { color: #ff4444; }
+.shop-giftcode-msg.hidden { display: none; }
+
 .booster-full {
   position: relative; cursor: pointer; transition: all 0.3s ease;
   border-radius: 10px; overflow: hidden;

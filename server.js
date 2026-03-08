@@ -163,6 +163,32 @@ db.exec(`
   }
 }
 
+// === GIFT CODES ===
+db.exec(`
+  CREATE TABLE IF NOT EXISTS gift_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT UNIQUE NOT NULL,
+    credits INTEGER DEFAULT 0,
+    card_id INTEGER DEFAULT NULL,
+    card_quantity INTEGER DEFAULT 1,
+    is_shiny INTEGER DEFAULT 0,
+    max_uses INTEGER DEFAULT 1,
+    used_count INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active INTEGER DEFAULT 1
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS gift_code_uses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    used_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(code_id, user_id)
+  )
+`);
+
 // --- Seed compte admin ---
 {
   const adminUser = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
@@ -4088,6 +4114,88 @@ app.post('/api/admin/set-credits', requireAdmin, (req, res) => {
   if (!userId || credits === undefined) return res.status(400).json({ error: 'userId et credits requis' });
   db.prepare('UPDATE users SET credits = ? WHERE id = ?').run(credits, userId);
   res.json({ success: true });
+});
+
+// ============================================
+// GIFT CODES ROUTES
+// ============================================
+
+// Admin: list all gift codes
+app.get('/api/admin/gift-codes', requireAdmin, (req, res) => {
+  const codes = db.prepare(`
+    SELECT gc.*, c.name as card_name, c.rarity as card_rarity, c.emoji as card_emoji
+    FROM gift_codes gc
+    LEFT JOIN cards c ON gc.card_id = c.id
+    ORDER BY gc.created_at DESC
+  `).all();
+  res.json(codes);
+});
+
+// Admin: create gift code
+app.post('/api/admin/create-gift-code', requireAdmin, (req, res) => {
+  const { code, credits, cardId, cardQuantity, isShiny, maxUses } = req.body;
+  if (!code || code.trim().length < 3) return res.status(400).json({ error: 'Code trop court (min 3 caracteres)' });
+
+  const existing = db.prepare('SELECT id FROM gift_codes WHERE UPPER(code) = UPPER(?)').get(code.trim());
+  if (existing) return res.status(400).json({ error: 'Ce code existe deja' });
+
+  if (cardId) {
+    const card = db.prepare('SELECT id FROM cards WHERE id = ?').get(cardId);
+    if (!card) return res.status(400).json({ error: 'Carte introuvable' });
+  }
+
+  db.prepare(`INSERT INTO gift_codes (code, credits, card_id, card_quantity, is_shiny, max_uses) VALUES (?, ?, ?, ?, ?, ?)`)
+    .run(code.trim().toUpperCase(), credits || 0, cardId || null, cardQuantity || 1, isShiny ? 1 : 0, maxUses || 1);
+
+  res.json({ success: true });
+});
+
+// Admin: delete gift code
+app.post('/api/admin/delete-gift-code', requireAdmin, (req, res) => {
+  const { codeId } = req.body;
+  if (!codeId) return res.status(400).json({ error: 'codeId requis' });
+  db.prepare('DELETE FROM gift_code_uses WHERE code_id = ?').run(codeId);
+  db.prepare('DELETE FROM gift_codes WHERE id = ?').run(codeId);
+  res.json({ success: true });
+});
+
+// Player: redeem a gift code
+app.post('/api/redeem-code', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { code } = req.body;
+  if (!code || !code.trim()) return res.status(400).json({ error: 'Code vide' });
+
+  const gc = db.prepare('SELECT * FROM gift_codes WHERE UPPER(code) = UPPER(?) AND is_active = 1').get(code.trim());
+  if (!gc) return res.json({ success: false, error: 'Code invalide ou expire' });
+
+  if (gc.used_count >= gc.max_uses) return res.json({ success: false, error: 'Code deja utilise au maximum' });
+
+  const alreadyUsed = db.prepare('SELECT id FROM gift_code_uses WHERE code_id = ? AND user_id = ?').get(gc.id, userId);
+  if (alreadyUsed) return res.json({ success: false, error: 'Tu as deja utilise ce code !' });
+
+  const rewards = { credits: gc.credits, cards: [] };
+
+  const redeemTx = db.transaction(() => {
+    // Donner credits
+    if (gc.credits > 0) {
+      db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(gc.credits, userId);
+    }
+    // Donner cartes
+    if (gc.card_id) {
+      for (let i = 0; i < gc.card_quantity; i++) {
+        db.prepare('INSERT INTO user_cards (user_id, card_id, is_shiny) VALUES (?, ?, ?)').run(userId, gc.card_id, gc.is_shiny);
+      }
+      const cardInfo = db.prepare('SELECT name, rarity, emoji FROM cards WHERE id = ?').get(gc.card_id);
+      if (cardInfo) rewards.cards.push({ ...cardInfo, quantity: gc.card_quantity, isShiny: gc.is_shiny });
+    }
+    // Log usage
+    db.prepare('INSERT INTO gift_code_uses (code_id, user_id) VALUES (?, ?)').run(gc.id, userId);
+    db.prepare('UPDATE gift_codes SET used_count = used_count + 1 WHERE id = ?').run(gc.id);
+  });
+  redeemTx();
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ success: true, rewards, credits: newCredits });
 });
 
 // ============================================

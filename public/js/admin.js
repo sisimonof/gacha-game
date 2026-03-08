@@ -338,6 +338,7 @@ function showTab(tabName) {
   document.getElementById(`tab-${tabName}`).classList.remove('hidden');
   event.target.classList.add('active');
   if (tabName === 'backups') loadBackups();
+  if (tabName === 'giftcodes') loadGiftCodes();
 }
 
 // === ACTIONS ===
@@ -477,6 +478,96 @@ async function resetUser(userId, username) {
   } else {
     showFeedback(data.error, true);
   }
+}
+
+// ==========================================
+//  GIFT CODES
+// ==========================================
+
+async function loadGiftCodes() {
+  const res = await fetch('/api/admin/gift-codes');
+  const codes = await res.json();
+  const tbody = document.getElementById('giftcodes-body');
+  if (!tbody) return;
+
+  tbody.innerHTML = codes.map(gc => {
+    let reward = '';
+    if (gc.credits > 0) reward += `${gc.credits} CR`;
+    if (gc.card_name) {
+      if (reward) reward += ' + ';
+      reward += `${gc.card_quantity}x ${gc.card_emoji || ''} ${gc.card_name}`;
+      if (gc.is_shiny) reward += ' ✦';
+    }
+    if (!reward) reward = '—';
+
+    const date = new Date(gc.created_at).toLocaleDateString('fr-FR');
+    const usageColor = gc.used_count >= gc.max_uses ? '#ff4444' : '#44dd44';
+
+    return `<tr>
+      <td style="font-weight:bold;letter-spacing:1px">${gc.code}</td>
+      <td>${reward}</td>
+      <td style="color:${usageColor}">${gc.used_count} / ${gc.max_uses}</td>
+      <td>${date}</td>
+      <td><button class="submit-btn admin-small-btn" onclick="deleteGiftCode(${gc.id}, '${gc.code}')" style="font-size:11px;background:rgba(255,0,0,0.2)">SUPPR</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function createGiftCode() {
+  const code = document.getElementById('gc-code').value.trim().toUpperCase();
+  const credits = parseInt(document.getElementById('gc-credits').value) || 0;
+  const maxUses = parseInt(document.getElementById('gc-max-uses').value) || 1;
+  const cardId = document.getElementById('gc-card-id').value ? parseInt(document.getElementById('gc-card-id').value) : null;
+  const cardQuantity = parseInt(document.getElementById('gc-card-qty').value) || 1;
+  const isShiny = document.getElementById('gc-shiny').checked ? 1 : 0;
+
+  if (!code) { showFeedback('Code requis', true); return; }
+  if (credits <= 0 && !cardId) { showFeedback('Ajoute des credits ou une carte', true); return; }
+
+  const res = await fetch('/api/admin/create-gift-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, credits, cardId, cardQuantity, isShiny, maxUses })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    showFeedback(`Code "${data.code}" cree !`);
+    document.getElementById('gc-code').value = '';
+    document.getElementById('gc-credits').value = '0';
+    document.getElementById('gc-max-uses').value = '1';
+    document.getElementById('gc-card-id').value = '';
+    document.getElementById('gc-card-qty').value = '1';
+    document.getElementById('gc-shiny').checked = false;
+    loadGiftCodes();
+  } else {
+    showFeedback(data.error, true);
+  }
+}
+
+async function deleteGiftCode(id, code) {
+  if (!confirm(`Supprimer le code "${code}" ?`)) return;
+
+  const res = await fetch('/api/admin/delete-gift-code', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ codeId: id })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    showFeedback(`Code "${code}" supprime`);
+    loadGiftCodes();
+  } else {
+    showFeedback(data.error, true);
+  }
+}
+
+function generateRandomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = 'GACHA-';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  code += '-';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  document.getElementById('gc-code').value = code;
 }
 
 checkAdmin();
