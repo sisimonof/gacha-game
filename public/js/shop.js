@@ -230,13 +230,12 @@ function showCardsReveal(cards) {
   let revealedCount = 0;
   const totalCards = cards.length;
 
-  // Tri : commune -> legendaire, shiny en dernier
-  const rarityOrder = { commune: 0, rare: 1, epique: 2, legendaire: 3, chaos: 4, secret: 5 };
-  const sorted = [...cards].sort((a, b) => {
-    const rd = rarityOrder[a.rarity] - rarityOrder[b.rarity];
-    if (rd !== 0) return rd;
-    return (a.is_shiny || 0) - (b.is_shiny || 0);
-  });
+  // Melange aleatoire pour le suspense
+  const sorted = [...cards];
+  for (let i = sorted.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
+  }
 
   // Creer toutes les cartes
   sorted.forEach((card, idx) => {
