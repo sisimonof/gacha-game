@@ -78,12 +78,18 @@ function renderBattlePass() {
     }
   });
 
-  // Scroll to current tier position
+  // Scroll to current progress (or start)
   setTimeout(() => {
-    const targetIdx = Math.max(0, currentTier - 1);
-    const tierEls = track.querySelectorAll('.bp-tier');
-    if (tierEls[targetIdx]) {
-      tierEls[targetIdx].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    const scrollContainer = document.querySelector('.bp-track-scroll');
+    if (currentTier === 0) {
+      // Start at the beginning
+      if (scrollContainer) scrollContainer.scrollLeft = 0;
+    } else {
+      const tierEls = track.querySelectorAll('.bp-tier');
+      const targetIdx = Math.min(currentTier, tierEls.length - 1);
+      if (tierEls[targetIdx]) {
+        tierEls[targetIdx].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
     }
   }, 100);
 }
