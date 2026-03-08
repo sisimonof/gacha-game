@@ -352,7 +352,7 @@ async function runAuthFlow() {
       await typeLine('> Initialisation du briefing...', 25);
       stopSound();
       await sleep(1200);
-      window.location.href = '/intro';
+      window.location.href = '/tutorial';
     } else {
       await typeError('! ERREUR : ' + (result.error || 'Echec de la creation.'));
       await sleep(2000);

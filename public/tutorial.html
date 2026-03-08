@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Tutoriel</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
+</head>
+<body class="tutorial-page">
+  <div class="tut-scanlines"></div>
+
+  <div class="tut-terminal">
+    <div class="tut-header">
+      <span class="intro-header-dot intro-dot-red"></span>
+      <span class="intro-header-dot intro-dot-yellow"></span>
+      <span class="intro-header-dot intro-dot-green"></span>
+      <span class="tut-header-title">GACHA_CARDS — tutoriel</span>
+    </div>
+    <div class="tut-body" id="tut-body"></div>
+    <div class="tut-footer" id="tut-footer">
+      <button class="tut-skip" id="tut-skip" onclick="skipTutorial()">[ PASSER ]</button>
+    </div>
+  </div>
+
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/tutorial.js"></script>
+</body>
+</html>

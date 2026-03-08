@@ -9712,3 +9712,754 @@ body.casino-page {
 
 /* Market dashboard card */
 .dash-card--market .dash-card-icon--market { color: #ffcc00; }
+
+/* ============================================
+   TUTORIAL STYLES
+   ============================================ */
+
+.tutorial-page {
+  margin: 0;
+  padding: 0;
+  background: #000;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.tut-scanlines {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0,255,65,0.03) 0px,
+    rgba(0,255,65,0.03) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 999;
+}
+
+.tut-terminal {
+  width: 90vw;
+  max-width: 800px;
+  height: 85vh;
+  max-height: 700px;
+  background: rgba(0,10,0,0.95);
+  border: 2px solid #00ff41;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 40px rgba(0,255,65,0.15), inset 0 0 30px rgba(0,255,65,0.05);
+  position: relative;
+  z-index: 1;
+}
+
+.tut-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(0,255,65,0.08);
+  border-bottom: 1px solid rgba(0,255,65,0.3);
+}
+
+.tut-header-title {
+  font-family: 'VT323', monospace;
+  color: rgba(0,255,65,0.6);
+  font-size: 13px;
+  margin-left: 8px;
+}
+
+.tut-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: #00ff41;
+  line-height: 1.6;
+  scroll-behavior: smooth;
+}
+
+.tut-body::-webkit-scrollbar { width: 6px; }
+.tut-body::-webkit-scrollbar-track { background: transparent; }
+.tut-body::-webkit-scrollbar-thumb { background: rgba(0,255,65,0.3); border-radius: 3px; }
+
+.tut-footer {
+  padding: 8px 16px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid rgba(0,255,65,0.15);
+}
+
+.tut-skip {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: rgba(0,255,65,0.4);
+  background: none;
+  border: 1px solid rgba(0,255,65,0.2);
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.tut-skip:hover {
+  color: #00ff41;
+  border-color: #00ff41;
+}
+
+/* Continue button */
+.tut-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: #00ff41;
+  background: rgba(0,255,65,0.1);
+  border: 2px solid #00ff41;
+  padding: 12px 24px;
+  cursor: pointer;
+  margin: 16px auto;
+  display: block;
+  transition: all 0.3s;
+  text-transform: uppercase;
+}
+
+.tut-btn:hover {
+  background: rgba(0,255,65,0.25);
+  box-shadow: 0 0 20px rgba(0,255,65,0.4);
+  transform: scale(1.05);
+}
+
+.tut-btn-primary {
+  font-size: 14px;
+  padding: 16px 32px;
+  animation: tut-glow 2s infinite;
+}
+
+.tut-btn-secondary {
+  font-size: 10px;
+  color: rgba(0,255,65,0.6);
+  border-color: rgba(0,255,65,0.3);
+  background: transparent;
+}
+
+.tut-btn-secondary:hover {
+  color: #00ff41;
+  border-color: #00ff41;
+}
+
+.tut-end-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* Animations */
+@keyframes tut-glow {
+  0%, 100% { box-shadow: 0 0 10px rgba(0,255,65,0.2); }
+  50% { box-shadow: 0 0 30px rgba(0,255,65,0.5); }
+}
+
+@keyframes tut-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tut-fade-in {
+  animation: tut-fade-in 0.5s ease forwards;
+}
+
+@keyframes tut-slide-up {
+  from { opacity: 0; transform: translateY(40px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.tut-slide-up {
+  animation: tut-slide-up 0.6s ease forwards;
+}
+
+/* Flash overlay */
+.tut-flash {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: white;
+  z-index: 1000;
+  animation: tut-flash-anim 0.4s ease-out forwards;
+}
+
+@keyframes tut-flash-anim {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+
+/* ===== STEP 1: REAL BOOSTER PACK ===== */
+.tut-pack-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.tut-pack-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: #ffaa00;
+  text-shadow: 0 0 10px rgba(255,170,0,0.5);
+  margin-bottom: 16px;
+}
+
+.tut-booster-card {
+  position: relative;
+  cursor: pointer;
+  background: #0d0d0d;
+  border: 2px solid var(--primary-border);
+  border-radius: 10px;
+  overflow: visible;
+  transition: all 0.3s ease;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  animation: tut-booster-glow 2s infinite;
+}
+
+.tut-booster-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  border-color: var(--primary);
+  box-shadow: 0 8px 30px rgba(var(--primary-rgb), 0.35), 0 0 60px rgba(var(--primary-rgb), 0.15);
+}
+
+@keyframes tut-booster-glow {
+  0%, 100% { box-shadow: 0 4px 20px rgba(var(--primary-rgb), 0.15); }
+  50% { box-shadow: 0 8px 40px rgba(var(--primary-rgb), 0.35); }
+}
+
+.tut-badge-training {
+  position: absolute;
+  top: 10px;
+  right: -24px;
+  transform: rotate(35deg);
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px;
+  padding: 3px 28px;
+  z-index: 3;
+  letter-spacing: 1px;
+  text-align: center;
+  pointer-events: none;
+  background: linear-gradient(135deg, #44dd44, #22aa22);
+  color: #000;
+}
+
+/* Tear animation for tutorial */
+.tut-tear-container {
+  position: relative;
+  width: auto;
+  height: 50vh;
+  max-height: 400px;
+  display: flex;
+  justify-content: center;
+}
+
+.tut-tear-container .tear-half {
+  width: 160px;
+  height: 100%;
+  background-size: auto 100%;
+  background-repeat: no-repeat;
+  transition: all 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.tut-tear-container .tear-left { background-position: left center; }
+.tut-tear-container .tear-right { background-position: right center; }
+
+.tut-tear-container.shaking { animation: boosterShake 0.12s infinite alternate; }
+.tut-tear-container.tearing .tear-left { transform: translateX(-120px) rotate(-8deg); opacity: 0; }
+.tut-tear-container.tearing .tear-right { transform: translateX(120px) rotate(8deg); opacity: 0; }
+.tut-tear-container.tearing .tear-glow { opacity: 1; width: 300px; }
+
+/* ===== STEP 1: REAL CARD REVEAL (reuses shop classes) ===== */
+.tut-reveal-scene {
+  text-align: center;
+  margin: 12px 0;
+}
+
+.tut-reveal-scene .reveal-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--primary);
+  text-shadow: 0 0 15px rgba(var(--primary-rgb), 0.5);
+  margin-bottom: 16px;
+}
+
+.tut-cards-reveal {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+/* ===== STEP 2: CARD ANATOMY ===== */
+.tut-anatomy-zone {
+  margin: 16px 0;
+  display: flex;
+  justify-content: center;
+}
+
+.tut-anatomy-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.tut-big-card {
+  transform: scale(1.3);
+  transform-origin: center center;
+  width: 180px;
+  min-height: 270px;
+  flex-shrink: 0;
+}
+
+.tut-annotations {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 140px;
+}
+
+.tut-annotations-left { text-align: right; }
+.tut-annotations-right { text-align: left; }
+
+.tut-annot {
+  display: flex;
+  flex-direction: column;
+  transition: all 0.4s;
+}
+
+.tut-annot-hidden {
+  opacity: 0;
+  transform: translateX(-10px);
+}
+
+.tut-annotations-right .tut-annot-hidden {
+  transform: translateX(10px);
+}
+
+.tut-annot-line {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  text-shadow: 0 0 8px currentColor;
+}
+
+.tut-annot-desc {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: rgba(0,255,65,0.6);
+}
+
+/* ===== STEP 3: FIELD ===== */
+.tut-field-zone {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.tut-field-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+}
+
+.tut-field-label-enemy { color: #ff4444; text-shadow: 0 0 10px rgba(255,68,68,0.5); }
+.tut-field-label-player { color: #44dd44; text-shadow: 0 0 10px rgba(68,221,68,0.5); }
+
+.tut-field-row {
+  display: flex;
+  gap: 12px;
+}
+
+.tut-field-slot {
+  width: 100px;
+  height: 80px;
+  border: 2px dashed rgba(0,255,65,0.3);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.5s;
+  position: relative;
+}
+
+.tut-slot-enemy {
+  border-color: rgba(255,68,68,0.3);
+  background: rgba(255,0,0,0.05);
+}
+
+.tut-slot-player {
+  border-color: rgba(68,221,68,0.3);
+  background: rgba(0,255,0,0.05);
+}
+
+.tut-field-slot span {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: rgba(0,255,65,0.4);
+}
+
+.tut-field-vs {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: #ffaa00;
+  text-shadow: 0 0 10px rgba(255,170,0,0.5);
+  padding: 4px 0;
+}
+
+.tut-field-card {
+  font-size: 30px;
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tut-slot-highlight-atk {
+  border-color: #ff4444 !important;
+  background: rgba(255,68,68,0.15) !important;
+  box-shadow: 0 0 20px rgba(255,68,68,0.3);
+}
+
+.tut-slot-highlight-def {
+  border-color: #4488ff !important;
+  background: rgba(68,136,255,0.15) !important;
+  box-shadow: 0 0 20px rgba(68,136,255,0.3);
+}
+
+/* ===== STEP 4: ENERGY ===== */
+.tut-energy-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+  gap: 12px;
+}
+
+.tut-energy-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: #ffcc00;
+  text-shadow: 0 0 15px rgba(255,204,0,0.5);
+}
+
+.tut-energy-bar {
+  display: flex;
+  gap: 6px;
+}
+
+.tut-energy-segment {
+  width: 50px;
+  height: 50px;
+  border: 2px solid rgba(255,204,0,0.3);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: rgba(255,204,0,0.3);
+  transition: all 0.4s;
+}
+
+.tut-seg-active {
+  background: rgba(255,204,0,0.2);
+  border-color: #ffcc00;
+  color: #ffcc00;
+  box-shadow: 0 0 15px rgba(255,204,0,0.4);
+  text-shadow: 0 0 8px rgba(255,204,0,0.5);
+}
+
+.tut-energy-counter {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: #ffcc00;
+}
+
+/* ===== STEP 5: CRYSTAL ===== */
+.tut-crystal-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+  gap: 10px;
+}
+
+.tut-crystal-icon {
+  font-size: 60px;
+  animation: tut-crystal-pulse 2s infinite;
+}
+
+@keyframes tut-crystal-pulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.1); filter: brightness(1.3); }
+}
+
+.tut-crystal-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: #cc44ff;
+  text-shadow: 0 0 10px rgba(204,68,255,0.5);
+}
+
+.tut-crystal-bar {
+  width: 250px;
+  height: 20px;
+  background: rgba(204,68,255,0.1);
+  border: 2px solid rgba(204,68,255,0.4);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.tut-crystal-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #8844cc, #cc44ff, #ff66ff);
+  border-radius: 8px;
+  transition: width 0.3s;
+  box-shadow: 0 0 10px rgba(204,68,255,0.5);
+}
+
+.tut-crystal-counter {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: #cc44ff;
+}
+
+/* ===== STEP 6: ATTACK ===== */
+.tut-vs-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 0;
+  gap: 12px;
+}
+
+.tut-vs-zone > div:first-child {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.tut-vs-card {
+  width: 140px;
+  padding: 16px;
+  border-radius: 10px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.tut-vs-player {
+  background: rgba(0,255,65,0.08);
+  border: 2px solid rgba(0,255,65,0.4);
+}
+
+.tut-vs-enemy {
+  background: rgba(255,68,68,0.08);
+  border: 2px solid rgba(255,68,68,0.4);
+}
+
+.tut-vs-card-title {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 6px;
+}
+
+.tut-vs-card-emoji {
+  font-size: 40px;
+  margin: 8px 0;
+}
+
+.tut-vs-stats {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+}
+
+.tut-vs-middle {
+  display: flex;
+  align-items: center;
+}
+
+.tut-vs-icon {
+  font-size: 30px;
+}
+
+.tut-vs-hp {
+  margin-top: 8px;
+}
+
+.tut-vs-hp-bar {
+  width: 100%;
+  height: 10px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.tut-vs-hp-fill {
+  height: 100%;
+  background: #44dd44;
+  border-radius: 5px;
+  transition: all 0.5s;
+}
+
+.tut-vs-hp-text {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #44dd44;
+  transition: color 0.5s;
+}
+
+@keyframes tut-attack-pulse {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.1) translateX(10px); }
+  60% { transform: scale(1) translateX(40px); box-shadow: 0 0 30px rgba(255,68,68,0.6); }
+  80% { transform: scale(1) translateX(10px); }
+  100% { transform: scale(1) translateX(0); }
+}
+
+.tut-attack-pulse {
+  animation: tut-attack-pulse 0.6s ease;
+}
+
+@keyframes tut-hit-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+
+.tut-hit-shake {
+  animation: tut-hit-shake 0.4s ease;
+}
+
+.tut-calc {
+  text-align: center;
+  margin-top: 12px;
+}
+
+.tut-calc-line {
+  font-family: 'VT323', monospace;
+  font-size: 22px;
+  color: #00ff41;
+  margin: 4px 0;
+}
+
+.tut-calc-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: #ff4444;
+  text-shadow: 0 0 10px rgba(255,68,68,0.5);
+}
+
+/* ===== STEP 7: VICTORY ===== */
+.tut-victory-zone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  margin: 20px 0;
+}
+
+.tut-avatar-side {
+  text-align: center;
+  width: 120px;
+}
+
+.tut-avatar-icon {
+  font-size: 50px;
+  margin-bottom: 8px;
+}
+
+.tut-avatar-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  margin-bottom: 8px;
+}
+
+.tut-avatar-player .tut-avatar-label { color: #44dd44; }
+.tut-avatar-enemy .tut-avatar-label { color: #ff4444; }
+
+.tut-avatar-hp-bar {
+  width: 100%;
+  height: 14px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.tut-avatar-hp-fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: all 0.5s;
+}
+
+.tut-avatar-hp-green { background: #44dd44; }
+.tut-avatar-hp-red { background: #ff4444; }
+
+.tut-avatar-hp-text {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: rgba(0,255,65,0.7);
+  margin-top: 4px;
+}
+
+.tut-avatar-vs {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 18px;
+  color: #ffaa00;
+  text-shadow: 0 0 15px rgba(255,170,0,0.5);
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 600px) {
+  .tut-terminal {
+    width: 98vw;
+    height: 95vh;
+    max-height: none;
+    border-radius: 0;
+  }
+
+  .tut-big-card { transform: scale(1); }
+
+  .tut-anatomy-wrapper {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .tut-annotations {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: auto;
+    justify-content: center;
+  }
+
+  .tut-annotations-left, .tut-annotations-right { text-align: center; }
+
+  .tut-cards-row { gap: 6px; }
+  .tut-card-slot { width: 100px; height: 155px; }
+
+  .tut-energy-segment { width: 40px; height: 40px; font-size: 11px; }
+
+  .tut-vs-card { width: 110px; padding: 10px; }
+  .tut-vs-card-emoji { font-size: 30px; }
+
+  .tut-field-slot { width: 80px; height: 65px; }
+}
+
+/* Utility */
+.hidden { display: none !important; }

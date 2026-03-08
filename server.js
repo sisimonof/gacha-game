@@ -263,7 +263,8 @@ db.exec(`
     ['stat_boosters_rift', 'INTEGER DEFAULT 0'],
     ['stat_boosters_avance', 'INTEGER DEFAULT 0'],
     ['stat_market_sales', 'INTEGER DEFAULT 0'],
-    ['stat_market_purchases', 'INTEGER DEFAULT 0']
+    ['stat_market_purchases', 'INTEGER DEFAULT 0'],
+    ['tutorial_completed', 'INTEGER DEFAULT 0']
   ];
   for (const [col, type] of newMigrations) {
     if (!cols2.includes(col)) {
@@ -3900,7 +3901,7 @@ app.post('/api/logout', (req, res) => {
 
 // --- Routes USER ---
 app.get('/api/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date, profile_frame, unlocked_frames FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date, profile_frame, unlocked_frames, tutorial_completed FROM users WHERE id = ?').get(req.session.userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(req.session.userId).c;
 
   const today = new Date().toISOString().split('T')[0];
@@ -3951,8 +3952,34 @@ app.get('/api/me', requireAuth, (req, res) => {
     battlePassTier: bp?.current_tier || 0,
     battlePassXP: bp?.xp || 0,
     currentTierXP,
-    currentTierRequired
+    currentTierRequired,
+    tutorialCompleted: user.tutorial_completed || 0
   });
+});
+
+// --- Tutorial API ---
+app.post('/api/tutorial/open-pack', requireAuth, (req, res) => {
+  const user = db.prepare('SELECT tutorial_completed FROM users WHERE id = ?').get(req.session.userId);
+  if (user.tutorial_completed) return res.status(400).json({ error: 'Tutoriel deja complete' });
+
+  const communes = db.prepare("SELECT * FROM cards WHERE rarity = 'commune' ORDER BY RANDOM() LIMIT 3").all();
+  const rares = db.prepare("SELECT * FROM cards WHERE rarity = 'rare' ORDER BY RANDOM() LIMIT 2").all();
+  const cards = [...communes, ...rares];
+
+  for (let i = cards.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [cards[i], cards[j]] = [cards[j], cards[i]];
+  }
+
+  const insert = db.prepare('INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)');
+  cards.forEach(c => insert.run(req.session.userId, c.id));
+
+  res.json({ cards });
+});
+
+app.post('/api/tutorial/complete', requireAuth, (req, res) => {
+  db.prepare('UPDATE users SET tutorial_completed = 1 WHERE id = ?').run(req.session.userId);
+  res.json({ success: true });
 });
 
 // User settings (avatar + display name)
@@ -6967,6 +6994,7 @@ app.post('/api/chat/:friendId', requireAuth, (req, res) => {
 // ============================================
 // PAGE ROUTES
 // ============================================
+app.get('/tutorial', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'tutorial.html')); });
 app.get('/intro', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'intro.html')); });
 app.get('/menu', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'menu.html')); });
 app.get('/shop', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'shop.html')); });
