@@ -1,32 +1,53 @@
-// mine.js — Mine game logic
+// mine.js — Mine scene avec pierres minables
 
-let mineState = null;
-let currentCredits = 0;
-let currentEssence = 0;
-let isHitting = false;
+let mineData = null;
 let cooldownInterval = null;
 let cooldownSecondsLeft = 0;
-const COOLDOWN_TOTAL = 240; // 4 minutes
+let cooldownTotal = 840;
 
-const RESOURCE_NAMES = {
-  charbon: 'Charbon',
-  fer: 'Fer',
-  or: 'Or',
-  diamant: 'Diamant'
+const RESOURCE_NAMES = { charbon: 'Charbon', fer: 'Fer', or: 'Or', diamant: 'Diamant' };
+const RESOURCE_PRICES = { charbon: 10, fer: 18, or: 35, diamant: 55 };
+const RESOURCE_COLORS = {
+  charbon: '#888',
+  fer: '#c0c0d0',
+  or: '#f0c040',
+  diamant: '#40d0ff'
 };
 
-const RESOURCE_PRICES = {
-  charbon: 3,
-  fer: 12,
-  or: 20,
-  diamant: 50
-};
+// Positions des pierres sur l'image de mine (% relatif)
+// Image: murs verts, entree mine au centre, pioches gauche, marchand droite
+// Sol vert = bande ~63-90% du haut, zone libre centre-gauche
+const ROCK_POSITIONS = [
+  { left: 18, top: 76 },
+  { left: 38, top: 73 },
+  { left: 55, top: 77 },
+  { left: 27, top: 86 },
+  { left: 47, top: 86 },
+  { left: 12, top: 86 },
+  { left: 58, top: 86 },
+  { left: 35, top: 93 }
+];
+
+// Positions minerais au sol (juste en dessous/a cote des pierres)
+const MINERAL_POSITIONS = [
+  { left: 21, top: 85 },
+  { left: 41, top: 82 },
+  { left: 58, top: 86 },
+  { left: 30, top: 94 },
+  { left: 50, top: 94 },
+  { left: 15, top: 94 },
+  { left: 61, top: 94 },
+  { left: 38, top: 98 }
+];
 
 // === INIT ===
 async function init() {
+  // Move popup to end of body to fix z-index stacking with flexbox layout
+  const popup = document.getElementById('mine-shop-popup');
+  if (popup) document.body.appendChild(popup);
+
   await loadMineState();
-  setupTabs();
-  setupButtons();
+  setupShop();
 }
 
 async function loadMineState() {
@@ -36,19 +57,15 @@ async function loadMineState() {
       if (res.status === 401) { window.location.href = '/'; return; }
       return;
     }
-    mineState = await res.json();
-    currentCredits = mineState.credits;
-    currentEssence = mineState.essence;
+    mineData = await res.json();
+    cooldownTotal = mineData.cooldownTotal || 840;
 
     updateNav();
-    renderMineGrid(mineState.grid);
-    renderInventory(mineState.inventory, mineState.maxSlots);
-    renderHiddenResources(mineState.hiddenResources);
-    updateButtons();
+    renderRocks();
+    renderMinerals();
 
-    // Check cooldown on load
-    if (mineState.cooldownRemaining > 0) {
-      startCooldownTimer(mineState.cooldownRemaining);
+    if (mineData.cooldownRemaining > 0) {
+      startCooldownTimer(mineData.cooldownRemaining);
     }
   } catch (e) {
     console.error('Erreur chargement mine:', e);
@@ -56,134 +73,88 @@ async function loadMineState() {
 }
 
 function updateNav() {
-  document.getElementById('nav-credits').textContent = currentCredits;
-  document.getElementById('nav-essence').textContent = currentEssence;
-  // Try to load username
+  document.getElementById('nav-credits').textContent = mineData.credits;
+  document.getElementById('nav-essence').textContent = mineData.essence;
   fetch('/api/me').then(r => r.json()).then(d => {
     document.getElementById('nav-username').textContent = d.displayName || d.username;
-    currentCredits = d.credits;
-    currentEssence = d.essence || 0;
-    document.getElementById('nav-credits').textContent = currentCredits;
-    document.getElementById('nav-essence').textContent = currentEssence;
+    mineData.credits = d.credits;
+    mineData.essence = d.essence || 0;
+    document.getElementById('nav-credits').textContent = d.credits;
+    document.getElementById('nav-essence').textContent = d.essence || 0;
   }).catch(() => {});
 }
 
-// === TAB SWITCHING ===
-function setupTabs() {
-  document.querySelectorAll('.mine-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      const tabName = tab.dataset.tab;
-      document.querySelectorAll('.mine-panel').forEach(p => p.classList.add('hidden'));
-      document.querySelectorAll('.mine-tab').forEach(t => t.classList.remove('active'));
-      document.getElementById(`tab-${tabName}`).classList.remove('hidden');
-      tab.classList.add('active');
-
-      if (tabName === 'collecter') renderCollecterTab();
-      if (tabName === 'shop') renderPierreShop();
-    });
-  });
-}
-
-function setupButtons() {
-  document.getElementById('mine-sell-all').addEventListener('click', sellAll);
-  document.getElementById('mine-reset').addEventListener('click', resetMine);
-  document.getElementById('collecter-sell-all').addEventListener('click', sellAll);
-  document.getElementById('collecter-reset').addEventListener('click', resetMine);
-}
-
-function updateButtons() {
-  const inv = mineState?.inventory || [];
-  const hasItems = inv.length > 0;
-  document.getElementById('mine-sell-all').disabled = !hasItems;
-  document.getElementById('mine-reset').disabled = hasItems;
-  const cs = document.getElementById('collecter-sell-all');
-  const cr = document.getElementById('collecter-reset');
-  if (cs) cs.disabled = !hasItems;
-  if (cr) cr.disabled = hasItems;
-}
-
-// === MINE GRID RENDERING ===
-function renderMineGrid(grid) {
-  const container = document.getElementById('mine-grid');
+// === RENDER ROCKS ===
+function renderRocks() {
+  const container = document.getElementById('mine-rocks');
   container.innerHTML = '';
 
-  grid.forEach((block, i) => {
-    const div = document.createElement('div');
-    div.className = 'mine-block';
-    div.dataset.index = i;
+  if (!mineData || !mineData.rocks) return;
 
-    if (block.mined) {
-      div.classList.add('mine-block--mined');
-      if (block.resource) {
-        div.classList.add(`mine-block--${block.resource}`);
-        const img = document.createElement('img');
-        img.src = `/img/mine/${block.resource}.png`;
-        img.className = 'mine-block-resource';
-        div.appendChild(img);
-        if (!block.collected) {
-          div.classList.add('mine-block--uncollected');
-        }
-      }
-    } else {
-      // Crack level
-      const upgrades = mineState?.upgrades || {};
-      const adjusted = Math.max(1, block.resistance - (upgrades.mine_speed || 0));
-      const progress = block.hits / adjusted;
-      const crackLevel = Math.min(4, Math.floor(progress * 5));
-      if (crackLevel > 0) div.classList.add(`mine-block--crack-${crackLevel}`);
-      div.addEventListener('click', () => hitBlock(i));
-    }
+  mineData.rocks.forEach((rock, i) => {
+    if (rock.mined) return;
 
-    container.appendChild(div);
+    const pos = ROCK_POSITIONS[i] || ROCK_POSITIONS[i % ROCK_POSITIONS.length];
+    const el = document.createElement('div');
+    el.className = 'mine-rock';
+    el.style.left = pos.left + '%';
+    el.style.top = pos.top + '%';
+    el.dataset.index = i;
+    el.title = 'Cliquez pour miner !';
+
+    const img = document.createElement('img');
+    img.src = '/img/mine/block.png';
+    img.className = 'mine-rock-img';
+    img.draggable = false;
+    el.appendChild(img);
+
+    const pick = document.createElement('div');
+    pick.className = 'mine-rock-pick';
+    pick.textContent = '\u26CF';
+    el.appendChild(pick);
+
+    el.addEventListener('click', () => hitRock(i, el));
+    container.appendChild(el);
   });
 }
 
-function updateSingleBlock(index, blockData) {
-  const div = document.querySelector(`.mine-block[data-index="${index}"]`);
-  if (!div) return;
+// === RENDER MINERALS ON GROUND ===
+function renderMinerals() {
+  const container = document.getElementById('mine-minerals-ground');
+  container.innerHTML = '';
 
-  // Remove old classes
-  div.className = 'mine-block';
-  div.innerHTML = '';
+  if (!mineData || !mineData.rocks) return;
 
-  if (blockData.mined) {
-    div.classList.add('mine-block--mined');
-    if (blockData.resource) {
-      div.classList.add(`mine-block--${blockData.resource}`);
-      div.classList.add('mine-block--breaking');
-      const img = document.createElement('img');
-      img.src = `/img/mine/${blockData.resource}.png`;
-      img.className = 'mine-block-resource';
-      div.appendChild(img);
-      if (blockData.collected) {
-        // Collected - slightly dimmer
-      } else {
-        div.classList.add('mine-block--uncollected');
-        div.addEventListener('click', () => collectResource(index));
-      }
-      // Flash effect for rare resources
-      if (blockData.resource === 'diamant') {
-        flashScreen('rgba(100,200,255,0.3)');
-        showNotification('💎 DIAMANT trouve !', 'diamant');
-      } else if (blockData.resource === 'or') {
-        flashScreen('rgba(255,200,0,0.2)');
-        showNotification('🟡 OR trouve !', 'or');
-      }
-    }
-  } else {
-    // Update crack
-    const crackLevel = blockData.crackLevel || 0;
-    if (crackLevel > 0) div.classList.add(`mine-block--crack-${crackLevel}`);
-    div.classList.add('mine-block--hit');
-    setTimeout(() => div.classList.remove('mine-block--hit'), 150);
-    div.addEventListener('click', () => hitBlock(index));
-  }
+  mineData.rocks.forEach((rock, i) => {
+    if (!rock.mined) return;
+
+    const pos = MINERAL_POSITIONS[i] || MINERAL_POSITIONS[i % MINERAL_POSITIONS.length];
+    const el = document.createElement('div');
+    el.className = 'mine-mineral-ground';
+    el.style.left = pos.left + '%';
+    el.style.top = pos.top + '%';
+
+    const img = document.createElement('img');
+    img.src = `/img/mine/${rock.mineral}.png`;
+    img.className = 'mine-mineral-img';
+    img.draggable = false;
+    el.appendChild(img);
+
+    const label = document.createElement('span');
+    label.className = 'mine-mineral-label';
+    label.textContent = RESOURCE_NAMES[rock.mineral];
+    label.style.color = RESOURCE_COLORS[rock.mineral];
+    el.appendChild(label);
+
+    container.appendChild(el);
+  });
 }
 
-// === MINING LOGIC ===
-async function hitBlock(index) {
-  if (isHitting) return;
-  isHitting = true;
+// === MINE A ROCK ===
+async function hitRock(index, el) {
+  if (el.classList.contains('mine-rock--breaking')) return;
+  el.classList.add('mine-rock--breaking');
+  el.style.animation = 'rockShake 0.4s ease-in-out';
 
   try {
     const res = await fetch('/api/mine/hit', {
@@ -194,118 +165,113 @@ async function hitBlock(index) {
     const data = await res.json();
 
     if (data.success) {
-      // Update local state
-      mineState.grid[index] = {
-        ...mineState.grid[index],
-        hits: data.block.hits,
-        mined: data.block.mined,
-        collected: data.block.collected,
-        resource: data.block.resource
-      };
+      mineData.rocks[index].mined = true;
+      mineData.rocks[index].mineral = data.mineral;
+      if (!mineData.minerals) mineData.minerals = [];
+      mineData.minerals.push({ resource: data.mineral });
 
-      updateSingleBlock(index, data.block);
+      setTimeout(() => {
+        el.classList.add('mine-rock--explode');
 
-      if (data.inventoryItem) {
-        mineState.inventory.push(data.inventoryItem);
-        renderInventory(mineState.inventory, mineState.maxSlots);
-        // Update hidden resources
-        if (data.block.resource && mineState.hiddenResources[data.block.resource] !== undefined) {
-          mineState.hiddenResources[data.block.resource]--;
-          renderHiddenResources(mineState.hiddenResources);
+        if (data.mineral === 'diamant') {
+          flashScreen('rgba(64,208,255,0.3)');
+          showNotification('DIAMANT trouve !', 'diamant');
+        } else if (data.mineral === 'or') {
+          flashScreen('rgba(240,192,64,0.2)');
+          showNotification('OR trouve !', 'or');
+        } else if (data.mineral === 'fer') {
+          showNotification('Fer trouve !', 'fer');
+        } else {
+          showNotification('Charbon trouve', 'charbon');
         }
-      }
 
-      if (data.inventoryFull) {
-        showInventoryWarning(true);
-      }
-
-      updateButtons();
+        setTimeout(() => {
+          renderRocks();
+          renderMinerals();
+          if (data.allMined) {
+            cooldownTotal = data.cooldownTotal || 840;
+            startCooldownTimer(cooldownTotal);
+          }
+        }, 300);
+      }, 400);
+    } else if (data.cooldown) {
+      showNotification('Mine en restock...', 'error');
     }
   } catch (e) {
     console.error('Erreur mine/hit:', e);
+    el.classList.remove('mine-rock--breaking');
   }
-
-  isHitting = false;
 }
 
-async function collectResource(index) {
-  try {
-    const res = await fetch('/api/mine/collect', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ index })
+// === SHOP ===
+function setupShop() {
+  document.getElementById('mine-shop-hitbox').addEventListener('click', openShop);
+  document.getElementById('mine-shop-close').addEventListener('click', closeShop);
+  document.getElementById('mine-shop-popup').addEventListener('click', (e) => {
+    if (e.target === e.currentTarget) closeShop();
+  });
+
+  document.querySelectorAll('.mine-shop-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      const tabName = tab.dataset.stab;
+      document.querySelectorAll('.mine-shop-panel').forEach(p => p.classList.add('hidden'));
+      document.querySelectorAll('.mine-shop-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(`stab-${tabName}`).classList.remove('hidden');
+      tab.classList.add('active');
+      if (tabName === 'upgrade') loadUpgrades();
     });
-    const data = await res.json();
+  });
 
-    if (data.success) {
-      mineState.grid[index].collected = true;
-      mineState.inventory.push(data.inventoryItem);
-      renderInventory(mineState.inventory, mineState.maxSlots);
-
-      const resource = mineState.grid[index].resource;
-      if (resource && mineState.hiddenResources[resource] !== undefined) {
-        mineState.hiddenResources[resource]--;
-        renderHiddenResources(mineState.hiddenResources);
-      }
-
-      // Update block visual
-      const div = document.querySelector(`.mine-block[data-index="${index}"]`);
-      if (div) div.classList.remove('mine-block--uncollected');
-
-      updateButtons();
-    } else if (data.inventoryFull) {
-      showInventoryWarning(true);
-    }
-  } catch (e) {
-    console.error('Erreur collect:', e);
-  }
+  document.getElementById('mine-sell-all-btn').addEventListener('click', sellAll);
 }
 
-// === INVENTORY ===
-function renderInventory(items, maxSlots) {
-  const container = document.getElementById('mine-inv-slots');
-  container.innerHTML = '';
+function openShop() {
+  document.getElementById('mine-shop-popup').classList.remove('hidden');
+  renderSellTab();
+}
 
-  for (let i = 0; i < maxSlots; i++) {
-    const slot = document.createElement('div');
-    slot.className = 'mine-inv-slot';
+function closeShop() {
+  document.getElementById('mine-shop-popup').classList.add('hidden');
+}
 
-    const item = items.find(it => it.slot_index === i || it.slot === i);
-    if (item) {
-      slot.classList.add('mine-inv-slot--filled', `mine-inv-slot--${item.resource}`);
-      const img = document.createElement('img');
-      img.src = `/img/mine/${item.resource}.png`;
-      img.className = 'mine-inv-resource';
-      slot.appendChild(img);
-      const label = document.createElement('span');
-      label.className = 'mine-inv-label';
-      label.textContent = RESOURCE_NAMES[item.resource];
-      slot.appendChild(label);
-    } else {
-      slot.classList.add('mine-inv-slot--empty');
-      slot.innerHTML = '<span class="mine-inv-empty">—</span>';
-    }
+function renderSellTab() {
+  const list = document.getElementById('mine-sell-list');
+  const totalEl = document.getElementById('mine-sell-total');
+  const btn = document.getElementById('mine-sell-all-btn');
+  list.innerHTML = '';
 
-    container.appendChild(slot);
+  const minerals = mineData?.minerals || [];
+
+  if (!minerals.length) {
+    list.innerHTML = '<p class="mine-sell-empty">Aucun minerai a vendre. Minez des pierres !</p>';
+    totalEl.textContent = '';
+    btn.disabled = true;
+    return;
   }
 
-  showInventoryWarning(items.length >= maxSlots);
+  const counts = {};
+  let totalPrice = 0;
+  minerals.forEach(m => {
+    counts[m.resource] = (counts[m.resource] || 0) + 1;
+    totalPrice += RESOURCE_PRICES[m.resource] || 0;
+  });
+
+  for (const [resource, count] of Object.entries(counts)) {
+    const row = document.createElement('div');
+    row.className = 'mine-sell-row';
+    row.innerHTML = `
+      <img src="/img/mine/${resource}.png" class="mine-sell-icon">
+      <span class="mine-sell-name">${RESOURCE_NAMES[resource]}</span>
+      <span class="mine-sell-count">x${count}</span>
+      <span class="mine-sell-price" style="color:${RESOURCE_COLORS[resource]}">${count * RESOURCE_PRICES[resource]} CR</span>
+    `;
+    list.appendChild(row);
+  }
+
+  totalEl.innerHTML = `<strong>TOTAL : ${totalPrice} CR</strong>`;
+  btn.disabled = false;
 }
 
-function showInventoryWarning(show) {
-  const warning = document.getElementById('mine-inv-warning');
-  if (warning) warning.classList.toggle('hidden', !show);
-}
-
-// === HIDDEN RESOURCES ===
-function renderHiddenResources(resources) {
-  document.getElementById('hidden-charbon').textContent = resources.charbon;
-  document.getElementById('hidden-fer').textContent = resources.fer;
-  document.getElementById('hidden-or').textContent = resources.or;
-  document.getElementById('hidden-diamant').textContent = resources.diamant;
-}
-
-// === SELLING ===
 async function sellAll() {
   try {
     const res = await fetch('/api/mine/sell-all', {
@@ -315,155 +281,55 @@ async function sellAll() {
     const data = await res.json();
 
     if (data.success) {
-      showNotification(`+${data.totalSold} CR (${data.itemsSold} minerais vendus)`, 'sell');
-      currentCredits = data.credits;
-      document.getElementById('nav-credits').textContent = currentCredits;
-      mineState.inventory = [];
-      renderInventory([], mineState.maxSlots);
-      showInventoryWarning(false);
-
-      // Auto-reset: nouvelle mine incluse dans la reponse
-      if (data.grid) {
-        mineState.grid = data.grid;
-        mineState.hiddenResources = data.hiddenResources;
-        renderMineGrid(data.grid);
-        renderHiddenResources(data.hiddenResources);
-      }
-
-      updateButtons();
-
-      // Update collecter tab if visible
-      const collecterGrid = document.getElementById('collecter-grid');
-      if (collecterGrid && !document.getElementById('tab-collecter').classList.contains('hidden')) {
-        renderCollecterTab();
-      }
-
-      // Lancer le cooldown de restock
-      startCooldownTimer(data.cooldownSeconds || COOLDOWN_TOTAL);
+      showNotification(`+${data.totalSold} CR (${data.itemsSold} minerais)`, 'sell');
+      mineData.credits = data.credits;
+      mineData.minerals = [];
+      document.getElementById('nav-credits').textContent = data.credits;
+      renderSellTab();
+      renderMinerals();
     }
   } catch (e) {
     console.error('Erreur sell-all:', e);
   }
 }
 
-// === MINE RESET ===
-async function resetMine() {
-  try {
-    const res = await fetch('/api/mine/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    const data = await res.json();
-
-    if (data.success) {
-      showNotification('Nouvelle mine generee !', 'reset');
-      mineState.grid = data.grid;
-      mineState.hiddenResources = data.hiddenResources;
-      renderMineGrid(data.grid);
-      renderHiddenResources(data.hiddenResources);
-      updateButtons();
-    } else if (res.status === 400) {
-      showNotification('Videz votre inventaire d\'abord !', 'error');
-    }
-  } catch (e) {
-    console.error('Erreur reset:', e);
-  }
-}
-
-// === COLLECTER TAB ===
-function renderCollecterTab() {
-  const grid = document.getElementById('collecter-grid');
-  grid.innerHTML = '';
-
-  const items = mineState?.inventory || [];
-
-  if (!items.length) {
-    grid.innerHTML = '<p class="collecter-empty">Inventaire vide. Minez des ressources !</p>';
-    return;
-  }
-
-  items.forEach((item, i) => {
-    const resource = item.resource;
-    const div = document.createElement('div');
-    div.className = `collecter-item collecter-item--${resource}`;
-    div.innerHTML = `
-      <img src="/img/mine/${resource}.png" class="collecter-item-img">
-      <div class="collecter-item-name">${RESOURCE_NAMES[resource]}</div>
-      <div class="collecter-item-price">${RESOURCE_PRICES[resource]} CR</div>
-      <button class="collecter-sell-btn" data-slot="${item.slot_index !== undefined ? item.slot_index : item.slot}">VENDRE</button>
-    `;
-    grid.appendChild(div);
-  });
-
-  grid.querySelectorAll('.collecter-sell-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const slot = parseInt(btn.dataset.slot);
-      await sellSingle(slot);
-    });
-  });
-}
-
-async function sellSingle(slot) {
-  try {
-    const res = await fetch('/api/mine/sell', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slot })
-    });
-    const data = await res.json();
-
-    if (data.success) {
-      showNotification(`+${data.soldPrice} CR (${RESOURCE_NAMES[data.soldResource]})`, 'sell');
-      currentCredits = data.credits;
-      document.getElementById('nav-credits').textContent = currentCredits;
-      mineState.inventory = data.inventory;
-      renderInventory(data.inventory, mineState.maxSlots);
-      renderCollecterTab();
-      updateButtons();
-    }
-  } catch (e) {
-    console.error('Erreur sell:', e);
-  }
-}
-
-// === PIERRE SHOP ===
-async function renderPierreShop() {
+async function loadUpgrades() {
   try {
     const res = await fetch('/api/mine/upgrades');
     const data = await res.json();
 
-    currentEssence = data.essence;
+    mineData.essence = data.essence;
     document.getElementById('shop-essence').textContent = data.essence;
     document.getElementById('nav-essence').textContent = data.essence;
 
-    const grid = document.getElementById('pierre-shop-grid');
+    const grid = document.getElementById('mine-upgrades-grid');
     grid.innerHTML = '';
 
     for (const [key, upgrade] of Object.entries(data.upgrades)) {
       const card = document.createElement('div');
-      card.className = `pierre-upgrade-card ${upgrade.maxed ? 'pierre-upgrade--maxed' : ''}`;
+      card.className = `mine-upgrade-card ${upgrade.maxed ? 'mine-upgrade--maxed' : ''}`;
 
       const levelBar = Array.from({ length: upgrade.maxLevel }, (_, i) =>
-        `<span class="pierre-level-pip ${i < upgrade.level ? 'pip--filled' : ''}"></span>`
+        `<span class="mine-level-pip ${i < upgrade.level ? 'pip--filled' : ''}"></span>`
       ).join('');
 
       card.innerHTML = `
-        <div class="pierre-upgrade-emoji">${upgrade.emoji}</div>
-        <h3 class="pierre-upgrade-name">${upgrade.name}</h3>
-        <p class="pierre-upgrade-desc">${upgrade.desc}</p>
-        <div class="pierre-level-bar">${levelBar}</div>
-        <p class="pierre-upgrade-level">Niveau ${upgrade.level}/${upgrade.maxLevel}</p>
+        <div class="mine-upgrade-emoji">${upgrade.emoji}</div>
+        <h3 class="mine-upgrade-name">${upgrade.name}</h3>
+        <p class="mine-upgrade-desc">${upgrade.desc}</p>
+        <div class="mine-level-bar">${levelBar}</div>
+        <p class="mine-upgrade-level">Niv. ${upgrade.level}/${upgrade.maxLevel}</p>
         ${upgrade.maxed
-          ? '<div class="pierre-upgrade-maxed">MAX</div>'
-          : `<button class="pierre-buy-btn" data-type="${key}" ${data.essence < upgrade.nextCost ? 'disabled' : ''}>
-               &#9935; ${upgrade.nextCost} Essence
+          ? '<div class="mine-upgrade-maxed">MAX</div>'
+          : `<button class="mine-upgrade-btn" data-type="${key}" ${data.essence < upgrade.nextCost ? 'disabled' : ''}>
+               \u26CF ${upgrade.nextCost} Essence
              </button>`
         }
       `;
       grid.appendChild(card);
     }
 
-    grid.querySelectorAll('.pierre-buy-btn').forEach(btn => {
+    grid.querySelectorAll('.mine-upgrade-btn').forEach(btn => {
       btn.addEventListener('click', () => purchaseUpgrade(btn.dataset.type));
     });
   } catch (e) {
@@ -482,12 +348,9 @@ async function purchaseUpgrade(type) {
 
     if (data.success) {
       showNotification('Amelioration achetee !', 'upgrade');
-      currentEssence = data.essence;
-      mineState.upgrades = data.upgrades;
-      mineState.maxSlots = 5 + (data.upgrades.inventory_size || 0);
+      mineData.essence = data.essence;
       document.getElementById('nav-essence').textContent = data.essence;
-      renderInventory(mineState.inventory, mineState.maxSlots);
-      renderPierreShop();
+      loadUpgrades();
     } else {
       showNotification(data.error || 'Erreur', 'error');
     }
@@ -496,22 +359,21 @@ async function purchaseUpgrade(type) {
   }
 }
 
-// === COOLDOWN ===
+// === COOLDOWN TIMER ===
 function startCooldownTimer(seconds) {
   cooldownSecondsLeft = seconds;
-  const overlay = document.getElementById('mine-cooldown-overlay');
-  const timerEl = document.getElementById('mine-cooldown-timer');
-  const barEl = document.getElementById('mine-cooldown-bar');
+  const overlay = document.getElementById('mine-timer-overlay');
+  const timerEl = document.getElementById('mine-timer-value');
+  const barEl = document.getElementById('mine-timer-bar');
 
   overlay.classList.remove('hidden');
-
   if (cooldownInterval) clearInterval(cooldownInterval);
 
   function updateDisplay() {
     const mins = Math.floor(cooldownSecondsLeft / 60);
     const secs = cooldownSecondsLeft % 60;
     timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
-    const progress = ((COOLDOWN_TOTAL - cooldownSecondsLeft) / COOLDOWN_TOTAL) * 100;
+    const progress = ((cooldownTotal - cooldownSecondsLeft) / cooldownTotal) * 100;
     barEl.style.width = `${progress}%`;
   }
 
@@ -523,14 +385,15 @@ function startCooldownTimer(seconds) {
       clearInterval(cooldownInterval);
       cooldownInterval = null;
       overlay.classList.add('hidden');
-      showNotification('Mine prete ! Bonne extraction !', 'reset');
+      showNotification('Mine prete ! Nouvelles pierres !', 'reset');
+      loadMineState();
     } else {
       updateDisplay();
     }
   }, 1000);
 }
 
-// === UI HELPERS ===
+// === HELPERS ===
 function flashScreen(color) {
   const flash = document.createElement('div');
   flash.className = 'mine-flash';
