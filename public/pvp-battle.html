@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - PvP</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
+</head>
+<body class="battle-page">
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
+
+  <!-- ===== BARRE SUPERIEURE ===== -->
+  <div class="bt-topbar">
+    <div class="bt-topbar-left">
+      <span class="bt-opponent" id="opponent-name">VS ???</span>
+      <span class="bt-info-chip bt-info-deck">&#x1F0CF; <span id="enemy-deck-count">0</span></span>
+    </div>
+    <div class="bt-topbar-center">
+      <span class="bt-turn" id="battle-turn">TOUR 1</span>
+      <span class="pvp-turn-indicator" id="pvp-turn-indicator">VOTRE TOUR</span>
+    </div>
+    <div class="bt-topbar-right">
+      <span class="bt-info-chip bt-info-deck">&#x1F0CF; <span id="player-deck-count">0</span></span>
+    </div>
+  </div>
+
+  <!-- ===== MAIN ENNEMIE ===== -->
+  <div class="bt-enemy-hand" id="enemy-hand-row"></div>
+
+  <!-- ===== ZONE PRINCIPALE ===== -->
+  <div class="bt-arena">
+    <div class="bt-side-gauges bt-side-gauges--left">
+      <div class="bt-battery bt-battery--energy" id="enemy-energy-battery">
+        <div class="bt-battery-label">NRJ</div>
+        <div class="bt-battery-cap"></div>
+        <div class="bt-battery-body" id="enemy-energy-body"></div>
+        <div class="bt-battery-value" id="enemy-energy-value">0/0</div>
+      </div>
+      <div class="bt-battery bt-battery--crystal" id="enemy-crystal-battery">
+        <div class="bt-battery-label">CRYS</div>
+        <div class="bt-battery-cap"></div>
+        <div class="bt-battery-body" id="enemy-crystal-body"></div>
+        <div class="bt-battery-value" id="enemy-crystal-value">0</div>
+      </div>
+    </div>
+
+    <div class="bt-fields">
+      <div class="bt-avatar-row bt-avatar-row--enemy" id="enemy-avatar-hp"></div>
+      <div class="bt-field bt-field--enemy" id="enemy-field">
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label bt-rank-label--enemy">FLANC G</div>
+          <div class="bt-slot" data-slot="0" data-side="enemy" onclick="clickFieldSlot('enemy', 0)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
+        </div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label bt-rank-label--enemy">CENTRE</div>
+          <div class="bt-slot" data-slot="1" data-side="enemy" onclick="clickFieldSlot('enemy', 1)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
+        </div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label bt-rank-label--enemy">FLANC D</div>
+          <div class="bt-slot" data-slot="2" data-side="enemy" onclick="clickFieldSlot('enemy', 2)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bt-midline"></div>
+
+      <div class="bt-field bt-field--player" id="player-field">
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label">FLANC G <span class="bt-rank-bonus">+1 ATK</span></div>
+          <div class="bt-slot" data-slot="0" data-side="player" onclick="clickFieldSlot('player', 0)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
+        </div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label">CENTRE <span class="bt-rank-bonus bt-rank-bonus--def">+1 DEF</span></div>
+          <div class="bt-slot" data-slot="1" data-side="player" onclick="clickFieldSlot('player', 1)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
+        </div>
+        <div class="bt-slot-wrapper">
+          <div class="bt-rank-label">FLANC D <span class="bt-rank-bonus">+1 ATK</span></div>
+          <div class="bt-slot" data-slot="2" data-side="player" onclick="clickFieldSlot('player', 2)">
+            <div class="bt-slot-empty">VIDE</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bt-avatar-row bt-avatar-row--player" id="player-avatar-hp"></div>
+    </div>
+
+    <div class="bt-side-gauges bt-side-gauges--right">
+      <div class="bt-battery bt-battery--energy" id="player-energy-battery">
+        <div class="bt-battery-label">NRJ</div>
+        <div class="bt-battery-cap"></div>
+        <div class="bt-battery-body" id="player-energy-body"></div>
+        <div class="bt-battery-value" id="player-energy-value">1/1</div>
+      </div>
+      <div class="bt-battery bt-battery--crystal" id="player-crystal-battery">
+        <div class="bt-battery-label">CRYS</div>
+        <div class="bt-battery-cap"></div>
+        <div class="bt-battery-body" id="player-crystal-body"></div>
+        <div class="bt-battery-value" id="player-crystal-value">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Popup d'actions -->
+  <div class="bt-actions-overlay hidden" id="bt-actions" onclick="if(event.target===this){hideActionPanel();cancelAction()}">
+    <div class="bt-actions-popup">
+      <button class="bt-actions-close" onclick="hideActionPanel()">&times;</button>
+      <div class="bt-actions-unit" id="bt-actions-unit"></div>
+      <div class="bt-actions-buttons" id="bt-actions-buttons"></div>
+    </div>
+  </div>
+
+  <!-- ===== MAIN DU JOUEUR ===== -->
+  <div class="bt-hand-bar">
+    <div class="bt-hand" id="player-hand"></div>
+    <button class="bt-end-turn" id="end-turn-btn" onclick="endTurn()">FIN DU TOUR &#x23E9;</button>
+  </div>
+
+  <!-- ===== OVERLAYS ===== -->
+  <div class="battle-result-overlay hidden" id="battle-result">
+    <div class="battle-result-box" id="battle-result-box">
+      <h1 id="result-title"></h1>
+      <div id="result-rewards"></div>
+      <button class="submit-btn" id="result-btn" onclick="leaveBattle()">CONTINUER</button>
+    </div>
+  </div>
+
+  <div class="battle-anim-overlay" id="battle-anim-overlay"></div>
+  <div class="screen-flash hidden" id="screen-flash"></div>
+  <div class="combo-kill-banner hidden" id="combo-kill-banner">COMBO KILL!</div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/friends.js"></script>
+  <script src="/js/card-renderer.js"></script>
+  <script src="/js/pvp.js"></script>
+</body>
+</html>

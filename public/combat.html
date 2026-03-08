@@ -23,6 +23,12 @@
           <span class="combat-mode-label">COMBAT IA</span>
           <span class="combat-mode-desc">Affrontez l'intelligence artificielle</span>
         </button>
+        <!-- PvP -->
+        <button class="combat-mode-btn combat-mode-pvp" onclick="showDeckSelect('pvp')">
+          <span class="combat-mode-icon">&#x2694;&#xFE0F;</span>
+          <span class="combat-mode-label">PVP</span>
+          <span class="combat-mode-desc">Affrontez un autre joueur en temps reel</span>
+        </button>
       </div>
 
       <!-- Mecaniques info -->
@@ -61,6 +67,7 @@
     </div>
   </div>
 
+  <script src="/socket.io/socket.io.js"></script>
   <script src="/js/toast.js"></script>
   <script src="/js/friends.js"></script>
   <script src="/js/card-renderer.js"></script>

@@ -238,7 +238,8 @@ db.exec(`
     ['stat_diamonds_mined', 'INTEGER DEFAULT 0'],
     ['stat_fusions', 'INTEGER DEFAULT 0'],
     ['stat_casino_spins', 'INTEGER DEFAULT 0'],
-    ['stat_credits_spent', 'INTEGER DEFAULT 0']
+    ['stat_credits_spent', 'INTEGER DEFAULT 0'],
+    ['pvp_rating', 'INTEGER DEFAULT 1000']
   ];
   for (const [col, type] of statMigrations) {
     if (!statCols.includes(col)) {
@@ -519,6 +520,15 @@ function getManaForTurn(turn) {
       passive_desc = 'Ressuscite avec 3 PV a la mort (1x)'
     WHERE name = 'Phoenix Ancestral'`).run();
     console.log('Migration: Phoenix Ancestral reworke');
+  }
+}
+
+// --- Migration : Phoenix Ancestral DOT AoE (v2) ---
+{
+  const phoenix = db.prepare("SELECT id, ability_desc FROM cards WHERE name = 'Phoenix Ancestral'").get();
+  if (phoenix && phoenix.ability_desc === 'Inflige 1 degat a tous les ennemis') {
+    db.prepare("UPDATE cards SET ability_desc = 'Brule tous les ennemis (1 degat/tour, 2 tours)' WHERE name = 'Phoenix Ancestral'").run();
+    console.log('Migration: Phoenix Ancestral DOT AoE');
   }
 }
 
@@ -1529,7 +1539,7 @@ const ABILITY_MAP = {
   'Filet marin':        { type: 'stun',              damage: 0 },
 
   // ===== NOUVELLES CARTES (v2) =====
-  'Appel gobelin':      { type: 'buff_team_atk',     value: 1 },   // Goblin — simplifie (devrait invoquer token)
+  'Appel gobelin':      { type: 'summon_one_token',   token: { name: 'Goblin', atk: 1, def: 1, hp: 2 } },   // Goblin — invoque 1 token Goblin
   'Carapace marine':    { type: 'buff_def_lasting',   value: 2 },   // Tortue des Rivieres (+2 DEF allie, dure jusqu'au prochain tour)
   'Frappe empoisonnee': { type: 'poison_dot',         damage: 1, turns: 4 },  // Serpent des Marees (1 degat/tour, 4 tours)
   'Eclair':             { type: 'direct_damage_ignore_def', value: 2 },   // Mage de Foudre (ignore DEF, 3 si 1ere action)
@@ -1548,7 +1558,7 @@ const ABILITY_MAP = {
   'Soins naturels':     { type: 'heal_ally_conditional', baseHeal: 1, bonusHeal: 1, bonusElement: 'terre' }, // Eclaireur
   'Protection marine':  { type: 'buff_def_element',   value: 1, element: 'eau' },  // Gardien du Recif
   'Eruption':           { type: 'aoe_damage_element', value: 2, targetElement: 'eau' }, // Titan de Magma
-  'Aura de flamme':     { type: 'none' },              // Phoenix — l'AOE est un passif turn-start
+  'Aura de flamme':     { type: 'dot_aoe', damage: 1, duration: 2 },  // Phoenix — brule tous les ennemis 2 tours
   'Vague ecrasante':    { type: 'bounce_damage',      damage: 2 },  // Leviathan rework
 
   // ===== NOUVELLES CARTES v1.3.0 =====
@@ -2190,6 +2200,19 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
     // ===== NOUVELLES ABILITIES (v3) =====
     case 'none':
       break;
+    case 'dot_aoe': {
+      // Phoenix : applique un burn AoE a tous les ennemis
+      const targets = allEnemies.filter(e => e.alive);
+      targets.forEach(e => {
+        e.burnAoe = { damage: ability.damage, turnsLeft: ability.duration, source: unit.name };
+      });
+      if (targets.length > 0) {
+        events.push({ type: 'ability_aoe', unit: unit.name, ability: abilityName, desc: `Aura de flamme ! ${targets.length} ennemi(s) brulent (${ability.damage} degat/tour, ${ability.duration} tours)` });
+      } else {
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Aucun ennemi a bruler !' });
+      }
+      break;
+    }
     case 'buff_atk_per_element': {
       const count = allAllies.filter(a => a.alive && a.element === ability.element).length;
       unit.buffAtk += count * ability.value;
@@ -2501,6 +2524,40 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       } else {
         unit.shield = (unit.shield || 0) + ability.token.def;
         events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Recif protecteur ! Bouclier +${ability.token.def}` });
+      }
+      break;
+    }
+    case 'summon_one_token': {
+      // Goblin : invoque UN token sur le premier slot vide
+      if (battle && battle.isDeckBattle) {
+        const field = unit.side === 'player' ? battle.playerField : battle.enemyField;
+        let summoned = false;
+        for (let si = 0; si < field.length; si++) {
+          if (field[si] === null || (field[si] && !field[si].alive)) {
+            const token = {
+              name: ability.token.name, emoji: '🗡️',
+              attack: ability.token.atk, defense: ability.token.def,
+              hp: ability.token.hp, currentHp: ability.token.hp, maxHp: ability.token.hp,
+              alive: true, side: unit.side, ability_name: null, usedAbility: true,
+              buffAtk: 0, buffDef: 0, permanentBonusAtk: 0, permanentBonusDef: 0,
+              element: 'terre', type: 'creature', isToken: true, taunt: false,
+              justDeployed: true,
+              effectiveStats: { attack: ability.token.atk, defense: ability.token.def }
+            };
+            field[si] = token;
+            summoned = true;
+            break;
+          }
+        }
+        if (summoned) {
+          events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `Invoque un ${ability.token.name} !` });
+        } else {
+          events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Pas de place pour invoquer !' });
+        }
+      } else {
+        // Fallback non-deck battle
+        unit.buffAtk += 1;
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: '+1 ATK (renfort gobelin)' });
       }
       break;
     }
@@ -3059,15 +3116,22 @@ function aiTurn(battle) {
     });
     events.push({ type: 'type_passive', desc: `Aura divine ennemie : +${divinCountE} PV` });
   }
-  // Passif Phoenix Ancestral ennemi : 1 degat a toutes les unites joueur
-  const phoenixCountEC = battle.enemyTeam.filter(u => u.alive && u.name === 'Phoenix Ancestral').length;
-  if (phoenixCountEC > 0) {
-    battle.playerTeam.filter(u => u.alive).forEach(u => {
-      u.currentHp = Math.max(0, u.currentHp - phoenixCountEC);
-      if (u.currentHp <= 0) checkKO(u, events, battle);
-    });
-    events.push({ type: 'type_passive', desc: `Phoenix Ancestral ennemi : ${phoenixCountEC} degat(s) a vos unites` });
-  }
+  // Burn AoE (Phoenix etc) : inflige degats aux unites joueur qui brulent
+  battle.playerTeam.filter(u => u.alive && u.burnAoe).forEach(u => {
+    u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+    events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
+    if (u.currentHp <= 0) checkKO(u, events, battle);
+    u.burnAoe.turnsLeft--;
+    if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+  });
+  // Burn AoE : inflige degats aux unites ennemies qui brulent
+  battle.enemyTeam.filter(u => u.alive && u.burnAoe).forEach(u => {
+    u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+    events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
+    if (u.currentHp <= 0) checkKO(u, events, battle);
+    u.burnAoe.turnsLeft--;
+    if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+  });
   // Passif Leviathan Abyssal ennemi : +1 ATK aux allies Eau
   const leviathanCountEC = battle.enemyTeam.filter(u => u.alive && u.name === 'Leviathan Abyssal').length;
   if (leviathanCountEC > 0) {
@@ -3539,7 +3603,7 @@ function aiDeckTurn(battle) {
     }
   });
 
-  // 1. Deploy: play most expensive affordable creature to empty slots
+  // 1. Deploy: IA amelioree — placement strategique
   let keepDeploying = true;
   while (keepDeploying) {
     keepDeploying = false;
@@ -3556,11 +3620,23 @@ function aiDeckTurn(battle) {
     const creatures = battle.enemyHand
       .filter(c => c.type !== 'objet' && c.mana_cost <= battle.enemyEnergy)
       .filter(c => !MAX_ONE_AI.includes(c.name) || !getFieldAlive(battle.enemyField).some(u => u.name === c.name))
-      .sort((a, b) => b.mana_cost - a.mana_cost);
+      .sort((a, b) => {
+        // Prioriser les cartes avec le meilleur ratio stats/cout
+        const aVal = (a.attack * 2 + a.defense + a.hp) / Math.max(1, a.mana_cost);
+        const bVal = (b.attack * 2 + b.defense + b.hp) / Math.max(1, b.mana_cost);
+        return bVal - aVal;
+      });
 
     if (creatures.length > 0) {
       const card = creatures[0];
-      const slot = emptySlots[0];
+      // Placement strategique : ATK haute → flancs (0,2), DEF haute → centre (1)
+      let slot;
+      if (card.defense > card.attack && emptySlots.includes(1)) {
+        slot = 1; // Centre pour les tanks
+      } else {
+        // Préférer les flancs pour les attaquants
+        slot = emptySlots.find(s => s !== 1) ?? emptySlots[0];
+      }
       const handIdx = battle.enemyHand.indexOf(card);
       battle.enemyHand.splice(handIdx, 1);
 
@@ -3771,9 +3847,32 @@ function aiDeckTurn(battle) {
 
     // Taunt: priorite aux unites avec taunt
     const taunters = playerAlive.filter(u => u.taunt);
-    const target = taunters.length > 0
-      ? taunters.reduce((a, b) => a.currentHp < b.currentHp ? a : b)
-      : playerAlive.reduce((a, b) => a.currentHp < b.currentHp ? a : b);
+    const candidates = taunters.length > 0 ? taunters : playerAlive;
+
+    // IA améliorée : prioriser les cibles qu'on peut tuer, sinon les plus dangereuses
+    const unitAtk = (unit.effectiveStats?.attack || unit.attack) + (unit.buffAtk || 0) + (unit.permanentBonusAtk || 0);
+    const killable = candidates.filter(u => {
+      const def = (u.effectiveStats?.defense || u.defense) + (u.buffDef || 0) + (u.permanentBonusDef || 0);
+      const dmgEstimate = Math.max(1, unitAtk - def);
+      return u.currentHp <= dmgEstimate;
+    });
+
+    let target;
+    if (killable.length > 0) {
+      // Tuer l'ennemi le plus dangereux parmi ceux qu'on peut achever
+      target = killable.reduce((a, b) => {
+        const aAtk = (a.effectiveStats?.attack || a.attack) + (a.buffAtk || 0) + (a.permanentBonusAtk || 0);
+        const bAtk = (b.effectiveStats?.attack || b.attack) + (b.buffAtk || 0) + (b.permanentBonusAtk || 0);
+        return bAtk > aAtk ? b : a;
+      });
+    } else {
+      // Cibler l'ennemi le plus dangereux (ATK la plus haute)
+      target = candidates.reduce((a, b) => {
+        const aAtk = (a.effectiveStats?.attack || a.attack) + (a.buffAtk || 0) + (a.permanentBonusAtk || 0);
+        const bAtk = (b.effectiveStats?.attack || b.attack) + (b.buffAtk || 0) + (b.permanentBonusAtk || 0);
+        return bAtk > aAtk ? b : a;
+      });
+    }
 
     const ignoreDef = ABILITY_MAP[unit.ability_name]?.type === 'ignore_def';
 
@@ -4272,15 +4371,22 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
     });
     events.push({ type: 'type_passive', desc: `Aura divine : +${divinCountP} PV a l equipe` });
   }
-  // Passif Phoenix Ancestral : 1 degat a tous les ennemis en debut de tour
-  const phoenixCountPC = battle.playerTeam.filter(u => u.alive && u.name === 'Phoenix Ancestral').length;
-  if (phoenixCountPC > 0) {
-    battle.enemyTeam.filter(u => u.alive).forEach(u => {
-      u.currentHp = Math.max(0, u.currentHp - phoenixCountPC);
-      if (u.currentHp <= 0) checkKO(u, events, battle);
-    });
-    events.push({ type: 'type_passive', desc: `Phoenix Ancestral : ${phoenixCountPC} degat(s) a tous les ennemis` });
-  }
+  // Burn AoE (Phoenix etc) : inflige degats aux unites ennemies qui brulent
+  battle.enemyTeam.filter(u => u.alive && u.burnAoe).forEach(u => {
+    u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+    events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
+    if (u.currentHp <= 0) checkKO(u, events, battle);
+    u.burnAoe.turnsLeft--;
+    if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+  });
+  // Burn AoE : inflige degats aux unites joueur qui brulent
+  battle.playerTeam.filter(u => u.alive && u.burnAoe).forEach(u => {
+    u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+    events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
+    if (u.currentHp <= 0) checkKO(u, events, battle);
+    u.burnAoe.turnsLeft--;
+    if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+  });
   // Passif Leviathan Abyssal : +1 ATK aux allies Eau
   const leviathanCountPC = battle.playerTeam.filter(u => u.alive && u.name === 'Leviathan Abyssal').length;
   if (leviathanCountPC > 0) {
@@ -4513,12 +4619,8 @@ app.post('/api/battle/start-deck', requireAuth, (req, res) => {
     playerCards = cards;
   }
 
-  // Generate AI opponent deck
-  let enemyCards;
-  let opponentName = 'Entraineur IA';
-
-  // Use starter deck as AI opponent
-  enemyCards = STARTER_DECK.map(c => ({ ...c }));
+  // Generate AI opponent deck — adapte au niveau du joueur
+  const { enemyCards, opponentName } = buildAIDeck(playerCards);
 
   const battle = createDeckBattleState(playerCards, enemyCards, 'ia');
 
@@ -5086,16 +5188,28 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
     }
   });
 
-  // Phoenix Ancestral ennemi : 1 degat a toutes vos unites
-  const phoenixCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Phoenix Ancestral').length;
-  if (phoenixCountE > 0) {
-    getFieldAlive(battle.playerField).forEach(u => {
-      u.currentHp = Math.max(0, u.currentHp - phoenixCountE);
+  // Burn AoE ennemi : inflige degats aux unites joueur qui brulent
+  getFieldAlive(battle.playerField).forEach(u => {
+    if (u.burnAoe) {
+      u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+      events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
       if (u.currentHp <= 0) checkKO(u, events, battle);
-    });
-    cleanDeadFromField(battle.playerField);
-    events.push({ type: 'type_passive', desc: `Phoenix Ancestral ennemi : ${phoenixCountE} degat(s) a vos unites` });
-  }
+      u.burnAoe.turnsLeft--;
+      if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+    }
+  });
+  cleanDeadFromField(battle.playerField);
+  // Burn AoE ennemi : inflige degats aux unites ennemies qui brulent
+  getFieldAlive(battle.enemyField).forEach(u => {
+    if (u.burnAoe) {
+      u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+      events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
+      if (u.currentHp <= 0) checkKO(u, events, battle);
+      u.burnAoe.turnsLeft--;
+      if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+    }
+  });
+  cleanDeadFromField(battle.enemyField);
 
   // Leviathan Abyssal ennemi : +1 ATK aux allies Eau ennemis
   const leviathanCountE = getFieldAlive(battle.enemyField).filter(u => u.name === 'Leviathan Abyssal').length;
@@ -5259,6 +5373,13 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
 
   // 6. New turn
   battle.turn++;
+
+  // Vérifier limite de tours immédiatement après incrémentation
+  if (battle.turn > battle.maxTurns) {
+    checkDeckWin(battle);
+    return res.json({ events, ...getDeckBattleSnapshot(battle) });
+  }
+
   battle.phase = 'player_turn';
   battle.attackedThisTurn = [];
 
@@ -5340,16 +5461,28 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
     }
   });
 
-  // Passif Phoenix Ancestral : 1 degat a tous les ennemis en debut de tour
-  const phoenixCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Phoenix Ancestral').length;
-  if (phoenixCountP > 0) {
-    getFieldAlive(battle.enemyField).forEach(u => {
-      u.currentHp = Math.max(0, u.currentHp - phoenixCountP);
+  // Burn AoE (Phoenix etc) : inflige degats aux unites ennemies qui brulent
+  getFieldAlive(battle.enemyField).forEach(u => {
+    if (u.burnAoe) {
+      u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+      events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
       if (u.currentHp <= 0) checkKO(u, events, battle);
-    });
-    cleanDeadFromField(battle.enemyField);
-    events.push({ type: 'type_passive', desc: `Phoenix Ancestral : ${phoenixCountP} degat(s) a tous les ennemis` });
-  }
+      u.burnAoe.turnsLeft--;
+      if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+    }
+  });
+  cleanDeadFromField(battle.enemyField);
+  // Burn AoE : inflige degats aux unites joueur qui brulent
+  getFieldAlive(battle.playerField).forEach(u => {
+    if (u.burnAoe) {
+      u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+      events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
+      if (u.currentHp <= 0) checkKO(u, events, battle);
+      u.burnAoe.turnsLeft--;
+      if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+    }
+  });
+  cleanDeadFromField(battle.playerField);
 
   // Passif Leviathan Abyssal : +1 ATK aux allies Eau en debut de tour
   const leviathanCountP = getFieldAlive(battle.playerField).filter(u => u.name === 'Leviathan Abyssal').length;
@@ -5860,6 +5993,92 @@ app.post('/api/redeem-code', requireAuth, (req, res) => {
 // ============================================
 // DECK ROUTES
 // ============================================
+
+// --- Build AI Deck adapte au joueur ---
+const AI_NAMES = ['Maitre d\'Arene', 'Champion du Rift', 'Gardien des Abimes', 'Sentinelle Celeste', 'Erudit des Ombres', 'Gladiateur Infernal'];
+
+function buildAIDeck(playerCards) {
+  const RARITY_WEIGHT = { commune: 1, rare: 2, epique: 4, legendaire: 7 };
+
+  // Calculer le power level du joueur
+  const playerPower = playerCards.reduce((sum, c) => {
+    return sum + (c.attack + c.defense + c.hp) * (RARITY_WEIGHT[c.rarity] || 1);
+  }, 0);
+
+  // Compter les raretés du joueur
+  const playerRarities = {};
+  playerCards.forEach(c => { playerRarities[c.rarity] = (playerRarities[c.rarity] || 0) + 1; });
+
+  // Récupérer toutes les cartes creature de la DB
+  const allCards = db.prepare("SELECT * FROM cards WHERE type = 'creature'").all();
+  if (allCards.length === 0) {
+    return { enemyCards: STARTER_DECK.map(c => ({ ...c })), opponentName: 'Entraineur IA' };
+  }
+
+  // Grouper par rareté
+  const byRarity = {};
+  allCards.forEach(c => {
+    if (!byRarity[c.rarity]) byRarity[c.rarity] = [];
+    byRarity[c.rarity].push(c);
+  });
+
+  const deck = [];
+  const cardCounts = {};
+
+  // Construire avec un ratio de raretés similaire au joueur
+  const targetRarities = {
+    commune: playerRarities.commune || 8,
+    rare: playerRarities.rare || 7,
+    epique: playerRarities.epique || 4,
+    legendaire: Math.min(playerRarities.legendaire || 0, 3)
+  };
+
+  // Si le joueur est faible (que des communes), donner un deck plus fort quand meme
+  const totalNonCommune = (targetRarities.rare || 0) + (targetRarities.epique || 0) + (targetRarities.legendaire || 0);
+  if (totalNonCommune < 4) {
+    targetRarities.rare = Math.max(targetRarities.rare, 6);
+    targetRarities.epique = Math.max(targetRarities.epique, 2);
+  }
+
+  // Remplir chaque rareté
+  for (const rarity of ['legendaire', 'epique', 'rare', 'commune']) {
+    const pool = byRarity[rarity] || [];
+    if (pool.length === 0) continue;
+    let needed = targetRarities[rarity] || 0;
+
+    // Mélanger le pool
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+
+    for (const card of shuffled) {
+      if (needed <= 0 || deck.length >= 20) break;
+      const count = cardCounts[card.name] || 0;
+      const maxCopies = rarity === 'legendaire' ? 1 : 3;
+      if (count >= maxCopies) continue;
+      deck.push({ ...card });
+      cardCounts[card.name] = count + 1;
+      needed--;
+    }
+  }
+
+  // Compléter à 20 si pas assez
+  while (deck.length < 20) {
+    const pool = byRarity.commune || byRarity.rare || allCards;
+    const card = pool[Math.floor(Math.random() * pool.length)];
+    const count = cardCounts[card.name] || 0;
+    if (count >= 3) continue;
+    deck.push({ ...card });
+    cardCounts[card.name] = count + 1;
+  }
+
+  // Mélanger le deck final
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+
+  const opponentName = AI_NAMES[Math.floor(Math.random() * AI_NAMES.length)];
+  return { enemyCards: deck, opponentName };
+}
 
 // Starter deck — cartes faibles pour tester sans collection
 const STARTER_DECK = [
@@ -7003,6 +7222,7 @@ app.get('/fusion', requireAuth, (req, res) => { res.sendFile(path.join(__dirname
 app.get('/mine', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'mine.html')); });
 app.get('/combat', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'combat.html')); });
 app.get('/battle', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battle.html')); });
+app.get('/pvp-battle', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'pvp-battle.html')); });
 app.get('/decks', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'decks.html')); });
 app.get('/battlepass', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battlepass.html')); });
 app.get('/casino', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'casino.html')); });
@@ -7145,6 +7365,142 @@ const io = new Server(server);
 io.engine.use(sessionMiddleware);
 
 const userSocketMap = new Map();
+const pvpQueue = []; // { userId, deckId }
+const pvpBattles = new Map(); // battleId → { battle, player1Id, player2Id, turnTimer }
+
+// --- PvP Helper Functions ---
+
+function getPvpBattleForUser(userId) {
+  for (const [battleId, pvp] of pvpBattles) {
+    if (pvp.player1Id === userId || pvp.player2Id === userId) return { battleId, pvp };
+  }
+  return null;
+}
+
+function getPvpSnapshot(pvp, forUserId) {
+  const battle = pvp.battle;
+  const isPlayer1 = forUserId === pvp.player1Id;
+  return {
+    battleId: battle.battleId,
+    turn: battle.turn,
+    phase: battle.phase,
+    result: battle.result,
+    currentTurnPlayer: battle.currentTurnPlayer,
+    playerHand: isPlayer1 ? battle.playerHand : battle.enemyHand,
+    playerField: isPlayer1 ? battle.playerField : battle.enemyField,
+    playerEnergy: isPlayer1 ? battle.playerEnergy : battle.enemyEnergy,
+    playerMaxEnergy: isPlayer1 ? battle.playerMaxEnergy : battle.enemyMaxEnergy,
+    playerCrystal: Math.round((isPlayer1 ? battle.playerCrystal : battle.enemyCrystal) * 100) / 100,
+    playerMaxCrystal: (isPlayer1 ? battle.playerMaxCrystal : battle.enemyMaxCrystal) || 2,
+    playerDeckCount: (isPlayer1 ? battle.playerDeck : battle.enemyDeck).length,
+    playerHp: isPlayer1 ? battle.playerHp : battle.enemyHp,
+    playerMaxHp: isPlayer1 ? battle.playerMaxHp : battle.enemyMaxHp,
+    enemyField: isPlayer1 ? battle.enemyField : battle.playerField,
+    enemyHandCount: (isPlayer1 ? battle.enemyHand : battle.playerHand).length,
+    enemyEnergy: isPlayer1 ? battle.enemyEnergy : battle.playerEnergy,
+    enemyMaxEnergy: isPlayer1 ? battle.enemyMaxEnergy : battle.playerMaxEnergy,
+    enemyCrystal: Math.round((isPlayer1 ? battle.enemyCrystal : battle.playerCrystal) * 100) / 100,
+    enemyMaxCrystal: (isPlayer1 ? battle.enemyMaxCrystal : battle.playerMaxCrystal) || 2,
+    enemyDeckCount: (isPlayer1 ? battle.enemyDeck : battle.playerDeck).length,
+    enemyHp: isPlayer1 ? battle.enemyHp : battle.playerHp,
+    enemyMaxHp: isPlayer1 ? battle.enemyMaxHp : battle.playerMaxHp,
+    attackedThisTurn: battle.attackedThisTurn || [],
+    pvp: true,
+  };
+}
+
+function pvpSwitchTurn(pvp) {
+  const battle = pvp.battle;
+  if (battle.currentTurnPlayer === pvp.player1Id) {
+    battle.currentTurnPlayer = pvp.player2Id;
+  } else {
+    battle.currentTurnPlayer = pvp.player1Id;
+    // Nouveau tour complet (les 2 joueurs ont joue)
+    battle.turn++;
+    if (battle.turn > battle.maxTurns) {
+      checkDeckWin(battle);
+      return;
+    }
+  }
+  battle.phase = 'player_turn';
+  battle.attackedThisTurn = [];
+
+  // Regénérer énergie + crystal pour le joueur actif
+  const isP1Turn = battle.currentTurnPlayer === pvp.player1Id;
+  const energy = getManaForTurn(battle.turn);
+  if (isP1Turn) {
+    battle.playerEnergy = energy;
+    battle.playerMaxEnergy = energy;
+    battle.playerCrystal = Math.min((battle.playerCrystal || 0) + (battle.playerCrystalRate || 0.3), battle.playerMaxCrystal || 2);
+    for (const u of getFieldAlive(battle.playerField)) { u.justDeployed = false; u.usedAbility = false; }
+  } else {
+    battle.enemyEnergy = energy;
+    battle.enemyMaxEnergy = energy;
+    battle.enemyCrystal = Math.min((battle.enemyCrystal || 0) + (battle.enemyCrystalRate || 0.3), battle.enemyMaxCrystal || 2);
+    for (const u of getFieldAlive(battle.enemyField)) { u.justDeployed = false; u.usedAbility = false; }
+  }
+
+  // Draw card
+  if (isP1Turn && battle.playerDeck.length > 0) {
+    battle.playerHand.push(battle.playerDeck.pop());
+  } else if (!isP1Turn && battle.enemyDeck.length > 0) {
+    battle.enemyHand.push(battle.enemyDeck.pop());
+  }
+}
+
+function pvpEndBattle(pvp, battleId) {
+  if (pvp.turnTimer) clearTimeout(pvp.turnTimer);
+  const battle = pvp.battle;
+
+  // Déterminer le résultat pour chaque joueur
+  let p1Result, p2Result;
+  if (battle.playerHp <= 0) { p1Result = 'defeat'; p2Result = 'victory'; }
+  else if (battle.enemyHp <= 0) { p1Result = 'victory'; p2Result = 'defeat'; }
+  else if (battle.result === 'victory') { p1Result = 'victory'; p2Result = 'defeat'; }
+  else if (battle.result === 'defeat') { p1Result = 'defeat'; p2Result = 'victory'; }
+  else { p1Result = 'draw'; p2Result = 'draw'; }
+
+  // Récompenses
+  const winReward = 100;
+  const loseReward = 20;
+
+  // Mise à jour DB
+  if (p1Result === 'victory') {
+    db.prepare('UPDATE users SET stat_pvp_wins = stat_pvp_wins + 1, credits = credits + ?, pvp_rating = pvp_rating + 25 WHERE id = ?').run(winReward, pvp.player1Id);
+    db.prepare('UPDATE users SET stat_pvp_losses = stat_pvp_losses + 1, credits = credits + ?, pvp_rating = MAX(0, pvp_rating - 20) WHERE id = ?').run(loseReward, pvp.player2Id);
+  } else if (p2Result === 'victory') {
+    db.prepare('UPDATE users SET stat_pvp_wins = stat_pvp_wins + 1, credits = credits + ?, pvp_rating = pvp_rating + 25 WHERE id = ?').run(winReward, pvp.player2Id);
+    db.prepare('UPDATE users SET stat_pvp_losses = stat_pvp_losses + 1, credits = credits + ?, pvp_rating = MAX(0, pvp_rating - 20) WHERE id = ?').run(loseReward, pvp.player1Id);
+  }
+
+  // Log
+  db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)').run(pvp.player1Id, 'pvp', `PvP vs ${pvp.player2Name}`, p1Result, p1Result === 'victory' ? winReward : loseReward);
+  db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)').run(pvp.player2Id, 'pvp', `PvP vs ${pvp.player1Name}`, p2Result, p2Result === 'victory' ? winReward : loseReward);
+
+  // Notifier les joueurs
+  const s1 = userSocketMap.get(pvp.player1Id);
+  const s2 = userSocketMap.get(pvp.player2Id);
+  if (s1 && s1.connected) s1.emit('pvp:result', { result: p1Result, reward: p1Result === 'victory' ? winReward : loseReward });
+  if (s2 && s2.connected) s2.emit('pvp:result', { result: p2Result, reward: p2Result === 'victory' ? winReward : loseReward });
+
+  pvpBattles.delete(battleId);
+}
+
+function pvpStartTurnTimer(pvp, battleId) {
+  if (pvp.turnTimer) clearTimeout(pvp.turnTimer);
+  pvp.turnTimer = setTimeout(() => {
+    // Auto end-turn après 60s
+    const battle = pvp.battle;
+    if (battle.result) return;
+    pvpSwitchTurn(pvp);
+    const s1 = userSocketMap.get(pvp.player1Id);
+    const s2 = userSocketMap.get(pvp.player2Id);
+    if (s1 && s1.connected) s1.emit('pvp:update', { events: [{ type: 'system', desc: 'Temps ecoule ! Tour passe.' }], ...getPvpSnapshot(pvp, pvp.player1Id) });
+    if (s2 && s2.connected) s2.emit('pvp:update', { events: [{ type: 'system', desc: 'Temps ecoule ! Tour passe.' }], ...getPvpSnapshot(pvp, pvp.player2Id) });
+    if (battle.result) { pvpEndBattle(pvp, battleId); return; }
+    pvpStartTurnTimer(pvp, battleId);
+  }, 60000);
+}
 
 // --- Socket.io Connection ---
 
@@ -7170,8 +7526,323 @@ io.on('connection', (socket) => {
     if (fSock && fSock.connected) fSock.emit('chat:typing', { userId });
   });
 
+  // ====== PvP Matchmaking & Combat ======
+
+  socket.on('pvp:queue', (data) => {
+    const deckId = data?.deckId;
+    // Vérifier que le joueur n'est pas déjà en queue ou en combat
+    if (pvpQueue.find(q => q.userId === userId)) return;
+    if (getPvpBattleForUser(userId)) { socket.emit('pvp:error', { error: 'Deja en combat' }); return; }
+
+    // Charger le deck du joueur
+    let playerCards;
+    if (deckId === 'starter') {
+      playerCards = STARTER_DECK.map(c => ({ ...c }));
+    } else {
+      const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(deckId, userId);
+      if (!deck) { socket.emit('pvp:error', { error: 'Deck introuvable' }); return; }
+      const cards = db.prepare(`
+        SELECT dc.position, c.* FROM deck_cards dc
+        JOIN user_cards uc ON dc.user_card_id = uc.id
+        JOIN cards c ON uc.card_id = c.id
+        WHERE dc.deck_id = ? ORDER BY dc.position
+      `).all(deck.id);
+      if (cards.length !== 20) { socket.emit('pvp:error', { error: 'Deck incomplet' }); return; }
+      playerCards = cards;
+    }
+
+    // Chercher un adversaire dans la queue
+    if (pvpQueue.length > 0) {
+      const opponent = pvpQueue.shift();
+      const opponentSocket = userSocketMap.get(opponent.userId);
+      if (!opponentSocket || !opponentSocket.connected) {
+        // L'adversaire s'est déconnecté, on se remet dans la queue
+        pvpQueue.push({ userId, deckId, cards: playerCards });
+        socket.emit('pvp:waiting', { position: pvpQueue.length });
+        return;
+      }
+
+      // Match trouvé ! Créer le combat
+      const battle = createDeckBattleState(opponent.cards, playerCards, 'pvp');
+      battle.currentTurnPlayer = opponent.userId; // Player 1 commence
+      const battleId = battle.battleId;
+
+      const p1Name = db.prepare('SELECT username FROM users WHERE id = ?').get(opponent.userId)?.username || 'Joueur 1';
+      const p2Name = db.prepare('SELECT username FROM users WHERE id = ?').get(userId)?.username || 'Joueur 2';
+
+      const pvp = {
+        battle,
+        player1Id: opponent.userId,
+        player2Id: userId,
+        player1Name: p1Name,
+        player2Name: p2Name,
+        turnTimer: null
+      };
+      pvpBattles.set(battleId, pvp);
+
+      // Notifier les 2 joueurs
+      opponentSocket.emit('pvp:matched', {
+        battleId,
+        opponentName: p2Name,
+        ...getPvpSnapshot(pvp, opponent.userId)
+      });
+      socket.emit('pvp:matched', {
+        battleId,
+        opponentName: p1Name,
+        ...getPvpSnapshot(pvp, userId)
+      });
+
+      pvpStartTurnTimer(pvp, battleId);
+    } else {
+      // Pas d'adversaire, on attend
+      pvpQueue.push({ userId, deckId, cards: playerCards });
+      socket.emit('pvp:waiting', { position: pvpQueue.length });
+    }
+  });
+
+  socket.on('pvp:cancel', () => {
+    const idx = pvpQueue.findIndex(q => q.userId === userId);
+    if (idx >= 0) pvpQueue.splice(idx, 1);
+    socket.emit('pvp:cancelled');
+  });
+
+  socket.on('pvp:deploy', (data) => {
+    const found = getPvpBattleForUser(userId);
+    if (!found) return;
+    const { pvp, battleId } = found;
+    const battle = pvp.battle;
+    if (battle.result || battle.currentTurnPlayer !== userId) return;
+
+    const isP1 = userId === pvp.player1Id;
+    const hand = isP1 ? battle.playerHand : battle.enemyHand;
+    const field = isP1 ? battle.playerField : battle.enemyField;
+    const energyKey = isP1 ? 'playerEnergy' : 'enemyEnergy';
+
+    const { handIndex, fieldSlot } = data;
+    if (handIndex < 0 || handIndex >= hand.length) return;
+    if (fieldSlot < 0 || fieldSlot > 2) return;
+    if (field[fieldSlot] && field[fieldSlot].alive) return;
+
+    const card = hand[handIndex];
+    if (card.mana_cost > battle[energyKey]) return;
+
+    hand.splice(handIndex, 1);
+    const unit = makeDeckFieldUnit(card, isP1 ? 'player' : 'enemy');
+    unit.justDeployed = true;
+    field[fieldSlot] = unit;
+    battle[energyKey] -= card.mana_cost;
+
+    // Rank synergy
+    if (fieldSlot === 1) { unit.rankBonusDef = 1; unit.permanentBonusDef += 1; }
+    else { unit.rankBonusAtk = 1; unit.permanentBonusAtk += 1; }
+
+    const events = [{ type: isP1 ? 'deploy' : 'enemy_deploy', slot: fieldSlot, name: unit.name, emoji: unit.emoji, mana_cost: unit.mana_cost }];
+
+    // Envoyer aux 2 joueurs
+    const s1 = userSocketMap.get(pvp.player1Id);
+    const s2 = userSocketMap.get(pvp.player2Id);
+    if (s1 && s1.connected) s1.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player1Id) });
+    if (s2 && s2.connected) s2.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player2Id) });
+  });
+
+  socket.on('pvp:attack', (data) => {
+    const found = getPvpBattleForUser(userId);
+    if (!found) return;
+    const { pvp, battleId } = found;
+    const battle = pvp.battle;
+    if (battle.result || battle.currentTurnPlayer !== userId) return;
+
+    const isP1 = userId === pvp.player1Id;
+    const attackerField = isP1 ? battle.playerField : battle.enemyField;
+    const defenderField = isP1 ? battle.enemyField : battle.playerField;
+    const energyKey = isP1 ? 'playerEnergy' : 'enemyEnergy';
+
+    const { attackerSlot, targetSlot } = data;
+    const attacker = attackerField[attackerSlot];
+    const target = defenderField[targetSlot];
+    if (!attacker || !attacker.alive || attacker.justDeployed) return;
+    if (!target || !target.alive) return;
+    if (battle[energyKey] < 1) return;
+    if ((battle.attackedThisTurn || []).includes(attackerSlot)) return;
+
+    battle.attackedThisTurn = battle.attackedThisTurn || [];
+    battle.attackedThisTurn.push(attackerSlot);
+    battle[energyKey] -= 1;
+
+    const events = [];
+    const dmg = calcDamage(attacker, target, false, attackerField);
+    applyDamage(target, dmg, events, attacker, battle);
+    events.push({ type: 'attack', attacker: attacker.name, attackerSlot, target: target.name, targetSlot, damage: dmg, side: isP1 ? 'player' : 'enemy' });
+
+    if (!target.alive) {
+      cleanDeadFromField(defenderField);
+    }
+
+    checkDeckWin(battle);
+
+    const s1 = userSocketMap.get(pvp.player1Id);
+    const s2 = userSocketMap.get(pvp.player2Id);
+    if (s1 && s1.connected) s1.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player1Id) });
+    if (s2 && s2.connected) s2.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player2Id) });
+
+    if (battle.result) pvpEndBattle(pvp, battleId);
+  });
+
+  socket.on('pvp:attack-avatar', (data) => {
+    const found = getPvpBattleForUser(userId);
+    if (!found) return;
+    const { pvp, battleId } = found;
+    const battle = pvp.battle;
+    if (battle.result || battle.currentTurnPlayer !== userId) return;
+
+    const isP1 = userId === pvp.player1Id;
+    const attackerField = isP1 ? battle.playerField : battle.enemyField;
+    const defenderField = isP1 ? battle.enemyField : battle.playerField;
+    const energyKey = isP1 ? 'playerEnergy' : 'enemyEnergy';
+    const hpKey = isP1 ? 'enemyHp' : 'playerHp';
+
+    // Vérifier que le terrain adverse est vide
+    if (getFieldAlive(defenderField).length > 0) return;
+
+    const { attackerSlot } = data;
+    const attacker = attackerField[attackerSlot];
+    if (!attacker || !attacker.alive || attacker.justDeployed) return;
+    if (battle[energyKey] < 1) return;
+    if ((battle.attackedThisTurn || []).includes(attackerSlot)) return;
+
+    battle.attackedThisTurn = battle.attackedThisTurn || [];
+    battle.attackedThisTurn.push(attackerSlot);
+    battle[energyKey] -= 1;
+
+    const totalAtk = (attacker.effectiveStats?.attack || attacker.attack) + (attacker.buffAtk || 0) + (attacker.permanentBonusAtk || 0);
+    const dmg = Math.max(1, totalAtk);
+    battle[hpKey] = Math.max(0, battle[hpKey] - dmg);
+
+    const events = [{ type: 'avatar_damage', attacker: attacker.name, attackerSlot, damage: dmg, side: isP1 ? 'player' : 'enemy' }];
+
+    checkDeckWin(battle);
+
+    const s1 = userSocketMap.get(pvp.player1Id);
+    const s2 = userSocketMap.get(pvp.player2Id);
+    if (s1 && s1.connected) s1.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player1Id) });
+    if (s2 && s2.connected) s2.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player2Id) });
+
+    if (battle.result) pvpEndBattle(pvp, battleId);
+  });
+
+  socket.on('pvp:use-ability', (data) => {
+    const found = getPvpBattleForUser(userId);
+    if (!found) return;
+    const { pvp, battleId } = found;
+    const battle = pvp.battle;
+    if (battle.result || battle.currentTurnPlayer !== userId) return;
+
+    const isP1 = userId === pvp.player1Id;
+    const myField = isP1 ? battle.playerField : battle.enemyField;
+    const enemyFieldArr = isP1 ? battle.enemyField : battle.playerField;
+    const crystalKey = isP1 ? 'playerCrystal' : 'enemyCrystal';
+
+    const { fieldSlot } = data;
+    const unit = myField[fieldSlot];
+    if (!unit || !unit.alive || unit.usedAbility || unit.silenced || unit.stunned) return;
+
+    const ability = ABILITY_MAP[unit.ability_name];
+    if (!ability) return;
+    const crystalCost = unit.crystal_cost || 1;
+    if (battle[crystalKey] < crystalCost) return;
+
+    battle[crystalKey] -= crystalCost;
+    unit.usedAbility = true;
+
+    const allAllies = getFieldAlive(myField);
+    const allEnemies = getFieldAlive(enemyFieldArr);
+    const events = resolveAbility(unit, allAllies, allEnemies, allAllies, battle);
+
+    checkDeckWin(battle);
+
+    const s1 = userSocketMap.get(pvp.player1Id);
+    const s2 = userSocketMap.get(pvp.player2Id);
+    if (s1 && s1.connected) s1.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player1Id) });
+    if (s2 && s2.connected) s2.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player2Id) });
+
+    if (battle.result) pvpEndBattle(pvp, battleId);
+  });
+
+  socket.on('pvp:end-turn', () => {
+    const found = getPvpBattleForUser(userId);
+    if (!found) return;
+    const { pvp, battleId } = found;
+    const battle = pvp.battle;
+    if (battle.result || battle.currentTurnPlayer !== userId) return;
+
+    const events = [];
+
+    // Burn AoE turn-start
+    getFieldAlive(battle.playerField).forEach(u => {
+      if (u.burnAoe) {
+        u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+        events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
+        if (u.currentHp <= 0) checkKO(u, events, battle);
+        u.burnAoe.turnsLeft--;
+        if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+      }
+    });
+    cleanDeadFromField(battle.playerField);
+    getFieldAlive(battle.enemyField).forEach(u => {
+      if (u.burnAoe) {
+        u.currentHp = Math.max(0, u.currentHp - u.burnAoe.damage);
+        events.push({ type: 'type_passive', desc: `${u.name} brule ! -${u.burnAoe.damage} PV` });
+        if (u.currentHp <= 0) checkKO(u, events, battle);
+        u.burnAoe.turnsLeft--;
+        if (u.burnAoe.turnsLeft <= 0) u.burnAoe = null;
+      }
+    });
+    cleanDeadFromField(battle.enemyField);
+
+    pvpSwitchTurn(pvp);
+
+    if (battle.result) {
+      const s1 = userSocketMap.get(pvp.player1Id);
+      const s2 = userSocketMap.get(pvp.player2Id);
+      if (s1 && s1.connected) s1.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player1Id) });
+      if (s2 && s2.connected) s2.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player2Id) });
+      pvpEndBattle(pvp, battleId);
+      return;
+    }
+
+    pvpStartTurnTimer(pvp, battleId);
+
+    const s1 = userSocketMap.get(pvp.player1Id);
+    const s2 = userSocketMap.get(pvp.player2Id);
+    if (s1 && s1.connected) s1.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player1Id) });
+    if (s2 && s2.connected) s2.emit('pvp:update', { events, ...getPvpSnapshot(pvp, pvp.player2Id) });
+  });
+
   socket.on('disconnect', () => {
     onlineUsers.delete(userId);
+
+    // PvP: retirer de la queue
+    const qIdx = pvpQueue.findIndex(q => q.userId === userId);
+    if (qIdx >= 0) pvpQueue.splice(qIdx, 1);
+
+    // PvP: forfait si en combat
+    const found = getPvpBattleForUser(userId);
+    if (found) {
+      const { pvp, battleId } = found;
+      const battle = pvp.battle;
+      if (!battle.result) {
+        // Le joueur qui se déconnecte perd
+        if (userId === pvp.player1Id) {
+          battle.playerHp = 0;
+          battle.result = 'defeat';
+        } else {
+          battle.enemyHp = 0;
+          battle.result = 'victory';
+        }
+        pvpEndBattle(pvp, battleId);
+      }
+    }
+
     const offFriends = db.prepare(`
       SELECT CASE WHEN user_id = ? THEN friend_id ELSE user_id END as fid
       FROM friendships WHERE (user_id = ? OR friend_id = ?) AND status = 'accepted'
