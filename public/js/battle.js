@@ -296,10 +296,12 @@ function renderHand() {
     const isObj = card.type === 'objet';
     const canAfford = card.mana_cost <= battleData.playerEnergy;
     const isSelected = selectedHandIndex === i;
-    const isDraggable = !isObj && canAfford;
+    const isForced = battleData.forcedPlayerCardHandId && card.handId === battleData.forcedPlayerCardHandId;
+    const isForcedLocked = battleData.forcedPlayerCardHandId && !isForced && !isObj;
+    const isDraggable = !isObj && canAfford && !isForcedLocked;
 
     return `
-      <div class="bt-card ${isObj ? 'bt-card--objet' : ''} ${canAfford ? '' : 'bt-card--expensive'} ${isSelected ? 'bt-card--selected' : ''}"
+      <div class="bt-card ${isObj ? 'bt-card--objet' : ''} ${canAfford && !isForcedLocked ? '' : 'bt-card--expensive'} ${isSelected ? 'bt-card--selected' : ''} ${isForced ? 'bt-card--forced' : ''}"
            style="border-color: ${r.color}"
            onclick="clickHandCard(${i})"
            ${isDraggable ? `draggable="true" ondragstart="onCardDragStart(event, ${i})" ondragend="onCardDragEnd(event)"` : ''}
@@ -422,6 +424,12 @@ function actionAttack(e) {
 function actionAbility(e) {
   e.stopPropagation();
   hideActionPanel();
+  // Pines Controle Mental : pas besoin de cible sur le terrain, activation directe
+  const unit = battleData.playerField[actionPanelSlot || selectedFieldSlot];
+  if (unit && unit.ability_name === 'Controle Mental') {
+    useAbility(selectedFieldSlot, null);
+    return;
+  }
   actionMode = 'select_ability_target';
   renderAll();
 }
@@ -430,6 +438,9 @@ function clickHandCard(index) {
   if (isAnimating || battleData.result) return;
   const card = battleData.playerHand[index];
   if (!card || card.mana_cost > battleData.playerEnergy) return;
+
+  // Controle Mental ennemi : seule la carte forcee peut etre posee
+  if (battleData.forcedPlayerCardHandId && card.type !== 'objet' && card.handId !== battleData.forcedPlayerCardHandId) return;
 
   if (card.type === 'objet') {
     const targetType = getItemTarget(card);
@@ -560,7 +571,8 @@ function clickFieldSlot(side, slotIndex) {
     const hasEnergy = battleData.playerEnergy >= 1;
     const canAttack = !battleData.attackedThisTurn?.includes(slotIndex) && !hasSickness && hasEnergy && enemyAlive;
     const crystalCost = unit.crystal_cost || 1;
-    const canAbility = !unit.usedAbility && (battleData.playerCrystal || 0) >= crystalCost && enemyAlive;
+    const needsEnemyTarget = unit.ability_name !== 'Controle Mental';
+    const canAbility = !unit.usedAbility && (battleData.playerCrystal || 0) >= crystalCost && (enemyAlive || !needsEnemyTarget);
     showActionPanel(slotIndex, unit, crystalCost, canAttack, canAbility, hasSickness, hasEnergy);
   }
 }
@@ -647,9 +659,54 @@ async function useAbility(fieldSlot, targetSlot) {
     if (!res.ok) { isAnimating = false; return; }
     await animateEvents(data.events);
     updateBattleData(data);
+    // Pines Controle Mental : check if we need to show the card selection modal
+    const pinesEvent = data.events?.find(e => e.pinesReveal);
+    if (pinesEvent) {
+      await showPinesChoiceModal(pinesEvent.pinesReveal);
+    }
   } catch { /* */ }
   cancelAction();
   isAnimating = false;
+}
+
+// Pines: Controle Mental — modal to choose which enemy card to force
+function showPinesChoiceModal(cards) {
+  return new Promise((resolve) => {
+    const overlay = document.getElementById('pines-modal-overlay');
+    const container = document.getElementById('pines-cards-container');
+    container.innerHTML = '';
+
+    cards.forEach(card => {
+      const div = document.createElement('div');
+      div.className = `pines-card rarity-${card.rarity}`;
+      div.innerHTML = `
+        <div class="pines-card-emoji">${card.emoji}</div>
+        <div class="pines-card-name">${card.name}</div>
+        <div class="pines-card-stats">\u2694\uFE0F${card.attack} \uD83D\uDEE1\uFE0F${card.defense} \u2764\uFE0F${card.hp}</div>
+        ${card.ability_name && card.ability_name !== 'Aucun' ? `<div class="pines-card-ability">\u2726 ${card.ability_name}</div>` : ''}
+        <div class="pines-card-mana">\u26A1 ${card.mana_cost} mana</div>
+      `;
+      div.onclick = async () => {
+        overlay.classList.add('hidden');
+        try {
+          const res = await fetch('/api/battle/pines-choose', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ battleId: battleData.battleId, chosenHandId: card.handId })
+          });
+          const data = await res.json();
+          if (res.ok) {
+            await animateEvents(data.events);
+            updateBattleData(data);
+          }
+        } catch { /* */ }
+        resolve();
+      };
+      container.appendChild(div);
+    });
+
+    overlay.classList.remove('hidden');
+  });
 }
 
 async function useItem(handIndex, targetSlot, targetSide) {

@@ -747,6 +747,18 @@ function getManaForTurn(turn) {
   if (addedCount3 > 0) console.log('Migration: ' + addedCount3 + ' nouvelles cartes v0.2.3 ajoutees');
 }
 
+// --- Migration : Carte SECRET - Pines ---
+{
+  const hasPines = db.prepare("SELECT id FROM cards WHERE name = 'Pines'").get();
+  if (!hasPines) {
+    db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('Pines', 'secret', 'creature', 'terre', 4, 5, 9, 7, 'Controle Mental', 'Revele la main adverse et choisit la prochaine carte que l ennemi devra poser', '🌲', 'Immunise aux degats des cartes Terre', 2.0);
+    console.log('Migration: carte SECRET Pines ajoutee');
+  }
+}
+
 // --- Migration : 3 nouvelles cartes v0.2.4 ---
 {
   const newCards4 = [
@@ -1578,6 +1590,7 @@ const ABILITY_MAP = {
 
   // ===== CARTES SECRET =====
   'Action de Moderation': { type: 'silence' },                          // Koteons (supprime l'ability d'un ennemi)
+  'Controle Mental':      { type: 'force_next_card' },                   // Pines (revele la main, force la prochaine carte ennemie)
 
   // ===== NOUVELLES CARTES v1.4.0 =====
   'Mur infranchissable':  { type: 'buff_def_lasting', value: 2 },               // Sentinelle de Pierre
@@ -1696,6 +1709,9 @@ function calcDamage(attacker, defender, ignoreDef, attackerField) {
   // Passif Golem de Roche : -1 degat subi
   if (defender.name === 'Golem de Roche') dmg = Math.max(1, dmg - 1);
 
+  // Passif Pines : immunise aux degats des cartes Terre
+  if (defender.name === 'Pines' && hasElement(attacker, 'terre')) return 0;
+
   // Passif Requin : woundedBonus (+1 degat aux unites blessees)
   if (attacker.woundedBonus && attacker.woundedBonus > 0 && defender.currentHp < defender.maxHp) {
     dmg += attacker.woundedBonus;
@@ -1706,6 +1722,11 @@ function calcDamage(attacker, defender, ignoreDef, attackerField) {
 
 // Helper pour appliquer des degats avec shield, counter, grace
 function applyDamage(target, damage, events, source, battle, isLinkedDamage) {
+  // Passif Pines : immunise aux degats des cartes Terre
+  if (target.name === 'Pines' && source && hasElement(source, 'terre')) {
+    events.push({ type: 'type_passive', desc: `Pines est immunise aux degats de ${source.name} (Terre) !` });
+    return;
+  }
   // Track last attacker for death-trigger passives (Rat des Egouts)
   if (source && source.name) target.lastAttacker = source.name;
   let remaining = damage;
@@ -2356,6 +2377,46 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
         events.push({ type: 'ability', unit: unit.name, target: target.name, ability: abilityName, desc: `${target.name} est reduit au silence ! Capacite supprimee & -1 DEF` });
       } else if (target && target.silenced) {
         events.push({ type: 'ability', unit: unit.name, target: target.name, ability: abilityName, desc: `${target.name} est deja reduit au silence !` });
+      }
+      break;
+    }
+    case 'force_next_card': {
+      // Pines : Controle Mental — revele la main adverse, choisit la prochaine carte a poser
+      if (battle && battle.isDeckBattle) {
+        if (unit.side === 'player' || !unit.side) {
+          // Joueur utilise Pines : revele la main ennemie, le joueur choisit
+          const enemyCreatures = battle.enemyHand.filter(c => c.type !== 'objet');
+          if (enemyCreatures.length > 0) {
+            battle.pinesChoicePending = true;
+            const revealedCards = enemyCreatures.map(c => ({
+              handId: c.handId,
+              name: c.name,
+              emoji: c.emoji,
+              rarity: c.rarity,
+              element: c.element,
+              attack: c.attack,
+              defense: c.defense,
+              hp: c.hp,
+              mana_cost: c.mana_cost,
+              ability_name: c.ability_name,
+              ability_desc: c.ability_desc,
+              passive_desc: c.passive_desc || '',
+            }));
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${unit.name} sonde l'esprit de l'adversaire ! Choisissez la carte qu'il devra poser.`, pinesReveal: revealedCards });
+          } else {
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${unit.name} sonde l'esprit de l'adversaire... mais il n'a aucune creature en main !` });
+          }
+        } else {
+          // IA utilise Pines : force aleatoirement une carte du joueur
+          const playerCreatures = battle.playerHand.filter(c => c.type !== 'objet');
+          if (playerCreatures.length > 0) {
+            const forced = playerCreatures[Math.floor(Math.random() * playerCreatures.length)];
+            battle.forcedPlayerCardHandId = forced.handId;
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${unit.name} ennemi controle votre esprit ! Vous devrez poser ${forced.name} a votre prochain tour !` });
+          } else {
+            events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: `${unit.name} ennemi sonde votre esprit... mais vous n'avez aucune creature en main !` });
+          }
+        }
       }
       break;
     }
@@ -3447,6 +3508,8 @@ function getDeckBattleSnapshot(battle) {
     playerKillsThisTurn: battle.playerKillsThisTurn || 0,
     comboKillActive: battle.comboKillActive || false,
     testMode: battle.testMode || false,
+    forcedPlayerCardHandId: battle.forcedPlayerCardHandId || null,
+    pinesChoicePending: battle.pinesChoicePending || false,
   };
 }
 
@@ -3633,6 +3696,19 @@ function aiDeckTurn(battle) {
     if (emptySlots.length === 0) break;
 
     const MAX_ONE_AI = ['La Voie Lactee', 'Le Neant Originel', 'Le De du Destin'];
+
+    // Pines Controle Mental : si une carte est forcee, la jouer en priorite
+    let forcedCard = null;
+    if (battle.forcedEnemyCardHandId) {
+      forcedCard = battle.enemyHand.find(c => c.handId === battle.forcedEnemyCardHandId && c.type !== 'objet');
+      if (forcedCard) {
+        // La carte forcee ignore la restriction de mana — elle DOIT etre jouee
+        battle.forcedEnemyCardHandId = null; // Clear le forçage une fois utilisé
+      } else {
+        battle.forcedEnemyCardHandId = null; // La carte n'est plus en main, annuler
+      }
+    }
+
     const creatures = battle.enemyHand
       .filter(c => c.type !== 'objet' && c.mana_cost <= battle.enemyEnergy)
       .filter(c => !MAX_ONE_AI.includes(c.name) || !getFieldAlive(battle.enemyField).some(u => u.name === c.name))
@@ -3643,8 +3719,14 @@ function aiDeckTurn(battle) {
         return bVal - aVal;
       });
 
-    if (creatures.length > 0) {
-      const card = creatures[0];
+    // Si une carte forcee existe, l'utiliser en premier (meme si pas assez de mana)
+    const deployable = forcedCard ? [forcedCard, ...creatures.filter(c => c !== forcedCard)] : creatures;
+
+    if (deployable.length > 0) {
+      const card = deployable[0];
+      const isForcedDeploy = (forcedCard && card === forcedCard);
+      // Verifier le mana sauf pour les cartes forcees par Controle Mental
+      if (!isForcedDeploy && card.mana_cost > battle.enemyEnergy) break;
       // Placement strategique : ATK haute → flancs (0,2), DEF haute → centre (1)
       let slot;
       if (card.defense > card.attack && emptySlots.includes(1)) {
@@ -3659,7 +3741,13 @@ function aiDeckTurn(battle) {
       const unit = makeDeckFieldUnit(card, 'enemy');
       unit.justDeployed = true; // summoning sickness
       battle.enemyField[slot] = unit;
-      battle.enemyEnergy -= card.mana_cost;
+      // Cartes forcees par Controle Mental : deduire le mana seulement si suffisant
+      if (isForcedDeploy) {
+        battle.enemyEnergy = Math.max(0, battle.enemyEnergy - card.mana_cost);
+        events.push({ type: 'type_passive', desc: `Controle Mental force ${card.name} a etre deploye !` });
+      } else {
+        battle.enemyEnergy -= card.mana_cost;
+      }
 
       // Rank Synergy for enemy
       const eRankName = slot === 0 ? 'left' : slot === 1 ? 'center' : 'right';
@@ -3771,7 +3859,7 @@ function aiDeckTurn(battle) {
     const enemyAlive = getFieldAlive(battle.enemyField);
 
     // Skip offensive abilities if no player targets
-    if (playerAlive.length === 0 && !['buff_atk', 'buff_def', 'buff_team_atk', 'buff_team_def', 'shield', 'heal_ally', 'counter', 'lifesteal_attack', 'revive', 'reflect_all'].includes(ability.type)) continue;
+    if (playerAlive.length === 0 && !['buff_atk', 'buff_def', 'buff_team_atk', 'buff_team_def', 'shield', 'heal_ally', 'counter', 'lifesteal_attack', 'revive', 'reflect_all', 'force_next_card'].includes(ability.type)) continue;
 
     const abilityEvents = resolveAbility(unit, playerAlive, enemyAlive, playerAlive, battle);
     events.push(...abilityEvents);
@@ -4658,16 +4746,27 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
   if (battle.playerField[fieldSlot] && battle.playerField[fieldSlot].alive) {
     return res.status(400).json({ error: 'Slot occupe' });
   }
+  // Controle Mental ennemi : le joueur doit poser la carte forcee
+  if (battle.forcedPlayerCardHandId && card.handId !== battle.forcedPlayerCardHandId) {
+    const forcedCard = battle.playerHand.find(c => c.handId === battle.forcedPlayerCardHandId);
+    if (forcedCard) {
+      return res.status(400).json({ error: `Controle Mental ! Vous devez poser ${forcedCard.name}` });
+    }
+  }
   if (card.mana_cost > battle.playerEnergy) return res.status(400).json({ error: 'Pas assez d energie' });
 
   // Max 1 on field restriction
-  const MAX_ONE_CARDS = ['La Voie Lactee', 'Le Neant Originel', 'Le De du Destin'];
+  const MAX_ONE_CARDS = ['La Voie Lactee', 'Le Neant Originel', 'Le De du Destin', 'Pines'];
   if (MAX_ONE_CARDS.includes(card.name)) {
     const alreadyOnField = getFieldAlive(battle.playerField).some(u => u.name === card.name);
     if (alreadyOnField) return res.status(400).json({ error: `${card.name} : max 1 sur le terrain !` });
   }
 
   // Deploy
+  // Clear forced card if deploying the forced card
+  if (battle.forcedPlayerCardHandId && card.handId === battle.forcedPlayerCardHandId) {
+    battle.forcedPlayerCardHandId = null;
+  }
   battle.playerHand.splice(handIndex, 1);
   battle.playerField[fieldSlot] = null; // clean dead
   const unit = makeDeckFieldUnit(card, 'player');
@@ -4917,6 +5016,28 @@ app.post('/api/battle/use-ability', requireAuth, (req, res) => {
   cleanDeadFromField(battle.enemyField);
   cleanDeadFromField(battle.playerField);
   checkDeckWin(battle);
+
+  res.json({ events, ...getDeckBattleSnapshot(battle) });
+});
+
+// Pines: player chooses which enemy hand card must be played next
+app.post('/api/battle/pines-choose', requireAuth, (req, res) => {
+  const { battleId, chosenHandId } = req.body;
+
+  const battle = activeBattles.get(battleId);
+  if (!battle || !battle.isDeckBattle) return res.status(404).json({ error: 'Combat introuvable' });
+  if (battle.result) return res.status(400).json({ error: 'Combat termine' });
+  if (!battle.pinesChoicePending) return res.status(400).json({ error: 'Pas de choix Pines en attente' });
+
+  const chosenCard = battle.enemyHand.find(c => c.handId === chosenHandId);
+  if (!chosenCard) return res.status(400).json({ error: 'Carte introuvable dans la main ennemie' });
+  if (chosenCard.type === 'objet') return res.status(400).json({ error: 'Vous devez choisir une creature' });
+
+  // Force the enemy AI to play this card next
+  battle.forcedEnemyCardHandId = chosenHandId;
+  battle.pinesChoicePending = false;
+
+  const events = [{ type: 'ability', unit: 'Pines', ability: 'Controle Mental', desc: `L'adversaire sera force de poser ${chosenCard.name} a son prochain tour !` }];
 
   res.json({ events, ...getDeckBattleSnapshot(battle) });
 });
@@ -5380,6 +5501,12 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
 
   battle.phase = 'player_turn';
   battle.attackedThisTurn = [];
+
+  // Clear forced player card if the card is no longer in hand
+  if (battle.forcedPlayerCardHandId) {
+    const still = battle.playerHand.find(c => c.handId === battle.forcedPlayerCardHandId);
+    if (!still) battle.forcedPlayerCardHandId = null;
+  }
 
   // Reset combo kill bonus from previous turn
   if (battle.comboKillActive) {

@@ -10283,5 +10283,108 @@ body.casino-page {
   .tut-field-slot { width: 80px; height: 65px; }
 }
 
+/* =============================
+   Pines - Controle Mental Modal
+   ============================= */
+.pines-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: pinesFadeIn 0.3s ease-out;
+}
+@keyframes pinesFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.pines-modal {
+  background: linear-gradient(135deg, #1a2a1a, #0d1f0d);
+  border: 2px solid #44aa33;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 700px;
+  width: 90%;
+  box-shadow: 0 0 40px rgba(68, 170, 51, 0.4), inset 0 0 20px rgba(68, 170, 51, 0.1);
+}
+.pines-modal-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: #44aa33;
+  text-align: center;
+  margin-bottom: 8px;
+  text-shadow: 0 0 10px rgba(68, 170, 51, 0.6);
+}
+.pines-modal-subtitle {
+  font-size: 13px;
+  color: #88cc77;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.pines-cards-container {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.pines-card {
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 2px solid #555;
+  border-radius: 8px;
+  padding: 12px;
+  width: 140px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.pines-card:hover {
+  border-color: #44aa33;
+  transform: translateY(-4px);
+  box-shadow: 0 4px 20px rgba(68, 170, 51, 0.4);
+}
+.pines-card-emoji {
+  font-size: 32px;
+  margin-bottom: 6px;
+}
+.pines-card-name {
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+  margin-bottom: 4px;
+}
+.pines-card-stats {
+  font-size: 11px;
+  color: #aaa;
+  margin-bottom: 4px;
+}
+.pines-card-ability {
+  font-size: 10px;
+  color: #cc88ff;
+  font-style: italic;
+}
+.pines-card-mana {
+  font-size: 10px;
+  color: #66aaff;
+  margin-top: 4px;
+}
+.pines-card.rarity-secret { border-color: #ff4444; }
+.pines-card.rarity-chaos { border-color: #ff00ff; }
+.pines-card.rarity-legendaire { border-color: #ffaa00; }
+.pines-card.rarity-epique { border-color: #aa44ff; }
+.pines-card.rarity-rare { border-color: #4488ff; }
+
+/* Pines forced card glow */
+.bt-card--forced {
+  border-color: #44aa33 !important;
+  box-shadow: 0 0 15px rgba(68, 170, 51, 0.6), 0 0 30px rgba(68, 170, 51, 0.3) !important;
+  animation: pinesForcedPulse 1.5s ease-in-out infinite;
+}
+@keyframes pinesForcedPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(68, 170, 51, 0.6), 0 0 30px rgba(68, 170, 51, 0.3); }
+  50% { box-shadow: 0 0 25px rgba(68, 170, 51, 0.8), 0 0 50px rgba(68, 170, 51, 0.5); }
+}
+
 /* Utility */
 .hidden { display: none !important; }
