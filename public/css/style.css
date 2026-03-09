@@ -4090,8 +4090,8 @@ body.battle-page {
 
 .bt-slot {
   position: relative;
-  width: 280px;
-  min-height: 240px;
+  width: 300px;
+  min-height: 200px;
   border: 2px dashed rgba(var(--primary-rgb), 0.12);
   border-radius: 8px;
   cursor: pointer;
@@ -4115,9 +4115,9 @@ body.battle-page {
   align-items: center;
   justify-content: center;
   height: 100%;
-  min-height: 240px;
+  min-height: 200px;
   font-family: 'VT323', monospace;
-  font-size: 20px;
+  font-size: 22px;
   color: #1a2a1a;
 }
 
@@ -4169,7 +4169,7 @@ body.battle-page {
 }
 
 .bt-unit-emoji {
-  font-size: 54px;
+  font-size: 58px;
   margin-bottom: 4px;
   line-height: 1.1;
   text-align: center;
@@ -4177,13 +4177,15 @@ body.battle-page {
 
 .bt-unit-name {
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--primary);
   margin-bottom: 5px;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   text-align: center;
+  line-height: 1.4;
+  max-height: 2.8em;
 }
 
 .bt-unit-hp {
@@ -4201,7 +4203,7 @@ body.battle-page {
 
 .bt-unit-hpbar {
   flex: 1;
-  height: 9px;
+  height: 12px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 4px;
   overflow: hidden;
@@ -4223,7 +4225,7 @@ body.battle-page {
 
 .bt-unit-stats {
   font-family: 'VT323', monospace;
-  font-size: 22px;
+  font-size: 26px;
   display: flex;
   gap: 16px;
   justify-content: center;
@@ -4736,8 +4738,8 @@ body.battle-page {
 
 /* ===== CARTES EN MAIN (flottantes) ===== */
 .bt-card {
-  width: 195px;
-  padding: 12px 10px;
+  width: 230px;
+  padding: 14px 12px;
   background: rgba(0, 8, 0, 0.95);
   border: 2px solid;
   border-radius: 8px;
@@ -4745,11 +4747,11 @@ body.battle-page {
   text-align: center;
   position: relative;
   pointer-events: auto;
-  transform: translateY(95px);
+  transform: translateY(45px);
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s ease;
-  margin-left: -20px;
-  margin-right: -20px;
+  margin-left: -24px;
+  margin-right: -24px;
   z-index: 1;
 }
 
@@ -4757,14 +4759,14 @@ body.battle-page {
 .bt-card:last-child { margin-right: 0; }
 
 .bt-card:hover {
-  transform: translateY(-20px) scale(1.08);
+  transform: translateY(-50px) scale(1.08);
   z-index: 50;
   box-shadow: 0 -8px 25px rgba(var(--primary-rgb), 0.25),
               0 0 15px rgba(var(--primary-rgb), 0.1);
 }
 
 .bt-card--selected {
-  transform: translateY(-25px) scale(1.1);
+  transform: translateY(-55px) scale(1.1);
   outline: 3px solid #ffcc00;
   outline-offset: 2px;
   box-shadow: 0 -10px 30px rgba(255, 204, 0, 0.3);
@@ -4782,7 +4784,7 @@ body.battle-page {
 
 .bt-card--dragging {
   opacity: 0.4;
-  transform: translateY(95px) scale(0.95) !important;
+  transform: translateY(45px) scale(0.95) !important;
   box-shadow: none !important;
 }
 
@@ -4822,7 +4824,7 @@ body.battle-page {
   top: 3px;
   left: 4px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
+  font-size: 8px;
   color: #aaa;
   text-transform: uppercase;
   line-height: 1;
@@ -4833,36 +4835,38 @@ body.battle-page {
   top: 3px;
   right: 4px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
+  font-size: 12px;
   color: #ffcc00;
   background: rgba(0, 0, 0, 0.5);
-  padding: 2px 4px;
+  padding: 2px 5px;
   border-radius: 3px;
 }
 
 .bt-card-emoji {
-  font-size: 48px;
-  margin: 4px 0;
+  font-size: 52px;
+  margin: 6px 0;
 }
 
 .bt-card-name {
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--primary);
   margin: 4px 0;
-  white-space: nowrap;
+  white-space: normal;
   overflow: hidden;
   text-overflow: ellipsis;
+  line-height: 1.4;
+  max-height: 2.8em;
 }
 
 .bt-card-stats {
   font-family: 'VT323', monospace;
-  font-size: 20px;
+  font-size: 24px;
   display: flex;
   flex-direction: row;
-  gap: 8px;
+  gap: 10px;
   justify-content: center;
-  padding: 3px 0;
+  padding: 4px 0;
 }
 
 .bt-card-stat-atk { color: #ff4444; }
@@ -4871,7 +4875,7 @@ body.battle-page {
 
 .bt-card-ability {
   font-family: 'VT323', monospace;
-  font-size: 15px;
+  font-size: 17px;
   color: #cc44ff;
   margin-top: 3px;
   display: -webkit-box;
@@ -4883,7 +4887,7 @@ body.battle-page {
 
 .bt-card-passive {
   font-family: 'VT323', monospace;
-  font-size: 14px;
+  font-size: 16px;
   color: #ffaa44;
   margin-top: 3px;
   display: -webkit-box;
@@ -5113,9 +5117,9 @@ body.battle-page {
     z-index: 20;
     box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
   }
-  .bt-slot { width: 180px; min-height: 170px; }
+  .bt-slot { width: 220px; min-height: 170px; }
   .bt-slot-empty { min-height: 170px; }
-  .bt-card { width: 140px; margin-left: -16px; margin-right: -16px; }
+  .bt-card { width: 180px; margin-left: -18px; margin-right: -18px; }
   .bt-side-gauges { padding: 4px; }
   .bt-battery { width: 28px; }
   .bt-battery-body { width: 24px; }
@@ -5123,14 +5127,14 @@ body.battle-page {
 }
 
 @media (max-width: 700px) {
-  .bt-slot { width: 155px; min-height: 150px; }
+  .bt-slot { width: 170px; min-height: 150px; }
   .bt-slot-empty { min-height: 150px; }
-  .bt-unit-emoji { font-size: 32px; }
-  .bt-unit-name { font-size: 7px; }
-  .bt-unit-stats { font-size: 15px; gap: 8px; }
+  .bt-unit-emoji { font-size: 36px; }
+  .bt-unit-name { font-size: 8px; }
+  .bt-unit-stats { font-size: 18px; gap: 8px; }
   .bt-unit-ability .bt-ability-desc { display: none; }
-  .bt-card { width: 100px; padding: 6px; transform: translateY(70px); margin-left: -10px; margin-right: -10px; }
-  .bt-card:hover { transform: translateY(-10px) scale(1.06); }
+  .bt-card { width: 140px; padding: 8px; transform: translateY(40px); margin-left: -12px; margin-right: -12px; }
+  .bt-card:hover { transform: translateY(-30px) scale(1.06); }
   .bt-card-emoji { font-size: 28px; }
   .bt-card-name { font-size: 6px; }
   .bt-card-ability { font-size: 10px; -webkit-line-clamp: 2; }
@@ -5325,8 +5329,8 @@ body.battle-page {
 
 .bt-rank-label {
   font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  color: #666;
+  font-size: 10px;
+  color: #777;
   text-transform: uppercase;
   letter-spacing: 1px;
   text-align: center;
@@ -5337,7 +5341,7 @@ body.battle-page {
 
 .bt-rank-bonus {
   color: #ff6644;
-  font-size: 8px;
+  font-size: 10px;
 }
 .bt-rank-bonus--def {
   color: #4488ff;
