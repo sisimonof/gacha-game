@@ -633,6 +633,18 @@ function getManaForTurn(turn) {
   }
 }
 
+// --- Migration : Carte SECRET - Pines ---
+{
+  const hasPines = db.prepare("SELECT id FROM cards WHERE name = 'Pines'").get();
+  if (!hasPines) {
+    db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run('Pines', 'secret', 'creature', 'terre', 3, 5, 8, 5, 'Emprise des Pins', 'Choisis une carte dans la main adverse : elle sera obligatoirement jouee en premier au prochain tour ennemi', '🌲', 'Immunise aux degats des cartes de type Terre', 2.0);
+    console.log('Migration: carte SECRET Pines ajoutee');
+  }
+}
+
 // --- Migration : 11 nouvelles cartes v1.4.0 ---
 {
   const newCards = [
@@ -1622,6 +1634,9 @@ const ABILITY_MAP = {
   'Pincement':              { type: 'damage_debuff_def', damage: 1, defDebuff: 1 },             // Crabe Blinde
   'Carapace piegee':        { type: 'sacrifice_aoe_def' },                                      // Tortue Bombe
   'Lien vital':             { type: 'link_enemies', duration: 3 },                              // Tisseuse d Ames
+
+  // ===== CARTE SECRET - Pines =====
+  'Emprise des Pins':       { type: 'force_deploy' },                                          // Pines (choisir carte adverse a deployer)
 };
 
 // ============================================
@@ -1706,6 +1721,11 @@ function calcDamage(attacker, defender, ignoreDef, attackerField) {
 
 // Helper pour appliquer des degats avec shield, counter, grace
 function applyDamage(target, damage, events, source, battle, isLinkedDamage) {
+  // Passif Pines : immunise aux degats des cartes Terre
+  if (target.name === 'Pines' && source && hasElement(source, 'terre')) {
+    events.push({ type: 'type_passive', desc: `${target.name} 🌲 est immunise aux degats Terre !` });
+    return;
+  }
   // Track last attacker for death-trigger passives (Rat des Egouts)
   if (source && source.name) target.lastAttacker = source.name;
   let remaining = damage;
@@ -2753,6 +2773,45 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       break;
     }
 
+    case 'force_deploy': {
+      // Pines : Emprise des Pins — montre la main ennemie, le joueur choisit quelle carte sera deployee
+      const side = unit.side;
+      const enemyHand = side === 'player' ? battle.enemyHand : battle.playerHand;
+      const deployable = enemyHand.filter(c => c.type !== 'objet');
+      if (deployable.length === 0) {
+        events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'L\'adversaire n\'a aucune creature en main !' });
+        unit.usedAbility = false; // Refund ability usage
+      } else {
+        // Mark that we're waiting for the player to pick which enemy card to force
+        battle.forceDeployPending = {
+          sourceSlot: unit.side === 'player' ? battle.playerField.indexOf(unit) : battle.enemyField.indexOf(unit),
+          sourceSide: unit.side
+        };
+        // Send enemy hand info for the picker
+        const enemyHandInfo = enemyHand.map((c, i) => ({
+          index: i,
+          name: c.name,
+          emoji: c.emoji,
+          attack: c.attack,
+          defense: c.defense,
+          hp: c.hp,
+          mana_cost: c.mana_cost,
+          type: c.type,
+          element: c.element
+        }));
+        events.push({
+          type: 'force_deploy_pick',
+          unit: unit.name,
+          ability: abilityName,
+          enemyHand: enemyHandInfo,
+          desc: `${unit.name} 🌲 utilise Emprise des Pins ! Choisissez la carte adverse a forcer.`
+        });
+        // Don't consume crystal yet — will be consumed when pick is confirmed
+        unit.usedAbility = false; // Will be set true when pick is made
+      }
+      break;
+    }
+
     case 'combo':
       for (const fx of ability.effects) {
         switch (fx.effect) {
@@ -3635,6 +3694,57 @@ function aiDeckTurn(battle) {
     }
   });
 
+  // 0. Force Deploy: si Pines a force une carte, la deployer en priorite
+  if (battle.forcedEnemyDeploy !== undefined && battle.forcedEnemyDeploy !== null) {
+    const forcedIdx = battle.forcedEnemyDeploy;
+    delete battle.forcedEnemyDeploy;
+
+    if (forcedIdx >= 0 && forcedIdx < battle.enemyHand.length) {
+      const forcedCard = battle.enemyHand[forcedIdx];
+      // Trouver un slot vide
+      let forcedSlot = -1;
+      for (let i = 0; i < 3; i++) {
+        if (!battle.enemyField[i] || !battle.enemyField[i].alive) {
+          battle.enemyField[i] = null;
+          forcedSlot = i;
+          break;
+        }
+      }
+      if (forcedSlot >= 0 && forcedCard.type !== 'objet') {
+        battle.enemyHand.splice(forcedIdx, 1);
+        const unit = makeDeckFieldUnit(forcedCard, 'enemy');
+        unit.justDeployed = true;
+        battle.enemyField[forcedSlot] = unit;
+        // Deduire le mana normalement (meme si cher, force deploy impose le cout)
+        battle.enemyEnergy = Math.max(0, battle.enemyEnergy - forcedCard.mana_cost);
+
+        // Rank Synergy
+        const eRankName = forcedSlot === 0 ? 'left' : forcedSlot === 1 ? 'center' : 'right';
+        unit.rankBonus = eRankName;
+        if (forcedSlot === 1) {
+          unit.rankBonusDef = 1;
+          unit.permanentBonusDef += 1;
+        } else {
+          unit.rankBonusAtk = 1;
+          unit.permanentBonusAtk += 1;
+        }
+
+        events.push({
+          type: 'enemy_deploy',
+          slot: forcedSlot,
+          name: unit.name,
+          emoji: unit.emoji,
+          mana_cost: unit.mana_cost,
+          rankBonus: eRankName,
+          forced: true,
+          desc: `🌲 ${unit.name} est force de combattre par Emprise des Pins !`
+        });
+      } else {
+        events.push({ type: 'system_msg', msg: '🌲 Emprise des Pins : impossible de deployer (pas de slot ou objet) !' });
+      }
+    }
+  }
+
   // 1. Deploy: IA amelioree — placement strategique
   let keepDeploying = true;
   while (keepDeploying) {
@@ -3782,6 +3892,9 @@ function aiDeckTurn(battle) {
 
     const ability = ABILITY_MAP[unit.ability_name];
     if (!ability) continue;
+
+    // IA ne peut pas utiliser force_deploy (c'est un pouvoir interactif joueur)
+    if (ability.type === 'force_deploy') continue;
 
     const playerAlive = getFieldAlive(battle.playerField);
     const enemyAlive = getFieldAlive(battle.enemyField);
@@ -4928,11 +5041,67 @@ app.post('/api/battle/use-ability', requireAuth, (req, res) => {
   }
 
   const events = resolveAbility(unit, targets, playerAlive, enemyAlive, battle);
-  if (!battle.testMode) battle.playerCrystal -= crystalCost;
+
+  // Si force_deploy pending, ne pas deduire le crystal maintenant (sera deduit a la confirmation du pick)
+  if (!battle.forceDeployPending) {
+    if (!battle.testMode) battle.playerCrystal -= crystalCost;
+  }
 
   cleanDeadFromField(battle.enemyField);
   cleanDeadFromField(battle.playerField);
   checkDeckWin(battle);
+
+  res.json({ events, ...getDeckBattleSnapshot(battle) });
+});
+
+// Force Deploy Pick - Pines ability: player picks which enemy card to force deploy
+app.post('/api/battle/force-deploy-pick', requireAuth, (req, res) => {
+  const { battleId, cardIndex } = req.body;
+
+  const battle = activeBattles.get(battleId);
+  if (!battle || !battle.isDeckBattle) return res.status(404).json({ error: 'Combat introuvable' });
+  if (battle.result) return res.status(400).json({ error: 'Combat termine' });
+  if (!battle.forceDeployPending) return res.status(400).json({ error: 'Pas de force deploy en attente' });
+
+  battle.lastAction = Date.now();
+
+  const enemyHand = battle.enemyHand;
+  if (cardIndex < 0 || cardIndex >= enemyHand.length) {
+    return res.status(400).json({ error: 'Index de carte invalide' });
+  }
+
+  const chosenCard = enemyHand[cardIndex];
+  if (chosenCard.type === 'objet') {
+    return res.status(400).json({ error: 'Impossible de forcer un objet' });
+  }
+
+  // Store the forced deploy choice
+  battle.forcedEnemyDeploy = cardIndex;
+
+  // Now consume the ability and crystal
+  const pending = battle.forceDeployPending;
+  const field = pending.sourceSide === 'player' ? battle.playerField : battle.enemyField;
+  const sourceUnit = field[pending.sourceSlot];
+  if (sourceUnit && sourceUnit.alive) {
+    sourceUnit.usedAbility = true;
+    const crystalCost = sourceUnit.crystal_cost || 1;
+    if (!battle.testMode) {
+      if (pending.sourceSide === 'player') {
+        battle.playerCrystal -= crystalCost;
+      } else {
+        battle.enemyCrystal -= crystalCost;
+      }
+    }
+  }
+
+  delete battle.forceDeployPending;
+
+  const events = [{
+    type: 'force_deploy_confirmed',
+    chosenCard: chosenCard.name,
+    chosenEmoji: chosenCard.emoji,
+    desc: `🌲 Emprise des Pins : ${chosenCard.name} ${chosenCard.emoji} sera force de combattre au prochain tour !`
+  }];
 
   res.json({ events, ...getDeckBattleSnapshot(battle) });
 });

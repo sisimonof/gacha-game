@@ -13,6 +13,10 @@ let actionPanelSlot = null;
 let slotClickedThisFrame = false;
 let draggedHandIndex = null;
 
+// Combat log
+let combatLog = [];
+let combatLogOpen = false;
+
 function init() {
   // Check for test battle from admin panel
   const testStored = sessionStorage.getItem('testBattle');
@@ -80,26 +84,11 @@ function renderEnemyHand() {
   container.innerHTML = html;
 }
 
-function renderBattery(bodyId, current, max, type) {
-  const body = document.getElementById(bodyId);
-  if (!body) return;
-  const maxSegs = type === 'energy' ? 10 : Math.ceil(max);
-  const filled = Math.min(Math.floor(current), maxSegs);
-  const partial = type === 'crystal' ? (current - filled) : 0;
-
-  let html = '';
-  for (let i = maxSegs - 1; i >= 0; i--) {
-    const isFilled = i < filled;
-    const isPartial = (type === 'crystal' && i === filled && partial > 0);
-    const isOverMax = (type === 'energy' && i >= max);
-    let cls = 'bt-battery-seg';
-    if (isFilled) cls += ' bt-battery-seg--filled';
-    if (isPartial) cls += ' bt-battery-seg--partial';
-    if (isOverMax) cls += ' bt-battery-seg--locked';
-    const pStyle = isPartial ? ` style="--partial:${Math.round(partial * 100)}%"` : '';
-    html += `<div class="${cls}"${pStyle}></div>`;
-  }
-  body.innerHTML = html;
+function renderGauge(fillId, current, max, type) {
+  const fill = document.getElementById(fillId);
+  if (!fill) return;
+  const pct = max > 0 ? Math.min(100, (current / max) * 100) : 0;
+  fill.style.width = pct + '%';
 }
 
 function renderTurnInfo() {
@@ -107,18 +96,21 @@ function renderTurnInfo() {
   document.getElementById('player-deck-count').textContent = battleData.playerDeckCount;
   document.getElementById('enemy-deck-count').textContent = battleData.enemyDeckCount;
 
-  // Battery gauges
-  renderBattery('player-energy-body', battleData.playerEnergy, battleData.playerMaxEnergy, 'energy');
-  renderBattery('enemy-energy-body', battleData.enemyEnergy, battleData.enemyMaxEnergy, 'energy');
-  document.getElementById('player-energy-value').textContent = `${battleData.playerEnergy}/${battleData.playerMaxEnergy}`;
-  document.getElementById('enemy-energy-value').textContent = `${battleData.enemyEnergy}/${battleData.enemyMaxEnergy}`;
+  // Horizontal gauges
+  const pMaxE = battleData.playerMaxEnergy || 1;
+  const eMaxE = battleData.enemyMaxEnergy || 1;
+  const pMaxC = battleData.playerMaxCrystal || 2;
+  const eMaxC = battleData.enemyMaxCrystal || 2;
+
+  renderGauge('player-energy-fill', battleData.playerEnergy, pMaxE);
+  renderGauge('enemy-energy-fill', battleData.enemyEnergy, eMaxE);
+  document.getElementById('player-energy-value').textContent = `${battleData.playerEnergy}/${pMaxE}`;
+  document.getElementById('enemy-energy-value').textContent = `${battleData.enemyEnergy}/${eMaxE}`;
 
   const pCrystal = battleData.playerCrystal || 0;
-  const pMaxCrystal = battleData.playerMaxCrystal || 2;
   const eCrystal = battleData.enemyCrystal || 0;
-  const eMaxCrystal = battleData.enemyMaxCrystal || 2;
-  renderBattery('player-crystal-body', pCrystal, pMaxCrystal, 'crystal');
-  renderBattery('enemy-crystal-body', eCrystal, eMaxCrystal, 'crystal');
+  renderGauge('player-crystal-fill', pCrystal, pMaxC);
+  renderGauge('enemy-crystal-fill', eCrystal, eMaxC);
   document.getElementById('player-crystal-value').textContent = pCrystal.toFixed(1);
   document.getElementById('enemy-crystal-value').textContent = eCrystal.toFixed(1);
 
@@ -150,10 +142,13 @@ function renderTurnInfo() {
     enemyAvatarEl.innerHTML = `
       <div class="bt-avatar-circle bt-avatar-enemy" onclick="clickEnemyAvatar()">
         <div class="bt-avatar-icon">\uD83D\uDC64</div>
-        <div class="bt-avatar-hpbar">
-          <div class="bt-avatar-hpbar-fill" style="width:${eHpPct}%;background:${eHpColor}"></div>
+        <div class="bt-avatar-info-col">
+          <div class="bt-avatar-name">${opponentName}</div>
+          <div class="bt-avatar-hpbar">
+            <div class="bt-avatar-hpbar-fill" style="width:${eHpPct}%;background:${eHpColor}"></div>
+          </div>
+          <div class="bt-avatar-hp-text">\u2764\uFE0F ${enemyHp}/${enemyMaxHp}</div>
         </div>
-        <div class="bt-avatar-hp-text">\u2764\uFE0F ${enemyHp}/${enemyMaxHp}</div>
       </div>
     `;
   }
@@ -164,10 +159,13 @@ function renderTurnInfo() {
     playerAvatarEl.innerHTML = `
       <div class="bt-avatar-circle bt-avatar-player">
         <div class="bt-avatar-icon">\uD83D\uDC64</div>
-        <div class="bt-avatar-hpbar">
-          <div class="bt-avatar-hpbar-fill" style="width:${pHpPct}%;background:${pHpColor}"></div>
+        <div class="bt-avatar-info-col">
+          <div class="bt-avatar-name">VOUS</div>
+          <div class="bt-avatar-hpbar">
+            <div class="bt-avatar-hpbar-fill" style="width:${pHpPct}%;background:${pHpColor}"></div>
+          </div>
+          <div class="bt-avatar-hp-text">\u2764\uFE0F ${playerHp}/${playerMaxHp}</div>
         </div>
-        <div class="bt-avatar-hp-text">\u2764\uFE0F ${playerHp}/${playerMaxHp}</div>
       </div>
     `;
   }
@@ -218,6 +216,8 @@ function renderFieldSlot(unit, slotIndex, side) {
 
   const attackedClass = side === 'player' && battleData.attackedThisTurn?.includes(slotIndex) ? 'bt-attacked' : '';
   const sicknessClass = unit.justDeployed ? 'bt-sickness' : '';
+  // Poison glow class
+  const poisonedClass = (unit.poisonDotTurns > 0) ? 'bt-poisoned' : '';
 
   const abilityHtml = unit.ability_name ? `
     <div class="bt-unit-ability ${unit.usedAbility ? 'bt-ability-used' : ''}">
@@ -233,7 +233,7 @@ function renderFieldSlot(unit, slotIndex, side) {
   const manaCost = unit.mana_cost || unit.manaCost || '?';
 
   return `
-    <div class="bt-unit ${isSelected ? 'bt-selected' : ''} ${isTarget ? 'bt-targetable' : ''} ${attackedClass} ${sicknessClass}"
+    <div class="bt-unit ${isSelected ? 'bt-selected' : ''} ${isTarget ? 'bt-targetable' : ''} ${attackedClass} ${sicknessClass} ${poisonedClass}"
          style="border-color: ${r.color}" data-slot="${slotIndex}" data-side="${side}">
       <div class="bt-unit-type">${unit.type || ''}</div>
       <div class="bt-unit-mana">\u26A1${manaCost}</div>
@@ -334,6 +334,150 @@ function getItemTarget(item) {
   if (enemyItems.includes(item.ability_name)) return 'enemy';
   if (teamItems.includes(item.ability_name) || aoeItems.includes(item.ability_name)) return 'team';
   return 'enemy';
+}
+
+// ========================
+// COMBAT LOG
+// ========================
+
+function addCombatLogEntry(event) {
+  let icon = '';
+  let text = '';
+  let type = 'system';
+
+  switch (event.type) {
+    case 'deploy':
+      icon = '\uD83C\uDFB4'; text = `${event.name} ${event.emoji} deploye (slot ${event.slot})`;
+      type = 'deploy'; break;
+    case 'enemy_deploy':
+      icon = '\uD83C\uDFB4'; text = `${event.name} ${event.emoji} ennemi deploye${event.forced ? ' (FORCE)' : ''}`;
+      type = 'deploy'; break;
+    case 'attack':
+      icon = '\u2694\uFE0F'; text = `${event.attacker || ''} attaque ${event.target || ''} (${event.damage} degats)`;
+      type = 'attack'; break;
+    case 'ability': case 'ability_damage': case 'ability_aoe': case 'ability_drain':
+      icon = '\u2726'; text = `${event.unit} : ${event.ability || ''} ${event.desc || ''} ${event.damage ? '(' + event.damage + ' degats)' : ''}`;
+      type = 'ability'; break;
+    case 'ability_heal': case 'ability_team_heal':
+      icon = '\uD83D\uDC9A'; text = `${event.unit} soigne ${event.target || 'equipe'} (+${event.heal} PV)`;
+      type = 'heal'; break;
+    case 'ability_poison':
+      icon = '\u2620\uFE0F'; text = `${event.unit} empoisonne ${event.target}`;
+      type = 'poison'; break;
+    case 'ko':
+      icon = '\uD83D\uDC80'; text = `${event.unit} est KO !`;
+      type = 'ko'; break;
+    case 'poison_tick':
+      icon = '\u2620\uFE0F'; text = `${event.unit} subit ${event.damage} degat(s) de poison`;
+      type = 'poison'; break;
+    case 'shield_absorb':
+      icon = '\uD83D\uDEE1\uFE0F'; text = `${event.unit} absorbe ${event.absorbed} degats (bouclier)`;
+      type = 'shield'; break;
+    case 'avatar_damage':
+      icon = '\uD83D\uDCA5'; text = `Avatar ${event.side === 'player' ? 'ennemi' : 'joueur'} touche !`;
+      type = 'attack'; break;
+    case 'type_passive':
+      icon = '\uD83D\uDD38'; text = event.desc || '';
+      type = 'passive'; break;
+    case 'counter_damage':
+      icon = '\uD83D\uDD04'; text = `${event.unit} renvoie ${event.damage} degats a ${event.target}`;
+      type = 'attack'; break;
+    case 'system_msg':
+      icon = '\u2139\uFE0F'; text = event.msg || '';
+      type = 'system'; break;
+    case 'item_heal': case 'item_buff':
+      icon = '\uD83C\uDF1F'; text = `${event.item} ${event.emoji || ''} : ${event.desc || ''}`;
+      type = 'item'; break;
+    case 'item_damage': case 'item_aoe':
+      icon = '\uD83C\uDF1F'; text = `${event.item} ${event.emoji || ''} : ${event.damage} degats a ${event.target || 'tous'}`;
+      type = 'item'; break;
+    case 'force_deploy_pick':
+      icon = '\uD83C\uDF32'; text = event.desc || 'Emprise des Pins';
+      type = 'ability'; break;
+    case 'force_deploy_confirmed':
+      icon = '\uD83C\uDF32'; text = event.desc || '';
+      type = 'ability'; break;
+    case 'combo_kill':
+      icon = '\uD83D\uDD25'; text = 'COMBO KILL !';
+      type = 'attack'; break;
+    default:
+      if (event.desc) { icon = '\u25B6'; text = event.desc; }
+      else return;
+  }
+
+  combatLog.push({ icon, text, type, turn: battleData ? battleData.turn : 0 });
+
+  const container = document.getElementById('combat-log-entries');
+  if (!container) return;
+
+  const entry = document.createElement('div');
+  entry.className = `bt-log-entry bt-log-entry--${type}`;
+  entry.innerHTML = `<span>${icon}</span> ${text}`;
+  container.appendChild(entry);
+
+  // Auto scroll
+  container.scrollTop = container.scrollHeight;
+}
+
+function toggleCombatLog() {
+  combatLogOpen = !combatLogOpen;
+  const panel = document.getElementById('combat-log-panel');
+  const btn = document.getElementById('combat-log-btn');
+  if (combatLogOpen) {
+    panel.classList.add('open');
+    btn.classList.add('active');
+  } else {
+    panel.classList.remove('open');
+    btn.classList.remove('active');
+  }
+}
+
+// ========================
+// FORCE DEPLOY PICKER (Pines)
+// ========================
+
+function showForceDeployPicker(enemyCards) {
+  const overlay = document.getElementById('force-deploy-overlay');
+  const container = document.getElementById('force-deploy-cards');
+  if (!overlay || !container) return;
+
+  container.innerHTML = enemyCards.map((card, i) => {
+    const isObj = card.type === 'objet';
+    return `
+      <div class="bt-force-deploy-card ${isObj ? 'bt-card--expensive' : ''}"
+           onclick="${isObj ? '' : `pickForceDeploy(${card.index})`}"
+           style="${isObj ? 'opacity:0.3;cursor:not-allowed;' : ''}">
+        <div class="bt-force-deploy-card-emoji">${card.emoji || '?'}</div>
+        <div class="bt-force-deploy-card-name">${card.name}</div>
+        <div class="bt-force-deploy-card-stats">
+          <span style="color:#ff4444">\u2694\uFE0F${card.attack}</span>
+          <span style="color:#4488ff">\uD83D\uDEE1\uFE0F${card.defense}</span>
+          <span style="color:#44dd44">\u2764\uFE0F${card.hp}</span>
+        </div>
+        <div class="bt-force-deploy-card-cost">\u26A1 ${card.mana_cost} mana</div>
+        ${isObj ? '<div style="color:#ff6644;font-size:12px;margin-top:4px">OBJET</div>' : ''}
+      </div>
+    `;
+  }).join('');
+
+  overlay.classList.remove('hidden');
+}
+
+async function pickForceDeploy(cardIndex) {
+  const overlay = document.getElementById('force-deploy-overlay');
+  if (overlay) overlay.classList.add('hidden');
+
+  try {
+    const res = await fetch('/api/battle/force-deploy-pick', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ battleId: battleData.battleId, cardIndex })
+    });
+    const data = await res.json();
+    if (!res.ok) { return; }
+    await animateEvents(data.events);
+    updateBattleData(data);
+  } catch { /* */ }
 }
 
 // ========================
@@ -717,6 +861,9 @@ function updateBattleData(data) {
 
 async function animateEvents(events) {
   for (const event of events) {
+    // Log every event
+    addCombatLogEntry(event);
+
     let animDuration = 300;
     switch (event.type) {
       case 'deploy': animateDeploy('player', event.slot); animDuration = 500; break;
@@ -751,15 +898,30 @@ async function animateEvents(events) {
       case 'ability_mark': { const t = findSlotByName(event.target); if (t) { animateAbilityHit(t.side, t.slot, 'rgba(255,170,0,0.5)'); showStatusFloat(t.side, t.slot, '\uD83C\uDFAF', '#ffaa00'); } animDuration = 500; break; }
       case 'ability_sacrifice': { const c = findSlotByName(event.unit); const t = findSlotByName(event.target); if (c) { showDamageFloat(c.side, c.slot, event.selfDamage); animateAbilityCast(c.side, c.slot, 'rgba(204,51,51,0.5)'); } if (t) showDamageFloat(t.side, t.slot, event.targetDamage); animDuration = 500; break; }
       case 'stunned': { const info = findSlotByName(event.unit); if (info) showStatusFloat(info.side, info.slot, '\uD83D\uDCAB', '#ffcc00'); break; }
-      case 'ko': { const info = findSlotByName(event.unit); if (info) animateKO(info.side, info.slot); animDuration = 500; break; }
+      case 'ko': { const info = findSlotByName(event.unit); if (info) animateKO(info.side, info.slot); animDuration = 800; break; }
       case 'revive': { const info = findSlotByName(event.unit); if (info) animateAbilityHit(info.side, info.slot, 'rgba(255,255,100,0.6)'); break; }
-      case 'poison_tick': { const info = findSlotByName(event.unit); if (info) { showDamageFloat(info.side, info.slot, event.damage); showStatusFloat(info.side, info.slot, '\u2620', '#aa44ff'); } break; }
+      case 'poison_tick': { const info = findSlotByName(event.unit); if (info) { showDamageFloat(info.side, info.slot, event.damage); showStatusFloat(info.side, info.slot, '\u2620', '#22cc22'); } break; }
       case 'grace_survive': { const info = findSlotByName(event.unit); if (info) animateAbilityHit(info.side, info.slot, 'rgba(255,255,100,0.6)'); break; }
       case 'item_heal': { const t = findSlotByName(event.target); if (t) { animateAbilityHit(t.side, t.slot, 'rgba(68,255,68,0.5)'); showHealFloat(t.side, t.slot, event.heal); } break; }
       case 'item_damage': case 'item_aoe': { const t = findSlotByName(event.target); if (t) { animateAbilityHit(t.side, t.slot, 'rgba(255,68,68,0.5)'); showDamageFloat(t.side, t.slot, event.damage); } break; }
       case 'avatar_damage': { const avatarId = event.side === 'player' ? 'enemy-avatar-hp' : 'player-avatar-hp'; const c = document.querySelector(`#${avatarId} .bt-avatar-circle`); if (c) { c.classList.add('bt-avatar-hit'); setTimeout(() => c.classList.remove('bt-avatar-hit'), 500); } animDuration = 400; break; }
       case 'combo_kill': { showComboKillBanner(); animDuration = 800; break; }
       case 'mana_carry': { showManaCarryEffect(); animDuration = 400; break; }
+      case 'force_deploy_pick': {
+        // Show the picker overlay
+        if (event.enemyHand) {
+          showForceDeployPicker(event.enemyHand);
+          // Wait for the pick (it will be handled by pickForceDeploy)
+          return; // Stop processing events — next events come from pick response
+        }
+        break;
+      }
+      case 'force_deploy_confirmed': {
+        // Show a brief flash/notification
+        screenFlash();
+        animDuration = 600;
+        break;
+      }
     }
     await sleep(animDuration);
   }

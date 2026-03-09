@@ -29,30 +29,30 @@
   <!-- ===== MAIN ENNEMIE (cartes face cachee) ===== -->
   <div class="bt-enemy-hand" id="enemy-hand-row"></div>
 
-  <!-- ===== ZONE PRINCIPALE ===== -->
-  <div class="bt-arena">
-
-    <!-- Jauges ennemi (gauche) -->
-    <div class="bt-side-gauges bt-side-gauges--left">
-      <div class="bt-battery bt-battery--energy" id="enemy-energy-battery">
-        <div class="bt-battery-label">NRJ</div>
-        <div class="bt-battery-cap"></div>
-        <div class="bt-battery-body" id="enemy-energy-body"></div>
-        <div class="bt-battery-value" id="enemy-energy-value">0/0</div>
+  <!-- ===== INFO ROW ENNEMI (avatar + jauges horizontales) ===== -->
+  <div class="bt-info-row bt-info-row--enemy">
+    <div class="bt-avatar-row bt-avatar-row--enemy" id="enemy-avatar-hp"></div>
+    <div class="bt-gauges-inline bt-gauges-inline--enemy">
+      <div class="bt-gauge-row">
+        <span class="bt-gauge-label">NRJ</span>
+        <div class="bt-gauge bt-gauge--energy-enemy">
+          <div class="bt-gauge-fill" id="enemy-energy-fill"></div>
+        </div>
+        <span class="bt-gauge-value" id="enemy-energy-value">0/0</span>
       </div>
-      <div class="bt-battery bt-battery--crystal" id="enemy-crystal-battery">
-        <div class="bt-battery-label">CRYS</div>
-        <div class="bt-battery-cap"></div>
-        <div class="bt-battery-body" id="enemy-crystal-body"></div>
-        <div class="bt-battery-value" id="enemy-crystal-value">0</div>
+      <div class="bt-gauge-row">
+        <span class="bt-gauge-label">CRYS</span>
+        <div class="bt-gauge bt-gauge--crystal-enemy">
+          <div class="bt-gauge-fill" id="enemy-crystal-fill"></div>
+        </div>
+        <span class="bt-gauge-value" id="enemy-crystal-value">0</span>
       </div>
     </div>
+  </div>
 
-    <!-- Champs de bataille -->
+  <!-- ===== ZONE PRINCIPALE ===== -->
+  <div class="bt-arena">
     <div class="bt-fields">
-      <!-- Avatar ennemi (PV adversaire) -->
-      <div class="bt-avatar-row bt-avatar-row--enemy" id="enemy-avatar-hp"></div>
-
       <!-- Zone ennemie avec labels de rang -->
       <div class="bt-field bt-field--enemy" id="enemy-field">
         <div class="bt-slot-wrapper">
@@ -99,27 +99,28 @@
           </div>
         </div>
       </div>
-
-      <!-- Avatar joueur (PV joueur) -->
-      <div class="bt-avatar-row bt-avatar-row--player" id="player-avatar-hp"></div>
     </div>
+  </div>
 
-    <!-- Jauges joueur (droite) -->
-    <div class="bt-side-gauges bt-side-gauges--right">
-      <div class="bt-battery bt-battery--energy" id="player-energy-battery">
-        <div class="bt-battery-label">NRJ</div>
-        <div class="bt-battery-cap"></div>
-        <div class="bt-battery-body" id="player-energy-body"></div>
-        <div class="bt-battery-value" id="player-energy-value">1/1</div>
+  <!-- ===== INFO ROW JOUEUR (avatar + jauges horizontales) ===== -->
+  <div class="bt-info-row bt-info-row--player">
+    <div class="bt-avatar-row bt-avatar-row--player" id="player-avatar-hp"></div>
+    <div class="bt-gauges-inline bt-gauges-inline--player">
+      <div class="bt-gauge-row">
+        <span class="bt-gauge-label">NRJ</span>
+        <div class="bt-gauge bt-gauge--energy-player">
+          <div class="bt-gauge-fill" id="player-energy-fill"></div>
+        </div>
+        <span class="bt-gauge-value" id="player-energy-value">1/1</span>
       </div>
-      <div class="bt-battery bt-battery--crystal" id="player-crystal-battery">
-        <div class="bt-battery-label">CRYS</div>
-        <div class="bt-battery-cap"></div>
-        <div class="bt-battery-body" id="player-crystal-body"></div>
-        <div class="bt-battery-value" id="player-crystal-value">0</div>
+      <div class="bt-gauge-row">
+        <span class="bt-gauge-label">CRYS</span>
+        <div class="bt-gauge bt-gauge--crystal-player">
+          <div class="bt-gauge-fill" id="player-crystal-fill"></div>
+        </div>
+        <span class="bt-gauge-value" id="player-crystal-value">0</span>
       </div>
     </div>
-
   </div>
 
   <!-- Popup d'actions (overlay) -->
@@ -135,6 +136,27 @@
   <div class="bt-hand-bar">
     <div class="bt-hand" id="player-hand"></div>
     <button class="bt-end-turn" id="end-turn-btn" onclick="endTurn()">FIN DU TOUR &#x23E9;</button>
+  </div>
+
+  <!-- ===== COMBAT LOG BUTTON ===== -->
+  <button class="bt-combat-log-btn" id="combat-log-btn" onclick="toggleCombatLog()">COMBAT TXT</button>
+
+  <!-- ===== COMBAT LOG PANEL ===== -->
+  <div class="bt-combat-log-panel" id="combat-log-panel">
+    <div class="bt-combat-log-header">
+      <span class="bt-combat-log-title">&#x1F4DC; JOURNAL DE COMBAT</span>
+      <button class="bt-combat-log-close" onclick="toggleCombatLog()">&times;</button>
+    </div>
+    <div class="bt-combat-log-entries" id="combat-log-entries"></div>
+  </div>
+
+  <!-- ===== FORCE DEPLOY PICKER (Pines) ===== -->
+  <div class="bt-force-deploy-overlay hidden" id="force-deploy-overlay">
+    <div class="bt-force-deploy-content">
+      <h2 class="bt-force-deploy-title">&#x1F332; EMPRISE DES PINS</h2>
+      <p class="bt-force-deploy-subtitle">Choisissez la carte adverse a forcer</p>
+      <div class="bt-force-deploy-cards" id="force-deploy-cards"></div>
+    </div>
   </div>
 
   <!-- ===== OVERLAYS ===== -->

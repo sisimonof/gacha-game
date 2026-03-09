@@ -3976,9 +3976,11 @@ body.battle-page {
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
-  overflow: hidden;
-  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  min-height: 100vh;
   padding: 0;
+  padding-bottom: 220px; /* space for fixed hand bar */
 }
 
 /* ===== TOPBAR ===== */
@@ -4358,21 +4360,21 @@ body.battle-page {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 4px 0;
-  min-height: 52px;
+  padding: 2px 0;
+  min-height: 40px;
 }
 
 .bt-avatar-circle {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  background: rgba(0, 8, 0, 0.8);
+  background: rgba(0, 8, 0, 0.85);
   border: 2px solid rgba(100, 100, 100, 0.4);
   border-radius: 50px;
-  padding: 6px 20px;
-  gap: 2px;
+  padding: 6px 18px;
+  gap: 8px;
   transition: all 0.3s;
-  min-width: 100px;
+  min-width: 140px;
 }
 
 .bt-avatar-enemy {
@@ -4384,27 +4386,42 @@ body.battle-page {
 }
 
 .bt-avatar-icon {
-  font-size: 20px;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.bt-avatar-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+}
+
+.bt-avatar-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #888;
 }
 
 .bt-avatar-hpbar {
-  width: 70px;
-  height: 6px;
+  width: 100px;
+  height: 10px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  border-radius: 5px;
   overflow: hidden;
+  border: 1px solid rgba(100, 100, 100, 0.2);
 }
 
 .bt-avatar-hpbar-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 4px;
   transition: width 0.4s;
 }
 
 .bt-avatar-hp-text {
   font-family: 'VT323', monospace;
-  font-size: 13px;
-  color: #aaa;
+  font-size: 16px;
+  color: #ccc;
 }
 
 .bt-avatar-targetable {
@@ -4740,7 +4757,7 @@ body.battle-page {
 .bt-card {
   width: 230px;
   padding: 14px 12px;
-  background: rgba(0, 8, 0, 0.95);
+  background: rgba(0, 8, 0, 0.97);
   border: 2px solid;
   border-radius: 8px;
   cursor: pointer;
@@ -4753,6 +4770,7 @@ body.battle-page {
   margin-left: -24px;
   margin-right: -24px;
   z-index: 1;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), 0 0 1px rgba(var(--primary-rgb), 0.2);
 }
 
 .bt-card:first-child { margin-left: 0; }
@@ -4761,8 +4779,9 @@ body.battle-page {
 .bt-card:hover {
   transform: translateY(-50px) scale(1.08);
   z-index: 50;
-  box-shadow: 0 -8px 25px rgba(var(--primary-rgb), 0.25),
-              0 0 15px rgba(var(--primary-rgb), 0.1);
+  box-shadow: 0 -8px 30px rgba(var(--primary-rgb), 0.3),
+              0 0 20px rgba(var(--primary-rgb), 0.15),
+              0 4px 15px rgba(0, 0, 0, 0.5);
 }
 
 .bt-card--selected {
@@ -5062,12 +5081,19 @@ body.battle-page {
   100% { transform: translateY(0) scale(1); opacity: 1; }
 }
 
-/* KO animation */
-.ko-anim { animation: koFadeOut 0.5s ease-in forwards; }
-@keyframes koFadeOut {
-  0% { transform: scale(1); opacity: 1; filter: none; }
-  50% { transform: scale(0.95); filter: grayscale(1) brightness(0.5); }
-  100% { transform: scale(0.9); opacity: 0.3; filter: grayscale(1) brightness(0.3); }
+/* KO animation — Glitch effect */
+.ko-anim { animation: koGlitch 0.8s ease-in forwards; }
+@keyframes koGlitch {
+  0%   { transform: scale(1); opacity: 1; filter: none; clip-path: inset(0 0 0 0); }
+  10%  { transform: translate(-3px, 2px) skewX(-5deg); filter: hue-rotate(40deg); }
+  20%  { transform: translate(4px, -1px) skewX(8deg); filter: hue-rotate(120deg) saturate(2); clip-path: inset(10% 0 30% 0); }
+  30%  { transform: translate(-2px, 3px) skewX(-3deg); filter: hue-rotate(200deg) brightness(1.5); clip-path: inset(40% 0 10% 0); }
+  40%  { transform: translate(5px, -2px) skewX(10deg); filter: hue-rotate(300deg) grayscale(0.3); clip-path: inset(5% 0 50% 0); }
+  50%  { transform: translate(-4px, 1px) skewX(-8deg) scale(0.98); filter: grayscale(0.5) hue-rotate(180deg); opacity: 0.8; clip-path: inset(20% 0 20% 0); }
+  60%  { transform: translate(3px, -3px) skewX(5deg) scale(0.95); filter: grayscale(0.7) brightness(0.6); opacity: 0.6; clip-path: inset(35% 0 5% 0); }
+  70%  { transform: translate(-5px, 2px) skewX(-12deg) scale(0.92); filter: grayscale(0.9) brightness(0.4); opacity: 0.4; clip-path: inset(15% 0 40% 0); }
+  85%  { transform: translate(2px, -1px) skewX(3deg) scale(0.88); filter: grayscale(1) brightness(0.2); opacity: 0.2; clip-path: inset(50% 0 10% 0); }
+  100% { transform: scale(0.85) skewX(0deg); filter: grayscale(1) brightness(0); opacity: 0; clip-path: inset(0 0 100% 0); }
 }
 
 /* Animation overlay */
@@ -5109,21 +5135,11 @@ body.battle-page {
 
 /* ===== BATTLE RESPONSIVE ===== */
 @media (max-width: 1000px) {
-  .bt-actions {
-    position: absolute;
-    right: 0;
-    top: 0;
-    height: 100%;
-    z-index: 20;
-    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
-  }
   .bt-slot { width: 220px; min-height: 170px; }
   .bt-slot-empty { min-height: 170px; }
   .bt-card { width: 180px; margin-left: -18px; margin-right: -18px; }
-  .bt-side-gauges { padding: 4px; }
-  .bt-battery { width: 28px; }
-  .bt-battery-body { width: 24px; }
-  .bt-battery-seg { height: 10px; }
+  .bt-gauge { width: 80px; }
+  .bt-combat-log-panel { width: 280px; }
 }
 
 @media (max-width: 700px) {
@@ -5139,20 +5155,23 @@ body.battle-page {
   .bt-card-name { font-size: 6px; }
   .bt-card-ability { font-size: 10px; -webkit-line-clamp: 2; }
   .bt-card-passive { font-size: 10px; -webkit-line-clamp: 2; }
-  .bt-enemy-card-back { width: 28px; height: 40px; margin-left: -6px; }
-  .bt-enemy-hand { min-height: 32px; padding: 2px 8px; }
-  .bt-side-gauges { padding: 2px; gap: 4px; }
-  .bt-battery { width: 24px; }
-  .bt-battery-body { width: 20px; padding: 2px; }
-  .bt-battery-seg { height: 8px; }
-  .bt-battery-label { font-size: 4px; }
-  .bt-battery-value { font-size: 11px; }
+  .bt-enemy-card-back { width: 40px; height: 56px; margin-left: -8px; }
+  .bt-enemy-hand { min-height: 48px; padding: 4px 8px; }
+  .bt-info-row { flex-direction: column; gap: 4px; padding: 4px 8px; }
+  .bt-gauge { width: 70px; height: 10px; }
+  .bt-gauge-label { font-size: 5px; width: 24px; }
+  .bt-gauge-value { font-size: 13px; }
+  .bt-avatar-circle { min-width: 110px; padding: 6px 16px; }
+  .bt-avatar-hpbar { width: 70px; height: 8px; }
   .bt-topbar { flex-wrap: wrap; height: auto; padding: 4px 8px; gap: 4px; }
   .bt-turn { font-size: 10px; }
   .bt-topbar-center { position: static; transform: none; }
   .bt-end-turn { bottom: 8px; right: 8px; font-size: 8px; padding: 6px 10px; }
   .bt-field { gap: 8px; }
-  .bt-actions { width: 180px; min-width: 180px; }
+  .bt-combat-log-btn { font-size: 6px; padding: 6px 10px; bottom: 8px; left: 8px; }
+  .bt-combat-log-panel { width: 260px; }
+  .bt-force-deploy-card { width: 140px; padding: 12px 8px; }
+  .bt-force-deploy-card-emoji { font-size: 36px; }
 }
 
 /* ==============================
@@ -5162,8 +5181,8 @@ body.battle-page {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 4px 16px;
-  min-height: 44px;
+  padding: 6px 16px;
+  min-height: 64px;
   gap: 0;
   overflow: hidden;
   background: rgba(0, 4, 0, 0.4);
@@ -5172,14 +5191,14 @@ body.battle-page {
 }
 
 .bt-enemy-card-back {
-  width: 36px;
-  height: 50px;
+  width: 55px;
+  height: 78px;
   background: linear-gradient(135deg, #1a0a0a, #2a1010 40%, #1a0a0a);
-  border: 1.5px solid rgba(255, 68, 68, 0.35);
-  border-radius: 4px;
-  margin-left: -8px;
+  border: 2px solid rgba(255, 68, 68, 0.4);
+  border-radius: 5px;
+  margin-left: -10px;
   position: relative;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), inset 0 0 15px rgba(255, 68, 68, 0.05);
   transition: transform 0.2s;
   animation: enemyCardAppear 0.3s ease-out backwards;
 }
@@ -5193,19 +5212,19 @@ body.battle-page {
   align-items: center;
   justify-content: center;
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  color: rgba(255, 68, 68, 0.3);
+  font-size: 14px;
+  color: rgba(255, 68, 68, 0.35);
   background: repeating-linear-gradient(
     45deg,
     transparent,
-    transparent 3px,
-    rgba(255, 68, 68, 0.04) 3px,
-    rgba(255, 68, 68, 0.04) 6px
+    transparent 4px,
+    rgba(255, 68, 68, 0.04) 4px,
+    rgba(255, 68, 68, 0.04) 8px
   );
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
-.bt-enemy-card-back:hover { transform: translateY(2px); }
+.bt-enemy-card-back:hover { transform: translateY(3px) scale(1.05); }
 
 @keyframes enemyCardAppear {
   0% { transform: translateY(-20px) scale(0.7); opacity: 0; }
@@ -5213,107 +5232,302 @@ body.battle-page {
 }
 
 /* ==============================
-   SIDE BATTERY GAUGES
+   INFO ROWS (avatar + horizontal gauges)
    ============================== */
-.bt-side-gauges {
+.bt-info-row {
   display: flex;
-  flex-direction: row;
-  gap: 6px;
   align-items: center;
   justify-content: center;
-  padding: 8px 6px;
-  z-index: 5;
+  gap: 16px;
+  padding: 4px 20px;
+  background: rgba(0, 6, 0, 0.5);
   flex-shrink: 0;
 }
-.bt-side-gauges--left {
-  border-right: 1px solid rgba(255, 68, 68, 0.1);
+.bt-info-row--enemy {
+  border-bottom: 1px solid rgba(255, 68, 68, 0.12);
 }
-.bt-side-gauges--right {
-  border-left: 1px solid rgba(var(--primary-rgb), 0.1);
+.bt-info-row--player {
+  border-top: 1px solid rgba(var(--primary-rgb), 0.12);
+  padding-bottom: 8px;
+  position: relative;
+  z-index: 110;
+  margin-bottom: 0;
 }
-
-.bt-battery {
+.bt-gauges-inline {
   display: flex;
   flex-direction: column;
+  gap: 4px;
+  min-width: 150px;
+}
+.bt-gauge-row {
+  display: flex;
   align-items: center;
-  gap: 3px;
-  width: 32px;
+  gap: 6px;
 }
-
-.bt-battery-label {
+.bt-gauge-label {
   font-family: 'Press Start 2P', monospace;
-  font-size: 5px;
-  color: #555;
-  letter-spacing: 1px;
+  font-size: 7px;
+  color: #666;
+  width: 30px;
+  text-align: right;
+  flex-shrink: 0;
 }
-
-.bt-battery-cap {
-  width: 14px;
-  height: 5px;
-  background: rgba(100, 100, 100, 0.3);
-  border: 1px solid rgba(100, 100, 100, 0.4);
-  border-bottom: none;
-  border-radius: 2px 2px 0 0;
-}
-
-.bt-battery-body {
-  width: 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 3px;
-  border: 2px solid rgba(100, 100, 100, 0.4);
-  border-radius: 2px 2px 4px 4px;
-  background: rgba(0, 5, 0, 0.6);
-}
-
-.bt-battery-seg {
-  width: 100%;
-  height: 12px;
-  background: rgba(30, 30, 30, 0.5);
-  border-radius: 1px;
-  transition: background 0.4s ease, box-shadow 0.4s ease;
+.bt-gauge {
+  width: 100px;
+  height: 14px;
+  background: rgba(30, 30, 30, 0.6);
+  border-radius: 7px;
+  overflow: hidden;
+  border: 1px solid rgba(80, 80, 80, 0.3);
   position: relative;
 }
-
-/* Energy segments — yellow/orange */
-.bt-battery--energy .bt-battery-seg--filled {
-  background: linear-gradient(180deg, #ffcc00, #ff9900);
-  box-shadow: 0 0 6px rgba(255, 204, 0, 0.5);
+.bt-gauge-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.5s ease;
+  position: relative;
 }
-.bt-battery--energy .bt-battery-seg--locked {
-  background: rgba(20, 20, 20, 0.3);
-  border: 1px dashed rgba(50, 50, 50, 0.3);
+/* Energy player — yellow/orange */
+.bt-gauge--energy-player .bt-gauge-fill {
+  background: linear-gradient(90deg, #ff9900, #ffcc00);
+  box-shadow: 0 0 8px rgba(255, 204, 0, 0.4);
 }
-
-/* Crystal segments — purple */
-.bt-battery--crystal .bt-battery-seg--filled {
-  background: linear-gradient(180deg, #cc44ff, #9922cc);
-  box-shadow: 0 0 6px rgba(204, 68, 255, 0.5);
+/* Energy enemy — red/orange */
+.bt-gauge--energy-enemy .bt-gauge-fill {
+  background: linear-gradient(90deg, #cc3300, #ff6644);
+  box-shadow: 0 0 8px rgba(255, 68, 68, 0.3);
 }
-.bt-battery--crystal .bt-battery-seg--partial {
-  background: linear-gradient(
-    to top,
-    rgba(204, 68, 255, 0.6) var(--partial, 0%),
-    rgba(30, 30, 30, 0.5) var(--partial, 0%)
-  );
-  box-shadow: 0 0 3px rgba(204, 68, 255, 0.3);
+/* Crystal player — violet */
+.bt-gauge--crystal-player .bt-gauge-fill {
+  background: linear-gradient(90deg, #9922cc, #cc66ff);
+  box-shadow: 0 0 8px rgba(204, 68, 255, 0.4);
 }
-
-.bt-battery-value {
+/* Crystal enemy — red sombre */
+.bt-gauge--crystal-enemy .bt-gauge-fill {
+  background: linear-gradient(90deg, #881133, #cc4466);
+  box-shadow: 0 0 8px rgba(204, 68, 102, 0.3);
+}
+.bt-gauge-value {
   font-family: 'VT323', monospace;
-  font-size: 14px;
-  text-align: center;
-  text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+  font-size: 16px;
+  min-width: 42px;
+  text-align: left;
+  flex-shrink: 0;
 }
-.bt-battery--energy .bt-battery-value { color: #ffcc00; }
-.bt-battery--crystal .bt-battery-value { color: #cc88ff; }
+.bt-gauges-inline--player .bt-gauge-row:first-child .bt-gauge-value { color: #ffcc00; }
+.bt-gauges-inline--player .bt-gauge-row:last-child .bt-gauge-value { color: #cc88ff; }
+.bt-gauges-inline--enemy .bt-gauge-row:first-child .bt-gauge-value { color: #ff6644; }
+.bt-gauges-inline--enemy .bt-gauge-row:last-child .bt-gauge-value { color: #cc4466; }
 
-/* Side colors */
-.bt-side-gauges--left .bt-battery-body { border-color: rgba(255, 68, 68, 0.25); }
-.bt-side-gauges--left .bt-battery-cap { border-color: rgba(255, 68, 68, 0.25); }
-.bt-side-gauges--right .bt-battery-body { border-color: rgba(var(--primary-rgb), 0.25); }
-.bt-side-gauges--right .bt-battery-cap { border-color: rgba(var(--primary-rgb), 0.25); }
+/* ==============================
+   COMBAT LOG PANEL
+   ============================== */
+.bt-combat-log-btn {
+  position: fixed;
+  bottom: 14px;
+  left: 14px;
+  z-index: 150;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  background: rgba(0, 15, 0, 0.9);
+  color: #44ccff;
+  border: 1.5px solid rgba(68, 204, 255, 0.4);
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-shadow: 0 0 6px rgba(68, 204, 255, 0.3);
+}
+.bt-combat-log-btn:hover {
+  background: rgba(0, 25, 0, 0.95);
+  border-color: #44ccff;
+  box-shadow: 0 0 12px rgba(68, 204, 255, 0.25);
+}
+.bt-combat-log-btn.active {
+  background: rgba(0, 30, 40, 0.95);
+  border-color: #44ccff;
+  color: #88eeff;
+}
+
+.bt-combat-log-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 320px;
+  height: 100vh;
+  background: rgba(0, 6, 0, 0.97);
+  border-left: 2px solid rgba(68, 204, 255, 0.2);
+  z-index: 800;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: -5px 0 30px rgba(0, 0, 0, 0.6);
+}
+.bt-combat-log-panel.open {
+  transform: translateX(0);
+}
+.bt-combat-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(68, 204, 255, 0.15);
+  background: rgba(0, 10, 15, 0.5);
+}
+.bt-combat-log-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: #44ccff;
+  text-shadow: 0 0 8px rgba(68, 204, 255, 0.3);
+}
+.bt-combat-log-close {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: color 0.15s;
+}
+.bt-combat-log-close:hover { color: #ff4444; }
+
+.bt-combat-log-entries {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.bt-combat-log-entries::-webkit-scrollbar { width: 4px; }
+.bt-combat-log-entries::-webkit-scrollbar-thumb { background: #44ccff; border-radius: 2px; }
+
+.bt-log-entry {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  padding: 4px 8px;
+  border-radius: 3px;
+  line-height: 1.3;
+  border-left: 3px solid transparent;
+  background: rgba(0, 10, 0, 0.3);
+}
+.bt-log-entry--attack { color: #ff6644; border-left-color: #ff4444; }
+.bt-log-entry--ability { color: #cc66ff; border-left-color: #cc44ff; }
+.bt-log-entry--poison { color: #44dd44; border-left-color: #22cc22; }
+.bt-log-entry--ko { color: #888; border-left-color: #555; background: rgba(50, 10, 10, 0.3); }
+.bt-log-entry--heal { color: #44ff88; border-left-color: #22cc66; }
+.bt-log-entry--deploy { color: #44ccff; border-left-color: #2288cc; }
+.bt-log-entry--passive { color: #ffaa44; border-left-color: #cc8800; }
+.bt-log-entry--system { color: #888; border-left-color: #444; }
+.bt-log-entry--shield { color: #44cccc; border-left-color: #22aaaa; }
+.bt-log-entry--item { color: #ddaa44; border-left-color: #aa8822; }
+
+/* ==============================
+   FORCE DEPLOY OVERLAY (Pines)
+   ============================== */
+.bt-force-deploy-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 5, 0, 0.85);
+  backdrop-filter: blur(6px);
+  animation: btActionsIn 0.2s ease-out;
+}
+.bt-force-deploy-overlay.hidden { display: none; }
+
+.bt-force-deploy-content {
+  text-align: center;
+  padding: 30px;
+  max-width: 90vw;
+}
+.bt-force-deploy-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: #44cc44;
+  margin-bottom: 8px;
+  text-shadow: 0 0 20px rgba(68, 204, 68, 0.5);
+}
+.bt-force-deploy-subtitle {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: #88aa88;
+  margin-bottom: 24px;
+}
+.bt-force-deploy-cards {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.bt-force-deploy-card {
+  width: 180px;
+  padding: 16px 12px;
+  background: rgba(0, 10, 0, 0.95);
+  border: 2px solid rgba(68, 204, 68, 0.3);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.25s;
+}
+.bt-force-deploy-card:hover {
+  border-color: #44cc44;
+  box-shadow: 0 0 25px rgba(68, 204, 68, 0.35), inset 0 0 15px rgba(68, 204, 68, 0.1);
+  transform: translateY(-5px) scale(1.05);
+}
+.bt-force-deploy-card-emoji { font-size: 48px; margin-bottom: 6px; }
+.bt-force-deploy-card-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: #44cc44;
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+.bt-force-deploy-card-stats {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+.bt-force-deploy-card-cost {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #ffcc00;
+}
+
+/* ==============================
+   POISONED GLOW (on field units)
+   ============================== */
+.bt-poisoned {
+  position: relative;
+}
+.bt-poisoned::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+  background: linear-gradient(to top, rgba(34, 204, 34, 0.15), transparent);
+  pointer-events: none;
+  border-radius: 0 0 6px 6px;
+  animation: poisonGlow 2s ease-in-out infinite;
+}
+@keyframes poisonGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(34, 204, 34, 0.2), inset 0 -10px 20px rgba(34, 204, 34, 0.08);
+    opacity: 0.7;
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(34, 204, 34, 0.45), inset 0 -10px 30px rgba(34, 204, 34, 0.15);
+    opacity: 1;
+  }
+}
 
 /* ==============================
    RANK SYNERGY / COMBAT MECHANICS
