@@ -3485,14 +3485,30 @@ function checkDeckWin(battle) {
     return 'defeat';
   }
 
-  // Deck exhaustion: no cards in hand + deck + field = lose
-  if (battle.enemyHand && battle.enemyHand.length === 0 && battle.enemyDeck && battle.enemyDeck.length === 0 && getFieldAlive(battle.enemyField).length === 0) {
-    battle.result = 'victory';
-    return 'victory';
+  // Deck exhaustion: field empty + deck empty + can't deploy anything = lose
+  const MAX_POSSIBLE_ENERGY = 6;
+  if (battle.enemyDeck && battle.enemyDeck.length === 0 && getFieldAlive(battle.enemyField).length === 0) {
+    if (!battle.enemyHand || battle.enemyHand.length === 0) {
+      battle.result = 'victory';
+      return 'victory';
+    }
+    // Hand has cards but no deployable creature (only items or all too expensive)
+    const canDeploy = battle.enemyHand.some(c => c.type !== 'objet' && c.mana_cost <= MAX_POSSIBLE_ENERGY);
+    if (!canDeploy) {
+      battle.result = 'victory';
+      return 'victory';
+    }
   }
-  if (battle.playerHand && battle.playerHand.length === 0 && battle.playerDeck && battle.playerDeck.length === 0 && getFieldAlive(battle.playerField).length === 0) {
-    battle.result = 'defeat';
-    return 'defeat';
+  if (battle.playerDeck && battle.playerDeck.length === 0 && getFieldAlive(battle.playerField).length === 0) {
+    if (!battle.playerHand || battle.playerHand.length === 0) {
+      battle.result = 'defeat';
+      return 'defeat';
+    }
+    const canDeploy = battle.playerHand.some(c => c.type !== 'objet' && c.mana_cost <= MAX_POSSIBLE_ENERGY);
+    if (!canDeploy) {
+      battle.result = 'defeat';
+      return 'defeat';
+    }
   }
 
   if (battle.turn > battle.maxTurns) {
@@ -5326,6 +5342,16 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
   // AI plays
   const aiEvents = aiDeckTurn(battle);
   events.push(...aiEvents);
+
+  // After AI turn: if field is empty and deck is empty, AI is exhausted
+  if (getFieldAlive(battle.enemyField).length === 0 && battle.enemyDeck.length === 0) {
+    const hasPlayableCreature = battle.enemyHand.some(c => c.type !== 'objet' && c.mana_cost <= 6);
+    if (!hasPlayableCreature) {
+      battle.result = 'victory';
+      events.push({ type: 'system_msg', msg: 'L\'adversaire n\'a plus de cartes jouables ! Victoire !' });
+      return res.json({ events, ...getDeckBattleSnapshot(battle) });
+    }
+  }
 
   if (checkDeckWin(battle)) {
     return res.json({ events, ...getDeckBattleSnapshot(battle) });
