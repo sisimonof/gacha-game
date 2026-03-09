@@ -102,27 +102,6 @@
     </div>
   </div>
 
-  <!-- ===== INFO ROW JOUEUR (avatar + jauges horizontales) ===== -->
-  <div class="bt-info-row bt-info-row--player">
-    <div class="bt-avatar-row bt-avatar-row--player" id="player-avatar-hp"></div>
-    <div class="bt-gauges-inline bt-gauges-inline--player">
-      <div class="bt-gauge-row">
-        <span class="bt-gauge-label">NRJ</span>
-        <div class="bt-gauge bt-gauge--energy-player">
-          <div class="bt-gauge-fill" id="player-energy-fill"></div>
-        </div>
-        <span class="bt-gauge-value" id="player-energy-value">1/1</span>
-      </div>
-      <div class="bt-gauge-row">
-        <span class="bt-gauge-label">CRYS</span>
-        <div class="bt-gauge bt-gauge--crystal-player">
-          <div class="bt-gauge-fill" id="player-crystal-fill"></div>
-        </div>
-        <span class="bt-gauge-value" id="player-crystal-value">0</span>
-      </div>
-    </div>
-  </div>
-
   <!-- Popup d'actions (overlay) -->
   <div class="bt-actions-overlay hidden" id="bt-actions" onclick="if(event.target===this){hideActionPanel();cancelAction()}">
     <div class="bt-actions-popup">
@@ -132,9 +111,31 @@
     </div>
   </div>
 
-  <!-- ===== MAIN DU JOUEUR ===== -->
+  <!-- ===== ZONE JOUEUR FIXE (info + main + bouton) ===== -->
   <div class="bt-hand-bar">
+    <!-- Info row joueur (avatar + jauges) -->
+    <div class="bt-info-row bt-info-row--player">
+      <div class="bt-avatar-row bt-avatar-row--player" id="player-avatar-hp"></div>
+      <div class="bt-gauges-inline bt-gauges-inline--player">
+        <div class="bt-gauge-row">
+          <span class="bt-gauge-label">NRJ</span>
+          <div class="bt-gauge bt-gauge--energy-player">
+            <div class="bt-gauge-fill" id="player-energy-fill"></div>
+          </div>
+          <span class="bt-gauge-value" id="player-energy-value">1/1</span>
+        </div>
+        <div class="bt-gauge-row">
+          <span class="bt-gauge-label">CRYS</span>
+          <div class="bt-gauge bt-gauge--crystal-player">
+            <div class="bt-gauge-fill" id="player-crystal-fill"></div>
+          </div>
+          <span class="bt-gauge-value" id="player-crystal-value">0</span>
+        </div>
+      </div>
+    </div>
+    <!-- Main du joueur -->
     <div class="bt-hand" id="player-hand"></div>
+    <!-- Bouton fin de tour (centré) -->
     <button class="bt-end-turn" id="end-turn-btn" onclick="endTurn()">FIN DU TOUR &#x23E9;</button>
   </div>
 

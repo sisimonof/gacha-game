@@ -3980,7 +3980,7 @@ body.battle-page {
   overflow-y: auto;
   min-height: 100vh;
   padding: 0;
-  padding-bottom: 220px; /* space for fixed hand bar */
+  padding-bottom: 280px; /* space for fixed hand bar + info row */
 }
 
 /* ===== TOPBAR ===== */
@@ -4695,11 +4695,9 @@ body.battle-page {
   left: 0;
   right: 0;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
   gap: 0;
-  padding: 0 16px;
-  padding-right: 140px;
   z-index: 100;
   pointer-events: none;
   overflow: visible;
@@ -4708,13 +4706,15 @@ body.battle-page {
 }
 
 .bt-hand {
-  flex: 1;
   display: flex;
   gap: 0;
   justify-content: center;
+  align-items: flex-end;
   min-height: 0;
   pointer-events: none;
   overflow: visible;
+  padding: 0 16px;
+  width: 100%;
 }
 
 .bt-hand-empty {
@@ -4726,9 +4726,8 @@ body.battle-page {
 }
 
 .bt-end-turn {
-  position: fixed;
-  bottom: 12px;
-  right: 16px;
+  position: relative;
+  margin: 6px auto 10px auto;
   z-index: 101;
   pointer-events: auto;
   font-family: 'Press Start 2P', monospace;
@@ -5166,7 +5165,7 @@ body.battle-page {
   .bt-topbar { flex-wrap: wrap; height: auto; padding: 4px 8px; gap: 4px; }
   .bt-turn { font-size: 10px; }
   .bt-topbar-center { position: static; transform: none; }
-  .bt-end-turn { bottom: 8px; right: 8px; font-size: 8px; padding: 6px 10px; }
+  .bt-end-turn { font-size: 8px; padding: 6px 10px; }
   .bt-field { gap: 8px; }
   .bt-combat-log-btn { font-size: 6px; padding: 6px 10px; bottom: 8px; left: 8px; }
   .bt-combat-log-panel { width: 260px; }
@@ -5248,10 +5247,12 @@ body.battle-page {
 }
 .bt-info-row--player {
   border-top: 1px solid rgba(var(--primary-rgb), 0.12);
-  padding-bottom: 8px;
-  position: relative;
-  z-index: 110;
-  margin-bottom: 0;
+  border-bottom: 1px solid rgba(var(--primary-rgb), 0.08);
+  padding: 6px 20px;
+  width: 100%;
+  pointer-events: auto;
+  background: rgba(0, 6, 0, 0.85);
+  backdrop-filter: blur(6px);
 }
 .bt-gauges-inline {
   display: flex;
