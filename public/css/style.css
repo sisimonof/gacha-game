@@ -4243,7 +4243,17 @@ body.battle-page {
 }
 
 .bt-status-icon { font-size: 14px; }
-.bt-status-poison { color: #aa44ff; }
+.bt-status-poison {
+  color: #aa44ff;
+  background: rgba(170, 68, 255, 0.15);
+  border-radius: 4px;
+  padding: 1px 4px;
+  animation: poison-pulse 1.5s ease-in-out infinite;
+}
+@keyframes poison-pulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 4px rgba(170, 68, 255, 0.5); }
+  50% { opacity: 0.7; text-shadow: 0 0 8px rgba(170, 68, 255, 0.8); }
+}
 .bt-status-stun { color: #ffcc00; }
 .bt-status-shield { color: #44cccc; }
 .bt-status-mark { color: #ffaa00; }

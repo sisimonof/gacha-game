@@ -428,7 +428,7 @@ function getManaForTurn(turn) {
       // [name, rarity, element, atk, def, hp, mana, ability_name, ability_desc, emoji, passive_desc, crystal_cost]
       ['Goblin',              'commune',  'terre', 1, 1, 2,  1, 'Appel gobelin',    'Ajoute un Goblin 1/1/1 dans votre main','🗡️', '+1 ATK si un autre Goblin est sur le terrain', 1.0],
       ['Tortue des Rivieres', 'commune',  'eau',   1, 4, 5,  4, 'Carapace marine',  '+2 DEF a un allie jusqu au prochain tour', '🐢', 'Les unites Eau alliees invoquees gagnent +1 PV', 1.0],
-      ['Serpent des Marees',  'rare',     'eau',   2, 1, 2,  2, 'Frappe empoisonnee','Empoisonne : 1 degat/tour pendant 4 tours', '🐍', '', 1.0],
+      ['Serpent des Marees',  'rare',     'eau',   2, 1, 2,  2, 'Frappe empoisonnee','Applique poison pendant 4 tours', '🐍', '', 1.0],
       ['Mage de Foudre',     'rare',     'eau',   3, 1, 2,  3, 'Eclair',           '2 degats a une cible (ignore la DEF)', '🌊', '1ere action du tour: 3 degats au lieu de 2', 1.0],
       ['Esprit des Forets',  'rare',     'terre', 1, 3, 4,  3, 'Croissance',       'Invoque une Pousse (0/1/1) qui evolue','🌿', 'Les unites Terre alliees gagnent +1 DEF', 1.5],
       ['Salamandre Ardente', 'rare',     'feu',   3, 1, 3,  3, 'Flamme adjacente', '1 degat a la cible et aux adjacents. Si tue : +1 ATK tour suivant', '🦎', '', 1.0],
@@ -590,7 +590,7 @@ function getManaForTurn(turn) {
   db.prepare("UPDATE cards SET ability_name = 'Tir traitre', ability_desc = 'x2 degats aux cibles endormies' WHERE name = 'Archer des Collines'").run();
   db.prepare("UPDATE cards SET passive_desc = 'En arrivant, gagne +1 ATK jusqu a fin du tour suivant' WHERE name = 'Sapeur de Terre'").run();
   db.prepare("UPDATE cards SET ability_desc = '2 degats a une cible (ignore la DEF)' WHERE name = 'Mage de Foudre'").run();
-  db.prepare("UPDATE cards SET ability_name = 'Frappe empoisonnee', ability_desc = 'Empoisonne : 1 degat/tour pendant 4 tours', passive_desc = '' WHERE name = 'Serpent des Marees'").run();
+  db.prepare("UPDATE cards SET ability_name = 'Frappe empoisonnee', ability_desc = 'Applique poison pendant 4 tours', passive_desc = '' WHERE name = 'Serpent des Marees'").run();
   db.prepare("UPDATE cards SET ability_desc = '1 degat a la cible et aux adjacents. Si tue : +1 ATK tour suivant', passive_desc = '' WHERE name = 'Salamandre Ardente'").run();
   db.prepare("UPDATE cards SET ability_desc = 'Statut: +1 ATK par unite Terre alliee' WHERE name = 'Guerrier des Falaises'").run();
   db.prepare("UPDATE cards SET rarity = 'legendaire' WHERE name = 'Archange Dechu'").run();
@@ -598,6 +598,18 @@ function getManaForTurn(turn) {
   db.prepare("UPDATE cards SET ability_name = 'Meditation interieure' WHERE name = 'Moine Errant' AND ability_name = 'Meditation'").run();
   // v2.1.1 fix: rename Souffle triple -> Souffle tri-elementaire for Chimere Elementaire (conflict with Hydre de feu)
   db.prepare("UPDATE cards SET ability_name = 'Souffle tri-elementaire' WHERE name = 'Chimere Elementaire' AND ability_name = 'Souffle triple'").run();
+  // Standardisation poison : descriptions uniformes
+  db.prepare("UPDATE cards SET ability_desc = 'Applique poison pendant 4 tours' WHERE name = 'Serpent des Marees'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Applique poison pendant 2 tours' WHERE ability_name = 'Spores nocives'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Applique poison pendant 2 tours' WHERE ability_name = 'Combustion lente'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Applique poison pendant 2 tours' WHERE ability_name = 'Morsure de flamme'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Applique poison pendant 2 tours' WHERE ability_name = 'Dague empoisonnee'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Applique poison pendant 2 tours' WHERE ability_name = 'Venin nocturne'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Inflige 2 degats et applique poison pendant 2 tours' WHERE name = 'Rat des Egouts'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Applique poison a tous les ennemis pendant 1 tour' WHERE name = 'Champignon Toxique'").run();
+  db.prepare("UPDATE cards SET ability_desc = 'Mord 3 ennemis aleatoires (2 degats) et applique poison pendant 2 tours' WHERE name = 'Hydre Venimeuse'").run();
+  db.prepare("UPDATE cards SET passive_desc = 'Quand touchee, applique poison a l attaquant pendant 2 tours' WHERE name = 'Hydre Venimeuse'").run();
+  db.prepare("UPDATE cards SET passive_desc = 'Si le Rat meurt, applique poison a son tueur pendant 2 tours' WHERE name = 'Rat des Egouts'").run();
 }
 
 // --- Migration : La Voie Lactee → rareté SECRET ---
@@ -663,11 +675,11 @@ function getManaForTurn(turn) {
 {
   const newCards2 = [
     // COMMUNES (5)
-    ['Rat des Egouts', 'commune', 'bete', 'ombre', 2, 0, 1, 1, 'Morsure infectee', 'Empoisonne la cible (1 degat/tour, 2 tours)', '🐀', 'Si le Rat meurt, empoisonne son tueur (1 degat/tour, 2 tours)', 1.0],
+    ['Rat des Egouts', 'commune', 'bete', 'ombre', 2, 0, 1, 1, 'Morsure infectee', 'Inflige 2 degats et applique poison pendant 2 tours', '🐀', 'Si le Rat meurt, applique poison a son tueur pendant 2 tours', 1.0],
     ['Moine Errant', 'commune', 'divin', 'lumiere', 0, 2, 4, 2, 'Meditation interieure', 'Se soigne 2 HP et gagne +1 DEF permanent', '🧘', '', 1.0],
     ['Scarabee de Lave', 'commune', 'bete', 'feu', 2, 2, 2, 2, 'Aucun', 'Aucun', '🪲', 'Quand il meurt, inflige 1 degat a toutes les cartes ennemies (explosion)', 1.0],
     ['Espion des Brumes', 'commune', 'creature', 'eau', 1, 1, 2, 1, 'Infiltration', 'Pioche 1 carte supplementaire', '🌫️', 'Ne peut pas etre cible au premier tour', 1.0],
-    ['Champignon Toxique', 'commune', 'creature', 'terre', 0, 0, 3, 1, 'Spores', 'Empoisonne tous les ennemis (1 degat, 1 tour)', '🍄', 'Ne peut pas attaquer. Meurt au bout de 3 tours', 1.0],
+    ['Champignon Toxique', 'commune', 'creature', 'terre', 0, 0, 3, 1, 'Spores', 'Applique poison a tous les ennemis pendant 1 tour', '🍄', 'Ne peut pas attaquer. Meurt au bout de 3 tours', 1.0],
     // RARES (4)
     ['Valkyrie Dechue', 'rare', 'guerrier', 'lumiere', 3, 2, 4, 3, 'Jugement guerrier', 'Attaque un ennemi ; si elle le tue, se soigne 3 HP', '🪽', '+1 ATK quand un allie meurt (vengeance)', 1.0],
     ['Alchimiste Fou', 'rare', 'mage', 'feu', 2, 1, 3, 3, 'Transmutation', 'Transforme 2 HP d un allie en +2 ATK permanent pour cet allie', '⚗️', 'Si l allie booste tue un ennemi ce tour, l Alchimiste recupere 2 HP', 1.0],
@@ -677,7 +689,7 @@ function getManaForTurn(turn) {
     ['Oracle du Temps', 'epique', 'divin', 'lumiere', 2, 3, 5, 4, 'Distorsion temporelle', 'Annule la derniere action de l adversaire et rejoue votre tour (1x/combat)', '⏳', '', 1.5],
     ['Colosse de Corail', 'epique', 'guerrier', 'eau', 3, 5, 8, 5, 'Recif vivant', 'Invoque un token Corail (0/2/2) sur chaque slot vide allie avec taunt', '🪸', '+1 DEF pour chaque token Corail en vie', 1.5],
     // LEGENDAIRES (2)
-    ['Chronos', 'legendaire', 'divin', 'lumiere', 3, 4, 8, 7, 'Boucle temporelle', 'Reinitialise TOUTES les cartes du terrain a leurs stats d origine, annule tous les buffs/debuffs/poison/shield', '⌛', 'Immunise au stun, silence et poison. Debut de tour : un ennemi aleatoire perd son dernier buff', 2.0],
+    ['Chronos', 'legendaire', 'divin', 'lumiere', 3, 4, 8, 7, 'Boucle temporelle', 'Reinitialise TOUTES les cartes, annule buffs/debuffs/poison/shield', '⌛', 'Immunise au stun, silence et poison. Debut de tour : un ennemi aleatoire perd son dernier buff', 2.0],
     ['Abyssia', 'legendaire', 'divin', 'eau', 4, 5, 8, 6, 'Maree montante', 'Inflige 2 degats a tous les ennemis. Les survivants ne peuvent pas attaquer au prochain tour', '🌊', 'Soigne 1 HP a tous les allies Eau en debut de tour. Quand un allie Eau meurt, gagne +2 ATK permanent', 2.0],
     // CHAOS (1)
     ['Le De du Destin', 'chaos', 'creature', 'neutre', 1, 1, 6, 3, 'Lancer divin', 'Lance un de (1-6) : 1=se tue, 2=rien, 3=+3 ATK, 4=3 degats AoE, 5=soigne tout le monde de 4 HP, 6=tue un ennemi aleatoire', '🎲', 'Debut de tour : ATK et DEF changent aleatoirement (0-4). Max 1 sur le terrain', 1.0],
@@ -710,7 +722,7 @@ function getManaForTurn(turn) {
     ['Pyromane', 'rare', 'mage', 'feu', 3, 0, 3, 2, 'Cocktail Molotov', 'Inflige 2 degats a tous les ennemis mais subit 1 degat', '🧨', 'Chaque kill : +1 ATK permanent', 1.0],
     // EPIQUES (2)
     ['Golem de Miroir', 'epique', 'guerrier', 'lumiere', 0, 6, 8, 5, 'Reflet parfait', 'Renvoie 100% des degats recus jusqu au tour suivant', '🪞', 'Renvoie 1 degat a chaque attaquant (permanent)', 1.5],
-    ['Hydre Venimeuse', 'epique', 'bete', 'ombre', 3, 2, 6, 5, 'Morsure triple', 'Mord 3 ennemis aleatoires (2 degats chacun) et les empoisonne', '🐍', 'Quand touchee, empoisonne l attaquant (1 degat/tour, 2 tours)', 1.5],
+    ['Hydre Venimeuse', 'epique', 'bete', 'ombre', 3, 2, 6, 5, 'Morsure triple', 'Mord 3 ennemis aleatoires (2 degats) et applique poison pendant 2 tours', '🐍', 'Quand touchee, applique poison a l attaquant pendant 2 tours', 1.5],
     // LEGENDAIRES (3)
     ['Marionnettiste', 'legendaire', 'mage', 'ombre', 1, 2, 4, 3, 'Fils du marionnettiste', 'Echange une de vos cartes avec une carte ennemie pendant 3 tours', '🎭', 'Les cartes volees ont -1 ATK', 2.0],
     ['Anubis', 'legendaire', 'divin', 'ombre', 4, 4, 8, 7, 'Jugement final', 'Ressuscite un allie mort a 50% PV et inflige 3 degats a un ennemi', '🐺', 'Chaque mort alliee : +1 ATK permanent', 2.0],
@@ -1267,7 +1279,7 @@ const ABILITY_MAP = {
   'Mur mineral':        { type: 'buff_def',          value: 3 },   // Caillou vivant
   'Regeneration':       { type: 'drain',             damage: 1, heal: 2 },  // Ver de terre
   'Herbe toxique':      { type: 'debuff_atk',        value: 2 },   // Herboriste
-  'Spores nocives':     { type: 'poison',            damage: 2 },  // Champignon
+  'Spores nocives':     { type: 'poison_dot',         damage: 1, turns: 2 },  // Champignon
   'Tranchant rocheux':  { type: 'direct_damage',     value: 2 },   // Terrassier
   'Morsure de rat':     { type: 'first_turn_damage', value: 2 },   // Rat
   'Garde de pierre':    { type: 'buff_def',          value: 2 },   // Sentinelle
@@ -1307,12 +1319,12 @@ const ABILITY_MAP = {
   'Bombe artisanale':   { type: 'random_damage',     damage: 1, hits: 3 },  // Artificier
   'Croc brulant':       { type: 'first_turn_damage', value: 2 },   // Fennec
   'Epines brulantes':   { type: 'counter',           value: 2 },   // Cactus ardent
-  'Combustion lente':   { type: 'poison',            damage: 2 },  // Charbon
+  'Combustion lente':   { type: 'poison_dot',         damage: 1, turns: 2 },  // Charbon
   'Ecaille de braise':  { type: 'buff_def',          value: 2 },   // Lezard
   'Eruption mineure':   { type: 'direct_damage',     value: 2 },   // Volcanologue
   'Suie aveuglante':    { type: 'debuff_atk',        value: 2 },   // Charbonnier
   'Etincelle vive':     { type: 'first_turn_damage', value: 2 },   // Etincelle
-  'Morsure de flamme':  { type: 'poison',            damage: 2 },  // Chien de feu
+  'Morsure de flamme':  { type: 'poison_dot',         damage: 1, turns: 2 },  // Chien de feu
   'Pas de feu':         { type: 'buff_atk',          value: 2 },   // Danseur
   'Coulée de lave':     { type: 'direct_damage',     value: 2 },   // Magma
   'Broche ardente':     { type: 'heal_ally',         value: 2 },   // Cuisinier
@@ -1333,12 +1345,12 @@ const ABILITY_MAP = {
   'Griffe d ombre':     { type: 'direct_damage',     value: 2 },   // Chat noir
   'Toucher spectral':   { type: 'drain',             damage: 2, heal: 1 },  // Ombre rampante
   'Cocon ténébreux':    { type: 'buff_def',          value: 3 },   // Larve
-  'Dague empoisonnee':  { type: 'poison',            damage: 2 },  // Assassin novice
+  'Dague empoisonnee':  { type: 'poison_dot',         damage: 1, turns: 2 },  // Assassin novice
   'Mucus toxique':      { type: 'debuff_atk',        value: 2 },   // Crapaud sombre
   'Effroi':             { type: 'stun',              damage: 0 },  // Ectoplasme
   'Morsure vorace':     { type: 'drain',             damage: 2, heal: 1 },  // Goule
   'Fils invisibles':    { type: 'stun',              damage: 0 },  // Marionnette
-  'Venin nocturne':     { type: 'poison',            damage: 2 },  // Serpent venimeux
+  'Venin nocturne':     { type: 'poison_dot',         damage: 1, turns: 2 },  // Serpent venimeux
   'Raid eclair':        { type: 'first_turn_damage', value: 2 },   // Pilleur
 
   // ===== COMMUNES - LUMIERE (18 unique) =====
@@ -1580,10 +1592,10 @@ const ABILITY_MAP = {
   'Sacrifice radieux':    { type: 'delayed_sacrifice', directDamage: 5 },       // Lumis (suicide + 5 degats joueur)
 
   // ===== NOUVELLES CARTES v1.5.0 =====
-  'Morsure infectee':     { type: 'combo', effects: [{ effect: 'damage', value: 2 }, { effect: 'poison', value: 1 }] },              // Rat des Egouts
+  'Morsure infectee':     { type: 'combo', effects: [{ effect: 'damage', value: 2 }, { effect: 'poison', value: 2 }] },              // Rat des Egouts (poison 2 tours)
   'Meditation interieure': { type: 'combo', effects: [{ effect: 'heal', value: 2 }, { effect: 'buff_def_lasting', value: 1 }] },     // Moine Errant
   'Infiltration':         { type: 'draw_card', value: 1 },                              // Espion des Brumes (pioche 1 carte)
-  'Spores':               { type: 'poison_all', damage: 1 },                            // Champignon Toxique (empoisonne tous ennemis)
+  'Spores':               { type: 'poison_all', damage: 1, turns: 1 },                   // Champignon Toxique (poison tous ennemis 1 tour)
   'Jugement guerrier':    { type: 'combo', effects: [{ effect: 'damage', value: 3 }, { effect: 'heal_on_kill', value: 3 }] },        // Valkyrie Dechue
   'Transmutation':        { type: 'transfer_hp_to_atk', hpCost: 2, atkGain: 2, target: 'ally' },  // Alchimiste Fou
   'Copie':                { type: 'copy_stats' },                                       // Ombre Mimetique (copie ATK/DEF d'une carte)
@@ -1624,7 +1636,7 @@ const ITEM_EFFECTS = {
   'Rage chimique':   { target: 'ally',        type: 'buff_atk',           value: 3 },
   'Protection':      { target: 'ally',        type: 'shield',             value: 4 },
   'Aveuglement':     { target: 'enemy',       type: 'stun' },
-  'Empoisonnement':  { target: 'enemy',       type: 'poison',             value: 2 },
+  'Empoisonnement':  { target: 'enemy',       type: 'poison',             value: 3 },
   'Soin de groupe':  { target: 'team',        type: 'team_heal',          value: 3 },
   'Enchantement':    { target: 'ally',        type: 'buff_atk_permanent', value: 5 },
   'Foudroiement':    { target: 'enemy',       type: 'damage',             value: 7 },
@@ -1748,9 +1760,9 @@ function applyDamage(target, damage, events, source, battle, isLinkedDamage) {
 
   // Passif Hydre Venimeuse : empoisonne l'attaquant
   if (target.alive && target.currentHp > 0 && target.name === 'Hydre Venimeuse' && source && source.alive) {
-    source.poisonDot = (source.poisonDot || 0) + 1;
+    source.poisonDot = 1;
     source.poisonDotTurns = Math.max(source.poisonDotTurns || 0, 2);
-    events.push({ type: 'type_passive', desc: `${target.name} empoisonne ${source.name} ! (1 degat/tour, 2 tours)` });
+    events.push({ type: 'type_passive', desc: `${target.name} empoisonne ${source.name} ! Poison pendant 2 tours` });
   }
 
   // Passif Crabe Blinde : +1 DEF quand attaque (max 3 stacks)
@@ -1829,7 +1841,6 @@ function createBattleState(playerCards, enemyCards, battleType) {
       canRevive: ABILITY_MAP[card.ability_name]?.type === 'revive' || card.name === 'Phoenix Ancestral',
       // Nouveaux champs
       shield: 0,
-      poisoned: 0,
       marked: 0,
       counterDamage: 0,
       permanentBonusAtk: 0,
@@ -1940,12 +1951,16 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       break;
     }
     case 'poison_dot': {
-      // Serpent des Marees : empoisonne la cible (1 degat/tour pendant N tours)
+      // Poison standardise : 1 degat/tour pendant N tours
       const target = pickTarget();
       if (target) {
-        target.poisonDot = (target.poisonDot || 0) + ability.damage;
-        target.poisonDotTurns = Math.max(target.poisonDotTurns || 0, ability.turns);
-        events.push({ type: 'ability_poison', unit: unit.name, target: target.name, ability: abilityName, desc: `Empoisonne ! ${ability.damage} degat/tour pendant ${ability.turns} tours` });
+        if (target.name === 'Chronos') {
+          events.push({ type: 'type_passive', desc: `${target.name} est immunise au poison !` });
+        } else {
+          target.poisonDot = 1;
+          target.poisonDotTurns = Math.max(target.poisonDotTurns || 0, ability.turns);
+          events.push({ type: 'ability_poison', unit: unit.name, target: target.name, ability: abilityName, desc: `Applique poison pendant ${ability.turns} tours` });
+        }
       }
       break;
     }
@@ -2102,8 +2117,10 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
         if (target.name === 'Chronos') {
           events.push({ type: 'type_passive', desc: `${target.name} est immunise au poison !` });
         } else {
-          target.poisoned = (target.poisoned || 0) + ability.damage;
-          events.push({ type: 'ability_poison', unit: unit.name, target: target.name, ability: abilityName, damage: ability.damage });
+          const turns = ability.turns || ability.damage || 2;
+          target.poisonDot = 1;
+          target.poisonDotTurns = Math.max(target.poisonDotTurns || 0, turns);
+          events.push({ type: 'ability_poison', unit: unit.name, target: target.name, ability: abilityName, desc: `Applique poison pendant ${turns} tours` });
         }
       }
       break;
@@ -2442,11 +2459,13 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
     }
     case 'poison_all': {
       // Champignon Toxique : empoisonne tous les ennemis (sauf immunises)
+      const turns = ability.turns || 1;
       allEnemies.filter(e => e.alive).forEach(e => {
         if (e.name === 'Chronos') return; // immunise
-        e.poisoned = (e.poisoned || 0) + ability.damage;
+        e.poisonDot = 1;
+        e.poisonDotTurns = Math.max(e.poisonDotTurns || 0, turns);
       });
-      events.push({ type: 'ability_poison', unit: unit.name, ability: abilityName, desc: `Spores ! Tous les ennemis empoisonnes (${ability.damage} degat/tour)` });
+      events.push({ type: 'ability_poison', unit: unit.name, ability: abilityName, desc: `Spores ! Tous les ennemis empoisonnes pendant ${turns} tour(s)` });
       break;
     }
     case 'transfer_hp_to_atk': {
@@ -2481,8 +2500,8 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
         if (a.buffAtk < 0) a.buffAtk = 0;
         if (a.buffDef < 0) a.buffDef = 0;
         a.stunned = false;
-        a.poisoned = 0;
         a.poisonDot = 0;
+        a.poisonDotTurns = 0;
       });
       allEnemies.filter(e => e.alive).forEach(e => {
         if (e.buffAtk > 0) e.buffAtk = 0;
@@ -2561,7 +2580,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
       const allUnits = [...allAllies.filter(a => a.alive), ...allEnemies.filter(e => e.alive)];
       allUnits.forEach(u => {
         u.buffAtk = 0; u.buffDef = 0;
-        u.stunned = false; u.poisoned = 0; u.poisonDot = 0;
+        u.stunned = false; u.poisonDot = 0; u.poisonDotTurns = 0;
         u.shield = 0; u.marked = 0; u.silenced = false;
       });
       events.push({ type: 'ability', unit: unit.name, ability: abilityName, desc: 'Boucle temporelle ! Toutes les stats reinitialises !' });
@@ -2640,9 +2659,11 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
         const t = alive[Math.floor(Math.random() * alive.length)];
         const d = scaleDmg(ability.damage);
         applyDamage(t, d, events, unit, battle);
-        t.poisonDot = (t.poisonDot || 0) + 1;
-        t.poisonDotTurns = Math.max(t.poisonDotTurns || 0, ability.poisonTurns);
-        events.push({ type: 'ability_damage', unit: unit.name, target: t.name, ability: abilityName, damage: d, desc: `Morsure ${i + 1} ! ${d} degats + poison` });
+        if (t.name !== 'Chronos') {
+          t.poisonDot = 1;
+          t.poisonDotTurns = Math.max(t.poisonDotTurns || 0, ability.poisonTurns);
+        }
+        events.push({ type: 'ability_damage', unit: unit.name, target: t.name, ability: abilityName, damage: d, desc: `Morsure ${i + 1} ! ${d} degats + poison ${ability.poisonTurns} tours` });
       }
       break;
     }
@@ -2806,8 +2827,16 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
             break;
           case 'poison': {
             const t = pickTarget();
-            if (t) t.poisoned = (t.poisoned || 0) + fx.value;
-            events.push({ type: 'ability_poison', unit: unit.name, target: t?.name, ability: abilityName, damage: fx.value });
+            if (t) {
+              if (t.name === 'Chronos') {
+                events.push({ type: 'type_passive', desc: `${t.name} est immunise au poison !` });
+              } else {
+                const turns = fx.value || 2;
+                t.poisonDot = 1;
+                t.poisonDotTurns = Math.max(t.poisonDotTurns || 0, turns);
+                events.push({ type: 'ability_poison', unit: unit.name, target: t.name, ability: abilityName, desc: `Applique poison pendant ${turns} tours` });
+              }
+            }
             break;
           }
           case 'revive':
@@ -2884,7 +2913,6 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
                 revived.currentHp = reviveHp;
                 revived.alive = true;
                 revived.stunned = false;
-                revived.poisoned = 0;
                 revived.poisonDot = 0;
                 revived.poisonDotTurns = 0;
                 revived.usedAbility = false;
@@ -2901,7 +2929,6 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
           case 'cleanse_all': {
             // Yggdrasil : purifie tous les allies
             allAllies.filter(a => a.alive).forEach(a => {
-              a.poisoned = 0;
               a.poisonDot = 0;
               a.poisonDotTurns = 0;
               a.stunned = false;
@@ -2975,9 +3002,9 @@ function checkKO(unit, events, battle) {
         if (unit.name === 'Rat des Egouts' && unit.lastAttacker) {
           const killer = [...getAllies(), ...getEnemies()].find(u => u.name === unit.lastAttacker && u.alive);
           if (killer) {
-            killer.poisonDot = (killer.poisonDot || 0) + 1;
+            killer.poisonDot = 1;
             killer.poisonDotTurns = Math.max(killer.poisonDotTurns || 0, 2);
-            events.push({ type: 'type_passive', desc: `${unit.name} empoisonne ${killer.name} en mourant !` });
+            events.push({ type: 'type_passive', desc: `${unit.name} empoisonne ${killer.name} en mourant ! Poison pendant 2 tours` });
           }
         }
         // Scarabee de Lave : explosion — 1 degat a tous les ennemis
@@ -3151,13 +3178,6 @@ function aiTurn(battle) {
     if (!enemy.alive || battle.playerTeam.filter(p => p.alive).length === 0) continue;
 
     // Tick poison ennemi
-    if (enemy.poisoned > 0) {
-      enemy.currentHp = Math.max(1, enemy.currentHp - enemy.poisoned);
-      events.push({ type: 'poison_tick', unit: enemy.name, damage: enemy.poisoned });
-      enemy.poisoned = 0;
-      if (enemy.currentHp <= 0) { checkKO(enemy, events, battle); continue; }
-    }
-    // Tick poison DOT ennemi
     if (enemy.poisonDotTurns > 0 && enemy.poisonDot > 0) {
       enemy.currentHp = Math.max(1, enemy.currentHp - enemy.poisonDot);
       events.push({ type: 'poison_tick', unit: enemy.name, damage: enemy.poisonDot, desc: `Poison (${enemy.poisonDotTurns} tours restants)` });
@@ -3306,7 +3326,6 @@ function makeDeckFieldUnit(handCard, side) {
     hasAttacked: false,
     canRevive: ABILITY_MAP[handCard.ability_name]?.type === 'revive' || handCard.name === 'Phoenix Ancestral',
     shield: 0,
-    poisoned: 0,
     marked: 0,
     counterDamage: 0,
     permanentBonusAtk: 0,
@@ -3537,8 +3556,10 @@ function resolveItemEffect(item, target, allAllies, allEnemies, events, battle) 
       break;
     case 'poison':
       if (target && target.alive) {
-        target.poisoned = (target.poisoned || 0) + effect.value;
-        events.push({ type: 'item_poison', item: item.name, target: target.name, emoji: item.emoji, damage: effect.value });
+        const turns = effect.value || 2;
+        target.poisonDot = 1;
+        target.poisonDotTurns = Math.max(target.poisonDotTurns || 0, turns);
+        events.push({ type: 'item_poison', item: item.name, target: target.name, emoji: item.emoji, desc: `Applique poison pendant ${turns} tours` });
       }
       break;
     case 'team_heal':
@@ -4402,12 +4423,6 @@ app.post('/api/battle/action', requireAuth, (req, res) => {
     }
   }
   // Tick Poison joueur
-  if (attacker.poisoned > 0) {
-    attacker.currentHp = Math.max(1, attacker.currentHp - attacker.poisoned);
-    events.push({ type: 'poison_tick', unit: attacker.name, damage: attacker.poisoned });
-    attacker.poisoned = 0;
-  }
-  // Tick poison DOT joueur
   if (attacker.poisonDotTurns > 0 && attacker.poisonDot > 0) {
     attacker.currentHp = Math.max(1, attacker.currentHp - attacker.poisonDot);
     events.push({ type: 'poison_tick', unit: attacker.name, damage: attacker.poisonDot, desc: `Poison (${attacker.poisonDotTurns} tours restants)` });
@@ -5058,13 +5073,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
 
   // 1. Poison ticks on player field
   for (const unit of getFieldAlive(battle.playerField)) {
-    if (unit.poisoned > 0) {
-      unit.currentHp = Math.max(1, unit.currentHp - unit.poisoned);
-      events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisoned });
-      unit.poisoned = 0;
-      if (unit.currentHp <= 0) checkKO(unit, events, battle);
-    }
-    if (unit.alive && unit.poisonDotTurns > 0 && unit.poisonDot > 0) {
+    if (unit.poisonDotTurns > 0 && unit.poisonDot > 0) {
       unit.currentHp = Math.max(1, unit.currentHp - unit.poisonDot);
       events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisonDot, desc: `Poison (${unit.poisonDotTurns} tours restants)` });
       unit.poisonDotTurns--;
@@ -5324,13 +5333,7 @@ app.post('/api/battle/end-turn', requireAuth, (req, res) => {
 
   // 4. Poison ticks on enemy field
   for (const unit of getFieldAlive(battle.enemyField)) {
-    if (unit.poisoned > 0) {
-      unit.currentHp = Math.max(1, unit.currentHp - unit.poisoned);
-      events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisoned });
-      unit.poisoned = 0;
-      if (unit.currentHp <= 0) checkKO(unit, events, battle);
-    }
-    if (unit.alive && unit.poisonDotTurns > 0 && unit.poisonDot > 0) {
+    if (unit.poisonDotTurns > 0 && unit.poisonDot > 0) {
       unit.currentHp = Math.max(1, unit.currentHp - unit.poisonDot);
       events.push({ type: 'poison_tick', unit: unit.name, damage: unit.poisonDot, desc: `Poison (${unit.poisonDotTurns} tours restants)` });
       unit.poisonDotTurns--;
@@ -6087,9 +6090,9 @@ const STARTER_DECK = [
   { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1,passive_desc:'Les unites Eau alliees gagnent +1 PV' },
   { name:'Tortue des Rivieres',emoji:'🐢',rarity:'commune',type:'creature',element:'eau',attack:1,defense:4,hp:5,mana_cost:4,ability_name:'Carapace marine',ability_desc:'+2 DEF a un allie jusqu au prochain tour',crystal_cost:1,passive_desc:'Les unites Eau alliees gagnent +1 PV' },
   // 3x Serpent des Marees (2 mana, eau)
-  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1,passive_desc:'Poison dure 1 tour de plus' },
-  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1,passive_desc:'Poison dure 1 tour de plus' },
-  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Empoisonne : 1 degat/tour 4 tours',crystal_cost:1,passive_desc:'Poison dure 1 tour de plus' },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Applique poison pendant 4 tours',crystal_cost:1,passive_desc:'Poison dure 1 tour de plus' },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Applique poison pendant 4 tours',crystal_cost:1,passive_desc:'Poison dure 1 tour de plus' },
+  { name:'Serpent des Marees',emoji:'🐍',rarity:'rare',type:'creature',element:'eau',attack:2,defense:1,hp:3,mana_cost:2,ability_name:'Frappe empoisonnee',ability_desc:'Applique poison pendant 4 tours',crystal_cost:1,passive_desc:'Poison dure 1 tour de plus' },
   // 3x Mage de Foudre (3 mana, eau)
   { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1,passive_desc:'+20% degats ability' },
   { name:'Mage de Foudre',emoji:'🌊',rarity:'rare',type:'creature',element:'eau',attack:3,defense:1,hp:3,mana_cost:3,ability_name:'Eclair',ability_desc:'2 degats (ignore DEF)',crystal_cost:1,passive_desc:'+20% degats ability' },

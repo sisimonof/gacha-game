@@ -164,7 +164,7 @@ function renderFieldSlot(unit, slotIndex, side) {
   const totalDef = (unit.effectiveStats?.defense || unit.defense || 0) + (unit.buffDef || 0) + (unit.permanentBonusDef || 0);
 
   let statusIcons = '';
-  if (unit.poisoned > 0) statusIcons += '<span class="bt-status-icon bt-status-poison">\u2620</span>';
+  if (unit.poisonDotTurns > 0) statusIcons += `<span class="bt-status-icon bt-status-poison" title="Poison (${unit.poisonDotTurns} tours)">☠${unit.poisonDotTurns}</span>`;
   if (unit.stunned) statusIcons += '<span class="bt-status-icon bt-status-stun">\uD83D\uDCAB</span>';
   if (unit.shield > 0) statusIcons += `<span class="bt-status-icon bt-status-shield">\uD83D\uDEE1${unit.shield}</span>`;
   if (unit.burnAoe) statusIcons += `<span class="bt-status-icon bt-status-poison">\uD83D\uDD25${unit.burnAoe.turnsLeft}</span>`;

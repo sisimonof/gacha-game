@@ -148,7 +148,7 @@ function renderBattleCard(unit) {
         </div>
         <div class="battle-hp-text" style="color:${hpColor}">${unit.currentHp}/${unit.maxHp}</div>
         <div class="battle-statuses">
-          ${unit.poisoned > 0 ? '<span title="Empoisonne" style="color:#aa44ff">☠</span>' : ''}
+          ${unit.poisonDotTurns > 0 ? '<span title="Poison (' + unit.poisonDotTurns + ' tours)" style="color:#aa44ff">☠' + unit.poisonDotTurns + '</span>' : ''}
           ${unit.shield > 0 ? '<span title="Bouclier" style="color:#44cccc">🛡' + unit.shield + '</span>' : ''}
           ${unit.marked > 0 ? '<span title="Marque" style="color:#ffaa00">🎯</span>' : ''}
           ${unit.counterDamage > 0 ? '<span title="Contre-attaque" style="color:#ff4444">⚔</span>' : ''}
