@@ -4244,15 +4244,27 @@ body.battle-page {
 
 .bt-status-icon { font-size: 14px; }
 .bt-status-poison {
-  color: #aa44ff;
-  background: rgba(170, 68, 255, 0.15);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: #7cdf30;
+  font-weight: bold;
+  font-size: 12px;
+  background: rgba(50, 120, 10, 0.25);
+  border: 1px solid rgba(124, 223, 48, 0.4);
   border-radius: 4px;
-  padding: 1px 4px;
+  padding: 1px 5px 1px 2px;
   animation: poison-pulse 1.5s ease-in-out infinite;
 }
+.bt-poison-img {
+  height: 18px;
+  width: auto;
+  vertical-align: middle;
+  filter: drop-shadow(0 0 3px rgba(124, 223, 48, 0.6));
+}
 @keyframes poison-pulse {
-  0%, 100% { opacity: 1; text-shadow: 0 0 4px rgba(170, 68, 255, 0.5); }
-  50% { opacity: 0.7; text-shadow: 0 0 8px rgba(170, 68, 255, 0.8); }
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 3px rgba(124, 223, 48, 0.4)); }
+  50% { opacity: 0.8; filter: drop-shadow(0 0 6px rgba(124, 223, 48, 0.8)); }
 }
 .bt-status-stun { color: #ffcc00; }
 .bt-status-shield { color: #44cccc; }

@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 32" width="120" height="32">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Background pill -->
+  <rect x="20" y="4" width="96" height="24" rx="4" fill="#1a3a0a" stroke="#4caf50" stroke-width="1" opacity="0.85"/>
+  <!-- Skull -->
+  <g transform="translate(4, 2) scale(0.55)" filter="url(#glow)">
+    <!-- Skull shape -->
+    <ellipse cx="25" cy="22" rx="18" ry="20" fill="#6abf20"/>
+    <ellipse cx="25" cy="28" rx="12" ry="10" fill="#6abf20"/>
+    <!-- Eyes -->
+    <ellipse cx="18" cy="20" rx="5" ry="6" fill="#0a1a00"/>
+    <ellipse cx="32" cy="20" rx="5" ry="6" fill="#0a1a00"/>
+    <!-- Nose -->
+    <circle cx="25" cy="28" r="2" fill="#0a1a00"/>
+    <!-- Teeth -->
+    <rect x="17" y="34" width="4" height="5" rx="1" fill="#4a8f10"/>
+    <rect x="23" y="34" width="4" height="5" rx="1" fill="#4a8f10"/>
+    <rect x="29" y="34" width="4" height="5" rx="1" fill="#4a8f10"/>
+    <!-- Smoke wisps -->
+    <path d="M20 5 Q18 -2 22 -5" stroke="#6abf20" stroke-width="2" fill="none" opacity="0.7"/>
+    <path d="M30 3 Q32 -4 28 -7" stroke="#6abf20" stroke-width="2" fill="none" opacity="0.7"/>
+  </g>
+  <!-- Text -->
+  <text x="68" y="21" text-anchor="middle" font-family="monospace" font-weight="bold" font-size="10" fill="#7cdf30" filter="url(#glow)" letter-spacing="0.5">POISON</text>
+</svg>
