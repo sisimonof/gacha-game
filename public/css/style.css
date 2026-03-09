@@ -3980,8 +3980,6 @@ body.battle-page {
   overflow-y: auto;
   min-height: 100vh;
   padding: 0;
-  padding-bottom: 240px; /* space for fixed hand bar + info row */
-  zoom: 0.78; /* dezoom global pour tout caser */
 }
 
 /* ===== TOPBAR ===== */
@@ -4093,8 +4091,8 @@ body.battle-page {
 
 .bt-slot {
   position: relative;
-  width: 240px;
-  min-height: 140px;
+  width: clamp(140px, 22vw, 240px);
+  min-height: clamp(90px, 14vh, 140px);
   border: 2px dashed rgba(var(--primary-rgb), 0.12);
   border-radius: 8px;
   cursor: pointer;
@@ -4118,7 +4116,7 @@ body.battle-page {
   align-items: center;
   justify-content: center;
   height: 100%;
-  min-height: 140px;
+  min-height: clamp(90px, 14vh, 140px);
   font-family: 'VT323', monospace;
   font-size: 18px;
   color: #1a2a1a;
@@ -4172,7 +4170,7 @@ body.battle-page {
 }
 
 .bt-unit-emoji {
-  font-size: 40px;
+  font-size: clamp(28px, 4vw, 40px);
   margin-bottom: 2px;
   line-height: 1.1;
   text-align: center;
@@ -4180,7 +4178,7 @@ body.battle-page {
 
 .bt-unit-name {
   font-family: 'Press Start 2P', monospace;
-  font-size: 9px;
+  font-size: clamp(6px, 0.8vw, 9px);
   color: var(--primary);
   margin-bottom: 3px;
   white-space: normal;
@@ -4228,9 +4226,9 @@ body.battle-page {
 
 .bt-unit-stats {
   font-family: 'VT323', monospace;
-  font-size: 20px;
+  font-size: clamp(16px, 2vw, 20px);
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
   margin: 4px 0;
 }
@@ -4691,19 +4689,14 @@ body.battle-page {
 
 /* ===== MAIN DU JOUEUR ===== */
 .bt-hand-bar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
-  z-index: 100;
-  pointer-events: none;
-  overflow: visible;
-  background: none;
-  border-top: none;
+  width: 100%;
+  background: rgba(0, 4, 0, 0.6);
+  border-top: 1px solid rgba(var(--primary-rgb), 0.1);
+  padding-bottom: 8px;
 }
 
 .bt-hand {
@@ -4712,10 +4705,10 @@ body.battle-page {
   justify-content: center;
   align-items: flex-end;
   min-height: 0;
-  pointer-events: none;
   overflow: visible;
-  padding: 0 16px;
+  padding: 0 10px;
   width: 100%;
+  max-width: 100vw;
 }
 
 .bt-hand-empty {
@@ -4755,8 +4748,9 @@ body.battle-page {
 
 /* ===== CARTES EN MAIN (flottantes) ===== */
 .bt-card {
-  width: 160px;
-  padding: 8px 6px;
+  width: clamp(110px, 13vw, 160px);
+  height: clamp(160px, 22vh, 220px);
+  padding: 6px 5px;
   background: rgba(0, 8, 0, 0.97);
   border: 2px solid;
   border-radius: 6px;
@@ -4764,20 +4758,25 @@ body.battle-page {
   text-align: center;
   position: relative;
   pointer-events: auto;
-  transform: translateY(30px);
+  transform: none;
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
               box-shadow 0.3s ease;
-  margin-left: -18px;
-  margin-right: -18px;
+  margin-left: -8px;
+  margin-right: -8px;
   z-index: 1;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5), 0 0 1px rgba(var(--primary-rgb), 0.2);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .bt-card:first-child { margin-left: 0; }
 .bt-card:last-child { margin-right: 0; }
 
 .bt-card:hover {
-  transform: translateY(-35px) scale(1.06);
+  transform: translateY(-15px) scale(1.05);
   z-index: 50;
   box-shadow: 0 -8px 30px rgba(var(--primary-rgb), 0.3),
               0 0 20px rgba(var(--primary-rgb), 0.15),
@@ -4785,7 +4784,7 @@ body.battle-page {
 }
 
 .bt-card--selected {
-  transform: translateY(-40px) scale(1.08);
+  transform: translateY(-20px) scale(1.06);
   outline: 3px solid #ffcc00;
   outline-offset: 2px;
   box-shadow: 0 -10px 30px rgba(255, 204, 0, 0.3);
@@ -4803,7 +4802,7 @@ body.battle-page {
 
 .bt-card--dragging {
   opacity: 0.4;
-  transform: translateY(45px) scale(0.95) !important;
+  transform: scale(0.95) !important;
   box-shadow: none !important;
 }
 
@@ -4851,41 +4850,42 @@ body.battle-page {
 
 .bt-card-cost {
   position: absolute;
-  top: 3px;
-  right: 4px;
+  top: 2px;
+  right: 3px;
   font-family: 'Press Start 2P', monospace;
-  font-size: 12px;
+  font-size: clamp(8px, 1vw, 11px);
   color: #ffcc00;
   background: rgba(0, 0, 0, 0.5);
-  padding: 2px 5px;
+  padding: 1px 3px;
   border-radius: 3px;
 }
 
 .bt-card-emoji {
-  font-size: 36px;
-  margin: 3px 0;
+  font-size: clamp(24px, 4vw, 36px);
+  margin: 2px 0;
+  line-height: 1;
 }
 
 .bt-card-name {
   font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
+  font-size: clamp(5px, 0.7vw, 8px);
   color: var(--primary);
-  margin: 4px 0;
-  white-space: normal;
+  margin: 2px 0;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  line-height: 1.4;
-  max-height: 2.8em;
+  width: 100%;
+  line-height: 1.3;
 }
 
 .bt-card-stats {
   font-family: 'VT323', monospace;
-  font-size: 20px;
+  font-size: clamp(16px, 2vw, 20px);
   display: flex;
   flex-direction: row;
-  gap: 10px;
+  gap: 6px;
   justify-content: center;
-  padding: 4px 0;
+  padding: 2px 0;
 }
 
 .bt-card-stat-atk { color: #ff4444; }
@@ -4894,26 +4894,28 @@ body.battle-page {
 
 .bt-card-ability {
   font-family: 'VT323', monospace;
-  font-size: 13px;
+  font-size: clamp(10px, 1.2vw, 13px);
   color: #cc44ff;
-  margin-top: 3px;
+  margin-top: 2px;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.2;
+  width: 100%;
 }
 
 .bt-card-passive {
   font-family: 'VT323', monospace;
-  font-size: 12px;
+  font-size: clamp(9px, 1.1vw, 12px);
   color: #ffaa44;
-  margin-top: 3px;
+  margin-top: 2px;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   line-height: 1.2;
+  width: 100%;
 }
 
 .bt-card-type {
@@ -5135,39 +5137,24 @@ body.battle-page {
 
 /* ===== BATTLE RESPONSIVE ===== */
 @media (max-width: 1000px) {
-  .bt-slot { width: 220px; min-height: 170px; }
-  .bt-slot-empty { min-height: 170px; }
-  .bt-card { width: 180px; margin-left: -18px; margin-right: -18px; }
   .bt-gauge { width: 80px; }
   .bt-combat-log-panel { width: 280px; }
 }
 
 @media (max-width: 700px) {
-  .bt-slot { width: 170px; min-height: 150px; }
-  .bt-slot-empty { min-height: 150px; }
-  .bt-unit-emoji { font-size: 36px; }
-  .bt-unit-name { font-size: 8px; }
-  .bt-unit-stats { font-size: 18px; gap: 8px; }
   .bt-unit-ability .bt-ability-desc { display: none; }
-  .bt-card { width: 140px; padding: 8px; transform: translateY(40px); margin-left: -12px; margin-right: -12px; }
-  .bt-card:hover { transform: translateY(-30px) scale(1.06); }
-  .bt-card-emoji { font-size: 28px; }
-  .bt-card-name { font-size: 6px; }
-  .bt-card-ability { font-size: 10px; -webkit-line-clamp: 2; }
-  .bt-card-passive { font-size: 10px; -webkit-line-clamp: 2; }
-  .bt-enemy-card-back { width: 40px; height: 56px; margin-left: -8px; }
-  .bt-enemy-hand { min-height: 48px; padding: 4px 8px; }
+  .bt-enemy-hand { min-height: 36px; padding: 4px 8px; }
   .bt-info-row { flex-direction: column; gap: 4px; padding: 4px 8px; }
   .bt-gauge { width: 70px; height: 10px; }
   .bt-gauge-label { font-size: 5px; width: 24px; }
   .bt-gauge-value { font-size: 13px; }
-  .bt-avatar-circle { min-width: 110px; padding: 6px 16px; }
-  .bt-avatar-hpbar { width: 70px; height: 8px; }
+  .bt-avatar-circle { min-width: 100px; padding: 4px 10px; }
+  .bt-avatar-hpbar { width: 60px; height: 6px; }
   .bt-topbar { flex-wrap: wrap; height: auto; padding: 4px 8px; gap: 4px; }
   .bt-turn { font-size: 10px; }
   .bt-topbar-center { position: static; transform: none; }
   .bt-end-turn { font-size: 8px; padding: 6px 10px; }
-  .bt-field { gap: 8px; }
+  .bt-field { gap: 6px; }
   .bt-combat-log-btn { font-size: 6px; padding: 6px 10px; bottom: 8px; left: 8px; }
   .bt-combat-log-panel { width: 260px; }
   .bt-force-deploy-card { width: 140px; padding: 12px 8px; }
@@ -5182,17 +5169,17 @@ body.battle-page {
   justify-content: center;
   align-items: center;
   padding: 4px 16px;
-  min-height: 48px;
+  min-height: 40px;
   gap: 0;
   overflow: hidden;
   background: rgba(0, 4, 0, 0.4);
   border-bottom: 1px solid rgba(255, 68, 68, 0.1);
-  margin-top: 40px;
+  margin-top: 36px;
 }
 
 .bt-enemy-card-back {
-  width: 42px;
-  height: 60px;
+  width: clamp(30px, 4vw, 45px);
+  height: clamp(42px, 6vw, 64px);
   background: linear-gradient(135deg, #1a0a0a, #2a1010 40%, #1a0a0a);
   border: 2px solid rgba(255, 68, 68, 0.4);
   border-radius: 5px;
