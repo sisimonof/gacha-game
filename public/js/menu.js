@@ -496,6 +496,68 @@ function updateThemeButtons() {
   else document.getElementById('theme-green')?.classList.add('theme-active');
 }
 
+// === DISCORD LINK ===
+async function loadDiscordStatus() {
+  try {
+    const res = await fetch('/api/discord/status');
+    const data = await res.json();
+    const statusEl = document.getElementById('discord-link-status');
+    const formEl = document.getElementById('discord-link-form');
+    const linkedEl = document.getElementById('discord-linked-info');
+
+    if (data.linked) {
+      statusEl.style.display = 'none';
+      formEl.style.display = 'none';
+      linkedEl.style.display = 'block';
+      document.getElementById('discord-tag-display').textContent = data.discordTag || 'Discord';
+    } else {
+      statusEl.textContent = 'Compte non lié. Clique sur "Lier mon compte" sur le serveur Discord pour obtenir un code.';
+      formEl.style.display = 'block';
+      linkedEl.style.display = 'none';
+    }
+  } catch {
+    document.getElementById('discord-link-status').textContent = 'Erreur de chargement.';
+  }
+}
+
+document.getElementById('discord-verify-btn').addEventListener('click', async () => {
+  const code = document.getElementById('discord-link-code').value.trim();
+  const msgEl = document.getElementById('discord-link-msg');
+  if (!code || code.length !== 6) {
+    msgEl.textContent = 'Entre un code à 6 chiffres.';
+    msgEl.style.color = '#ff4444';
+    return;
+  }
+  msgEl.textContent = 'Vérification...';
+  msgEl.style.color = '';
+  try {
+    const res = await fetch('/api/discord/verify-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    if (data.ok) {
+      msgEl.textContent = '';
+      loadDiscordStatus();
+    } else {
+      msgEl.textContent = data.error || 'Erreur.';
+      msgEl.style.color = '#ff4444';
+    }
+  } catch {
+    msgEl.textContent = 'Erreur réseau.';
+    msgEl.style.color = '#ff4444';
+  }
+});
+
+document.getElementById('discord-unlink-btn').addEventListener('click', async () => {
+  if (!confirm('Délier ton compte Discord ?')) return;
+  try {
+    await fetch('/api/discord/unlink', { method: 'POST' });
+    loadDiscordStatus();
+  } catch {}
+});
+
 // Init
 initSettingsModal();
 updateThemeButtons();
@@ -503,3 +565,4 @@ loadUser();
 loadQuests();
 loadCombatStats();
 loadDecksPreview();
+loadDiscordStatus();
