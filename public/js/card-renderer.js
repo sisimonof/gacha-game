@@ -44,9 +44,21 @@ function renderCardVisual(card) {
 function renderStatBars(card) {
   const isFused = card.is_fused;
   const mult = isFused ? 2 : 1;
-  const atk = card.attack * mult;
-  const def = card.defense * mult;
-  const hp = card.hp * mult;
+  // Awakening bonuses
+  const awLvl = card.awakening_level || 0;
+  const AWAKENING_BONUSES = [
+    { attack: 1, defense: 1, hp: 1 },
+    { attack: 2, defense: 2, hp: 2 }
+  ];
+  let awAtk = 0, awDef = 0, awHp = 0;
+  for (let i = 0; i < awLvl && i < AWAKENING_BONUSES.length; i++) {
+    awAtk += AWAKENING_BONUSES[i].attack;
+    awDef += AWAKENING_BONUSES[i].defense;
+    awHp += AWAKENING_BONUSES[i].hp;
+  }
+  const atk = card.attack * mult + awAtk;
+  const def = card.defense * mult + awDef;
+  const hp = card.hp * mult + awHp;
   const maxA = isFused ? MAX_ATK_FUSED : MAX_ATK;
   const maxD = isFused ? MAX_DEF_FUSED : MAX_DEF;
   const maxH = isFused ? MAX_HP_FUSED : MAX_HP;
@@ -85,12 +97,17 @@ function renderHolo(rarity, isShiny, isTemp) {
   return '';
 }
 
-// === BADGES SHINY / FUSED ===
+// === BADGES SHINY / FUSED / AWAKENED ===
 function renderBadges(card) {
   let html = '';
   if (card.is_temp) html += '<div class="card-badge badge-temp">TEMP</div>';
   if (card.is_shiny) html += '<div class="card-badge badge-shiny">SHINY</div>';
   if (card.is_fused) html += '<div class="card-badge badge-fused">FUSION+</div>';
+  const awLvl = card.awakening_level || 0;
+  if (awLvl > 0) {
+    const stars = '\u2605'.repeat(awLvl);
+    html += `<div class="card-badge badge-awakened badge-awakened-${awLvl}">${stars} EVEIL</div>`;
+  }
   return html;
 }
 
@@ -160,6 +177,7 @@ function renderBattleCard(unit) {
       </div>
       ${!unit.alive ? '<div class="battle-ko-overlay">KO</div>' : ''}
       ${unit.is_fused ? '<div class="battle-fused-badge">FUSION+</div>' : ''}
+      ${(unit.awakening_level || 0) > 0 ? `<div class="battle-awakened-badge">${'\u2605'.repeat(unit.awakening_level)}</div>` : ''}
     </div>
   `;
 }
@@ -215,9 +233,20 @@ function showCardDetail(card) {
 
   const isFused = card.is_fused;
   const mult = isFused ? 2 : 1;
-  const atk = card.attack * mult;
-  const def = card.defense * mult;
-  const hp = card.hp * mult;
+  const mAwLvl = card.awakening_level || 0;
+  const AWAKENING_BONUSES_M = [
+    { attack: 1, defense: 1, hp: 1 },
+    { attack: 2, defense: 2, hp: 2 }
+  ];
+  let mAwAtk = 0, mAwDef = 0, mAwHp = 0;
+  for (let i = 0; i < mAwLvl && i < AWAKENING_BONUSES_M.length; i++) {
+    mAwAtk += AWAKENING_BONUSES_M[i].attack;
+    mAwDef += AWAKENING_BONUSES_M[i].defense;
+    mAwHp += AWAKENING_BONUSES_M[i].hp;
+  }
+  const atk = card.attack * mult + mAwAtk;
+  const def = card.defense * mult + mAwDef;
+  const hp = card.hp * mult + mAwHp;
   const maxA = isFused ? MAX_ATK_FUSED : MAX_ATK;
   const maxD = isFused ? MAX_DEF_FUSED : MAX_DEF;
   const maxH = isFused ? MAX_HP_FUSED : MAX_HP;
@@ -232,6 +261,8 @@ function showCardDetail(card) {
   const tempBadge = card.is_temp ? '<span class="modal-badge modal-badge-temp">TEMP</span>' : '';
   const shinyBadge = card.is_shiny ? '<span class="modal-badge modal-badge-shiny">SHINY</span>' : '';
   const fusedBadge = card.is_fused ? '<span class="modal-badge modal-badge-fused">FUSION+</span>' : '';
+  const awLvlModal = card.awakening_level || 0;
+  const awakenedBadge = awLvlModal > 0 ? `<span class="modal-badge modal-badge-awakened">${'\u2605'.repeat(awLvlModal)} EVEIL</span>` : '';
 
   const overlay = document.createElement('div');
   overlay.className = 'card-modal-overlay';
@@ -242,7 +273,7 @@ function showCardDetail(card) {
         ${artHTML}
       </div>
       <div class="modal-card-info">
-        ${tempBadge}${shinyBadge}${fusedBadge}
+        ${tempBadge}${shinyBadge}${fusedBadge}${awakenedBadge}
         <div class="modal-card-rarity" style="background:${r.color}">${r.label}</div>
         <div class="modal-card-name" style="color:${r.color}">${card.name}</div>
         <div class="modal-card-element">

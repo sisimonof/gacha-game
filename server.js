@@ -265,7 +265,18 @@ db.exec(`
     ['stat_boosters_avance', 'INTEGER DEFAULT 0'],
     ['stat_market_sales', 'INTEGER DEFAULT 0'],
     ['stat_market_purchases', 'INTEGER DEFAULT 0'],
-    ['tutorial_completed', 'INTEGER DEFAULT 0']
+    ['tutorial_completed', 'INTEGER DEFAULT 0'],
+    // Phase 1: Energy system
+    ['energy', 'INTEGER DEFAULT 100'],
+    ['last_energy_update', "TEXT DEFAULT ''"],
+    ['energy_purchases_today', 'INTEGER DEFAULT 0'],
+    ['energy_purchases_date', "TEXT DEFAULT ''"],
+    // Phase 2: Craft stats
+    ['stat_crafts', 'INTEGER DEFAULT 0'],
+    // Phase 3: Awakening stats
+    ['stat_awakenings', 'INTEGER DEFAULT 0'],
+    // Phase 5: Guild
+    ['guild_id', 'INTEGER DEFAULT NULL']
   ];
   for (const [col, type] of newMigrations) {
     if (!cols2.includes(col)) {
@@ -274,6 +285,69 @@ db.exec(`
     }
   }
 }
+
+// Phase 3: Awakening level on user_cards
+{
+  const ucCols = db.prepare("PRAGMA table_info(user_cards)").all().map(c => c.name);
+  if (!ucCols.includes('awakening_level')) {
+    db.exec("ALTER TABLE user_cards ADD COLUMN awakening_level INTEGER DEFAULT 0");
+    console.log('Migration: awakening_level ajouté à user_cards');
+  }
+}
+
+// Phase 2: Craft items table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    item_key TEXT NOT NULL,
+    quantity INTEGER DEFAULT 0,
+    UNIQUE(user_id, item_key),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+// Phase 5: Guild tables
+db.exec(`
+  CREATE TABLE IF NOT EXISTS guilds (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    leader_id INTEGER NOT NULL,
+    emoji TEXT DEFAULT '⚔',
+    treasury INTEGER DEFAULT 0,
+    level INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (leader_id) REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS guild_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL UNIQUE,
+    role TEXT DEFAULT 'member',
+    joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_boss_attack TEXT DEFAULT '',
+    FOREIGN KEY (guild_id) REFERENCES guilds(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  );
+  CREATE TABLE IF NOT EXISTS guild_chat (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_guild_chat ON guild_chat(guild_id);
+  CREATE TABLE IF NOT EXISTS guild_boss (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    guild_id INTEGER NOT NULL UNIQUE,
+    boss_name TEXT DEFAULT 'Dragon Ancestral',
+    boss_hp INTEGER DEFAULT 10000,
+    boss_max_hp INTEGER DEFAULT 10000,
+    boss_emoji TEXT DEFAULT '🐉',
+    week_key TEXT NOT NULL DEFAULT '',
+    rewards_distributed INTEGER DEFAULT 0
+  );
+`)
 
 // === FRIENDS & CHAT ===
 db.exec(`
@@ -910,6 +984,161 @@ const BP_XP = {
 };
 
 // ============================================
+// ENERGY SYSTEM
+// ============================================
+const ENERGY_CONFIG = {
+  max: 100,
+  regen_interval: 300, // 1 énergie toutes les 5 min (300s)
+  costs: { pve_battle: 10, pvp_battle: 8, mine_tap: 5 },
+  purchase: { amount: 50, price: 300, max_per_day: 3 }
+};
+
+function getEnergy(userId) {
+  const user = db.prepare('SELECT energy, last_energy_update FROM users WHERE id = ?').get(userId);
+  if (!user) return { energy: 0, nextRegenAt: null };
+  let energy = user.energy;
+  if (user.last_energy_update && energy < ENERGY_CONFIG.max) {
+    const elapsed = Math.floor((Date.now() - new Date(user.last_energy_update + 'Z').getTime()) / 1000);
+    const regenned = Math.floor(elapsed / ENERGY_CONFIG.regen_interval);
+    if (regenned > 0) {
+      energy = Math.min(ENERGY_CONFIG.max, energy + regenned);
+      const now = new Date().toISOString();
+      db.prepare('UPDATE users SET energy = ?, last_energy_update = ? WHERE id = ?').run(energy, now, userId);
+    }
+  }
+  const secsToNext = ENERGY_CONFIG.regen_interval - (user.last_energy_update ? Math.floor((Date.now() - new Date(user.last_energy_update + 'Z').getTime()) / 1000) % ENERGY_CONFIG.regen_interval : 0);
+  return { energy, max: ENERGY_CONFIG.max, nextRegenIn: energy >= ENERGY_CONFIG.max ? null : secsToNext };
+}
+
+function consumeEnergy(userId, amount) {
+  const { energy } = getEnergy(userId); // recalculates regen first
+  if (energy < amount) return { success: false, energy, needed: amount };
+  const newEnergy = energy - amount;
+  const now = new Date().toISOString();
+  db.prepare('UPDATE users SET energy = ?, last_energy_update = ? WHERE id = ?').run(newEnergy, now, userId);
+  updateQuestProgress(userId, 'energy_spent', amount);
+  return { success: true, energy: newEnergy };
+}
+
+// ============================================
+// CRAFT SYSTEM
+// ============================================
+const CRAFT_ITEMS = {
+  pierre_eveil: { name: "Pierre d'Eveil", emoji: '🌟', desc: "Necessaire pour l'eveil des cartes fusionnees" },
+  booster_ticket: { name: 'Ticket Booster', emoji: '🎫', desc: 'Ouvre un booster gratuit (Origines)' }
+};
+
+const CRAFT_RECIPES = [
+  { id: 'pierre_eveil', name: "Pierre d'Eveil", emoji: '🌟',
+    cost: { fer: 10, or: 5 }, result: { type: 'item', key: 'pierre_eveil', qty: 1 } },
+  { id: 'booster_ticket', name: 'Ticket Booster', emoji: '🎫',
+    cost: { diamant: 20 }, result: { type: 'item', key: 'booster_ticket', qty: 1 } },
+  { id: 'essence_craft', name: '1 Essence', emoji: '⛏',
+    cost: { charbon: 50 }, result: { type: 'essence', qty: 1 } },
+  { id: 'random_commune', name: 'Carte Commune', emoji: '🃏',
+    cost: { fer: 5, charbon: 10 }, result: { type: 'card', rarity: 'commune' } },
+  { id: 'random_rare', name: 'Carte Rare', emoji: '✨',
+    cost: { or: 3, diamant: 2 }, result: { type: 'card', rarity: 'rare' } }
+];
+
+function getUserResourceCounts(userId) {
+  const inv = db.prepare('SELECT resource, COUNT(*) as count FROM mine_inventory WHERE user_id = ? GROUP BY resource').all(userId);
+  const counts = { charbon: 0, fer: 0, or: 0, diamant: 0 };
+  for (const r of inv) counts[r.resource] = r.count;
+  return counts;
+}
+
+function deductResources(userId, costs) {
+  for (const [resource, amount] of Object.entries(costs)) {
+    const ids = db.prepare('SELECT id FROM mine_inventory WHERE user_id = ? AND resource = ? LIMIT ?').all(userId, resource, amount);
+    for (const row of ids) {
+      db.prepare('DELETE FROM mine_inventory WHERE id = ?').run(row.id);
+    }
+  }
+}
+
+function getUserItems(userId) {
+  return db.prepare('SELECT * FROM user_items WHERE user_id = ?').all(userId);
+}
+
+function addUserItem(userId, itemKey, qty) {
+  const existing = db.prepare('SELECT * FROM user_items WHERE user_id = ? AND item_key = ?').get(userId, itemKey);
+  if (existing) {
+    db.prepare('UPDATE user_items SET quantity = quantity + ? WHERE id = ?').run(qty, existing.id);
+  } else {
+    db.prepare('INSERT INTO user_items (user_id, item_key, quantity) VALUES (?, ?, ?)').run(userId, itemKey, qty);
+  }
+}
+
+// ============================================
+// AWAKENING (EVEIL) SYSTEM
+// ============================================
+const AWAKENING_CONFIG = [
+  { level: 1, label: 'Eveil I',
+    cost: { credits: 3000, essence: 5, pierre_eveil: 1 },
+    bonuses: { attack: 1, defense: 1, hp: 1 } },
+  { level: 2, label: 'Eveil II',
+    cost: { credits: 8000, essence: 15, pierre_eveil: 3 },
+    bonuses: { attack: 2, defense: 2, hp: 2 } }
+];
+
+// ============================================
+// SPECIAL DAILY CHALLENGES
+// ============================================
+const SPECIAL_CHALLENGE_POOL = [
+  { key: 'element_water', label: 'Victoire avec un deck 100% Eau 🌊', goal: [1], credits: 300, xp: 50, track: 'special_element_water', validation: { type: 'element_deck', element: 'eau' } },
+  { key: 'element_fire', label: 'Victoire avec un deck 100% Feu 🔥', goal: [1], credits: 300, xp: 50, track: 'special_element_fire', validation: { type: 'element_deck', element: 'feu' } },
+  { key: 'element_earth', label: 'Victoire avec un deck 100% Terre 🌿', goal: [1], credits: 300, xp: 50, track: 'special_element_earth', validation: { type: 'element_deck', element: 'terre' } },
+  { key: 'element_shadow', label: 'Victoire avec un deck 100% Ombre 🌑', goal: [1], credits: 300, xp: 50, track: 'special_element_shadow', validation: { type: 'element_deck', element: 'ombre' } },
+  { key: 'element_light', label: 'Victoire avec un deck 100% Lumiere ✨', goal: [1], credits: 300, xp: 50, track: 'special_element_light', validation: { type: 'element_deck', element: 'lumiere' } },
+  { key: 'no_abilities', label: 'Victoire sans utiliser de capacites ❌', goal: [1], credits: 500, xp: 60, track: 'special_no_ability', validation: { type: 'no_abilities' } },
+  { key: 'speed_8', label: 'Victoire en moins de 8 tours ⚡', goal: [1], credits: 200, xp: 40, track: 'special_speed', validation: { type: 'max_turns', turns: 8 } },
+];
+
+// ============================================
+// GUILD SYSTEM
+// ============================================
+const GUILD_CONFIG = {
+  create_cost: 500,
+  max_members: 20,
+  boss: { max_hp: 10000, attacks_per_day: 1 },
+  donate_min: 50,
+  donate_max: 5000
+};
+
+function ensureGuildBoss(guildId) {
+  const week = getISOWeek(new Date());
+  let boss = db.prepare('SELECT * FROM guild_boss WHERE guild_id = ?').get(guildId);
+  if (!boss || boss.week_key !== week) {
+    // Distribute rewards if boss was killed last week
+    if (boss && boss.boss_hp <= 0 && !boss.rewards_distributed) {
+      distributeGuildBossRewards(guildId);
+    }
+    db.prepare('DELETE FROM guild_boss WHERE guild_id = ?').run(guildId);
+    db.prepare('INSERT INTO guild_boss (guild_id, boss_hp, boss_max_hp, boss_name, week_key) VALUES (?, ?, ?, ?, ?)')
+      .run(guildId, GUILD_CONFIG.boss.max_hp, GUILD_CONFIG.boss.max_hp, 'Dragon Ancestral', week);
+    // Reset all member boss attacks for new week
+    db.prepare("UPDATE guild_members SET last_boss_attack = '' WHERE guild_id = ?").run(guildId);
+    boss = db.prepare('SELECT * FROM guild_boss WHERE guild_id = ?').get(guildId);
+  }
+  return boss;
+}
+
+function distributeGuildBossRewards(guildId) {
+  const members = db.prepare('SELECT user_id FROM guild_members WHERE guild_id = ?').all(guildId);
+  const reward = 500;
+  for (const m of members) {
+    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(reward, m.user_id);
+    // Give a random rare card
+    const rareCard = db.prepare("SELECT id FROM cards WHERE rarity = 'rare' ORDER BY RANDOM() LIMIT 1").get();
+    if (rareCard) {
+      db.prepare('INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)').run(m.user_id, rareCard.id);
+    }
+  }
+  db.prepare('UPDATE guild_boss SET rewards_distributed = 1 WHERE guild_id = ?').run(guildId);
+}
+
+// ============================================
 // QUETES JOURNALIERES / HEBDOMADAIRES
 // ============================================
 const QUEST_POOL = {
@@ -921,6 +1150,8 @@ const QUEST_POOL = {
     { key: 'earn_credits',   label: 'Gagne {goal} credits',          goal: [500,1000], credits: 200, xp: 35, track: 'credits_earned' },
     { key: 'claim_daily',    label: 'Recupere ton bonus du jour',    goal: [1],     credits: 50,  xp: 15, track: 'daily_claim' },
     { key: 'play_casino',    label: 'Joue {goal} fois au casino',    goal: [1,3],   credits: 100, xp: 20, track: 'casino_spin' },
+    { key: 'spend_energy',   label: 'Depense {goal} energie',         goal: [30,50], credits: 100, xp: 20, track: 'energy_spent' },
+    { key: 'craft_item',     label: 'Fabrique {goal} objet(s)',       goal: [1,2],   credits: 150, xp: 25, track: 'craft' },
   ],
   weekly: [
     { key: 'open_boosters_w', label: 'Ouvre {goal} boosters',        goal: [10,15], credits: 500, xp: 100, track: 'booster_open' },
@@ -960,6 +1191,13 @@ const ACHIEVEMENTS = [
   // Richesse
   { key: 'rich_5000',      label: 'Riche',                   desc: '5000 credits',        icon: '💰', check: (s) => s.credits >= 5000,      credits: 300 },
   { key: 'rich_20000',     label: 'Millionnaire',            desc: '20000 credits',       icon: '🏦', check: (s) => s.credits >= 20000,     credits: 1000 },
+  // Craft
+  { key: 'crafter_first',  label: 'Artisan',                 desc: '1er objet fabrique',  icon: '🔨', check: (s) => s.crafts >= 1,          credits: 100 },
+  { key: 'crafter_10',     label: 'Maitre Artisan',          desc: '10 objets fabriques', icon: '⚒',  check: (s) => s.crafts >= 10,         credits: 500 },
+  // Awakening
+  { key: 'awakening_first',label: 'Eveille',                 desc: '1ere carte eveillee', icon: '⭐', check: (s) => s.awakenings >= 1,      credits: 300 },
+  // Guild
+  { key: 'guild_joined',   label: 'Coequipier',              desc: 'Rejoins une guilde',  icon: '🏰', check: (s) => s.inGuild,              credits: 100 },
 ];
 
 // ============================================
@@ -1090,6 +1328,15 @@ function assignQuests(userId) {
       insert.run(userId, q.key, 'weekly', goal, q.credits, q.xp, week);
     }
   }
+
+  // Assign 1 special daily challenge
+  const specialCount = db.prepare('SELECT COUNT(*) as c FROM user_quests WHERE user_id = ? AND type = ? AND assigned_date = ?').get(userId, 'special', today).c;
+  if (specialCount === 0 && SPECIAL_CHALLENGE_POOL.length > 0) {
+    const challenge = SPECIAL_CHALLENGE_POOL[Math.floor(Math.random() * SPECIAL_CHALLENGE_POOL.length)];
+    const goal = challenge.goal[Math.floor(Math.random() * challenge.goal.length)];
+    db.prepare('INSERT OR IGNORE INTO user_quests (user_id, quest_key, type, goal, reward_credits, reward_xp, assigned_date) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(userId, challenge.key, 'special', goal, challenge.credits, challenge.xp, today);
+  }
 }
 
 function updateQuestProgress(userId, trackKey, amount = 1) {
@@ -1097,7 +1344,7 @@ function updateQuestProgress(userId, trackKey, amount = 1) {
   const week = getISOWeek(new Date());
 
   // Find all active quests matching this trackKey
-  const allQuestDefs = [...QUEST_POOL.daily, ...QUEST_POOL.weekly];
+  const allQuestDefs = [...QUEST_POOL.daily, ...QUEST_POOL.weekly, ...SPECIAL_CHALLENGE_POOL];
   const matchingKeys = allQuestDefs.filter(q => q.track === trackKey).map(q => q.key);
   if (matchingKeys.length === 0) return;
 
@@ -1112,7 +1359,7 @@ function updateQuestProgress(userId, trackKey, amount = 1) {
 }
 
 function getAchievementStats(userId) {
-  const user = db.prepare('SELECT credits, stat_boosters_opened, stat_pvp_wins, stat_diamonds_mined, stat_fusions, stat_casino_spins, stat_credits_spent FROM users WHERE id = ?').get(userId);
+  const user = db.prepare('SELECT credits, stat_boosters_opened, stat_pvp_wins, stat_diamonds_mined, stat_fusions, stat_casino_spins, stat_credits_spent, stat_crafts, stat_awakenings, guild_id FROM users WHERE id = ?').get(userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(userId).c;
   const bp = db.prepare('SELECT current_tier FROM battle_pass WHERE user_id = ?').get(userId);
 
@@ -1125,7 +1372,10 @@ function getAchievementStats(userId) {
     fusions: user?.stat_fusions || 0,
     casinoSpins: user?.stat_casino_spins || 0,
     creditsSpent: user?.stat_credits_spent || 0,
-    bpTier: bp?.current_tier || 0
+    bpTier: bp?.current_tier || 0,
+    crafts: user?.stat_crafts || 0,
+    awakenings: user?.stat_awakenings || 0,
+    inGuild: !!(user?.guild_id)
   };
 }
 
@@ -1667,10 +1917,17 @@ const ITEM_EFFECTS = {
 
 function getEffectiveStats(card) {
   const mult = card.is_fused ? 2 : 1;
+  const awLvl = card.awakening_level || 0;
+  let awAtk = 0, awDef = 0, awHp = 0;
+  for (let i = 0; i < awLvl && i < AWAKENING_CONFIG.length; i++) {
+    awAtk += AWAKENING_CONFIG[i].bonuses.attack;
+    awDef += AWAKENING_CONFIG[i].bonuses.defense;
+    awHp += AWAKENING_CONFIG[i].bonuses.hp;
+  }
   return {
-    attack: card.attack * mult,
-    defense: card.defense * mult,
-    hp: card.hp * mult,
+    attack: card.attack * mult + awAtk,
+    defense: card.defense * mult + awDef,
+    hp: card.hp * mult + awHp,
   };
 }
 
@@ -3339,6 +3596,7 @@ function makeHandCard(card) {
     is_fused: card.is_fused || 0,
     is_shiny: card.is_shiny || 0,
     is_temp: card.is_temp || 0,
+    awakening_level: card.awakening_level || 0,
     ability_name: card.ability_name,
     ability_desc: card.ability_desc,
     passive_desc: card.passive_desc || '',
@@ -3460,6 +3718,9 @@ function createDeckBattleState(playerCards, enemyCards, battleType) {
     result: null,
     lastAction: Date.now(),
     deadTempCards: [],
+    // Challenge tracking
+    abilityUsedCount: 0,
+    playerDeployedElements: [],
     // New mechanics
     playerBonusMana: 0,   // Unspent mana carry-over (max 2)
     enemyBonusMana: 0,
@@ -4145,7 +4406,7 @@ app.post('/api/logout', (req, res) => {
 
 // --- Routes USER ---
 app.get('/api/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date, profile_frame, unlocked_frames, tutorial_completed FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date, profile_frame, unlocked_frames, tutorial_completed, guild_id FROM users WHERE id = ?').get(req.session.userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(req.session.userId).c;
 
   const today = new Date().toISOString().split('T')[0];
@@ -4197,7 +4458,12 @@ app.get('/api/me', requireAuth, (req, res) => {
     battlePassXP: bp?.xp || 0,
     currentTierXP,
     currentTierRequired,
-    tutorialCompleted: user.tutorial_completed || 0
+    tutorialCompleted: user.tutorial_completed || 0,
+    // Energy system
+    ...getEnergy(req.session.userId),
+    // Guild info
+    guildId: user.guild_id || null,
+    guildName: user.guild_id ? (db.prepare('SELECT name FROM guilds WHERE id = ?').get(user.guild_id)?.name || null) : null,
   });
 });
 
@@ -4359,11 +4625,11 @@ app.post('/api/boosters/:id/open', requireAuth, (req, res) => {
 // --- Routes COLLECTION (updated with shiny/fused grouping) ---
 app.get('/api/collection', requireAuth, (req, res) => {
   const cards = db.prepare(`
-    SELECT c.*, uc.is_shiny, uc.is_fused, uc.is_temp, COUNT(*) as count, MIN(uc.id) as user_card_id
+    SELECT c.*, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level, COUNT(*) as count, MIN(uc.id) as user_card_id
     FROM user_cards uc
     JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ?
-    GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp
+    GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level
     ORDER BY
       CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
@@ -4403,11 +4669,11 @@ app.post('/api/collection/sell', requireAuth, (req, res) => {
 
   const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
   const collection = db.prepare(`
-    SELECT c.*, uc.is_shiny, uc.is_fused, uc.is_temp, COUNT(*) as count, MIN(uc.id) as user_card_id
+    SELECT c.*, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level, COUNT(*) as count, MIN(uc.id) as user_card_id
     FROM user_cards uc
     JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ?
-    GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp
+    GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level
     ORDER BY
       CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
@@ -4698,6 +4964,25 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
   if (battle.result === 'victory') {
     db.prepare('UPDATE users SET stat_pvp_wins = stat_pvp_wins + 1 WHERE id = ?').run(req.session.userId);
     updateQuestProgress(req.session.userId, 'combat_win', 1);
+
+    // Validate special daily challenges
+    const today = new Date().toISOString().split('T')[0];
+    const specialQuests = db.prepare('SELECT * FROM user_quests WHERE user_id = ? AND type = ? AND assigned_date = ? AND claimed = 0').all(req.session.userId, 'special', today);
+    for (const sq of specialQuests) {
+      const challengeDef = SPECIAL_CHALLENGE_POOL.find(c => c.key === sq.quest_key);
+      if (!challengeDef) continue;
+      let passed = false;
+      const v = challengeDef.validation;
+      if (v.type === 'element_deck') {
+        const elems = battle.playerDeployedElements || [];
+        passed = elems.length > 0 && elems.every(e => e === v.element);
+      } else if (v.type === 'no_abilities') {
+        passed = (battle.abilityUsedCount || 0) === 0;
+      } else if (v.type === 'max_turns') {
+        passed = battle.turn <= v.turns;
+      }
+      if (passed) updateQuestProgress(req.session.userId, challengeDef.track, 1);
+    }
   }
   if (reward > 0) {
     updateQuestProgress(req.session.userId, 'credits_earned', reward);
@@ -4737,6 +5022,10 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
 app.post('/api/battle/start-deck', requireAuth, (req, res) => {
   const { deckId } = req.body; // deckId: number or 'starter'
 
+  // Energy check
+  const energyResult = consumeEnergy(req.session.userId, ENERGY_CONFIG.costs.pve_battle);
+  if (!energyResult.success) return res.status(400).json({ error: `Pas assez d'energie (${ENERGY_CONFIG.costs.pve_battle} requis, ${energyResult.energy} dispo)`, noEnergy: true });
+
   let playerCards;
 
   if (deckId === 'starter') {
@@ -4746,7 +5035,7 @@ app.post('/api/battle/start-deck', requireAuth, (req, res) => {
     if (!deck) return res.status(404).json({ error: 'Deck introuvable' });
 
     const cards = db.prepare(`
-      SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, c.*
+      SELECT dc.position, uc.id as user_card_id, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level, c.*
       FROM deck_cards dc
       JOIN user_cards uc ON dc.user_card_id = uc.id
       JOIN cards c ON uc.card_id = c.id
@@ -4803,6 +5092,9 @@ app.post('/api/battle/deploy', requireAuth, (req, res) => {
   unit.justDeployed = battle.testMode ? false : true; // summoning sickness (disabled in test mode)
   battle.playerField[fieldSlot] = unit;
   if (!battle.testMode) battle.playerEnergy -= card.mana_cost;
+
+  // Track deployed element for special challenges
+  if (card.element) battle.playerDeployedElements.push(card.element);
 
   // Rank Synergy: LEFT/RIGHT = +1 ATK, CENTER = +1 DEF
   const rankName = fieldSlot === 0 ? 'left' : fieldSlot === 1 ? 'center' : 'right';
@@ -5041,6 +5333,9 @@ app.post('/api/battle/use-ability', requireAuth, (req, res) => {
   }
 
   const events = resolveAbility(unit, targets, playerAlive, enemyAlive, battle);
+
+  // Track ability usage for special challenges
+  battle.abilityUsedCount = (battle.abilityUsedCount || 0) + 1;
 
   // Si force_deploy pending, ne pas deduire le crystal maintenant (sera deduit a la confirmation du pick)
   if (!battle.forceDeployPending) {
@@ -6500,6 +6795,10 @@ app.post('/api/mine/hit', requireAuth, (req, res) => {
   const userId = req.session.userId;
   const { index } = req.body;
 
+  // Energy check
+  const energyResult = consumeEnergy(userId, ENERGY_CONFIG.costs.mine_tap);
+  if (!energyResult.success) return res.json({ success: false, noEnergy: true, energy: energyResult.energy, needed: ENERGY_CONFIG.costs.mine_tap });
+
   const mine = db.prepare('SELECT * FROM mine_state WHERE user_id = ?').get(userId);
   if (!mine) return res.status(400).json({ error: 'Aucune mine active' });
 
@@ -6785,10 +7084,11 @@ app.get('/api/quests', requireAuth, (req, res) => {
 
   const daily = db.prepare('SELECT * FROM user_quests WHERE user_id = ? AND type = ? AND assigned_date = ? ORDER BY id').all(userId, 'daily', today);
   const weekly = db.prepare('SELECT * FROM user_quests WHERE user_id = ? AND type = ? AND assigned_date = ? ORDER BY id').all(userId, 'weekly', week);
+  const special = db.prepare('SELECT * FROM user_quests WHERE user_id = ? AND type = ? AND assigned_date = ? ORDER BY id').all(userId, 'special', today);
 
   // Attach labels from QUEST_POOL
   const addLabel = (q) => {
-    const allDefs = [...QUEST_POOL.daily, ...QUEST_POOL.weekly];
+    const allDefs = [...QUEST_POOL.daily, ...QUEST_POOL.weekly, ...SPECIAL_CHALLENGE_POOL];
     const def = allDefs.find(d => d.key === q.quest_key);
     return {
       ...q,
@@ -6799,7 +7099,8 @@ app.get('/api/quests', requireAuth, (req, res) => {
 
   res.json({
     daily: daily.map(addLabel),
-    weekly: weekly.map(addLabel)
+    weekly: weekly.map(addLabel),
+    special: special.map(addLabel)
   });
 });
 
@@ -7308,6 +7609,421 @@ app.post('/api/chat/:friendId', requireAuth, (req, res) => {
 // ============================================
 // PAGE ROUTES
 // ============================================
+// ============================================
+// ENERGY API
+// ============================================
+app.get('/api/energy', requireAuth, (req, res) => {
+  const data = getEnergy(req.session.userId);
+  const user = db.prepare('SELECT energy_purchases_today, energy_purchases_date FROM users WHERE id = ?').get(req.session.userId);
+  const today = new Date().toISOString().split('T')[0];
+  const purchasesToday = user.energy_purchases_date === today ? user.energy_purchases_today : 0;
+  res.json({ ...data, purchasesToday, maxPurchases: ENERGY_CONFIG.purchase.max_per_day, purchasePrice: ENERGY_CONFIG.purchase.price, purchaseAmount: ENERGY_CONFIG.purchase.amount });
+});
+
+app.post('/api/energy/buy', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const today = new Date().toISOString().split('T')[0];
+  const user = db.prepare('SELECT credits, energy_purchases_today, energy_purchases_date FROM users WHERE id = ?').get(userId);
+  const purchasesToday = user.energy_purchases_date === today ? user.energy_purchases_today : 0;
+  if (purchasesToday >= ENERGY_CONFIG.purchase.max_per_day) return res.status(400).json({ error: 'Maximum d\'achats atteint aujourd\'hui' });
+  if (user.credits < ENERGY_CONFIG.purchase.price) return res.status(400).json({ error: 'Pas assez de credits' });
+
+  const { energy } = getEnergy(userId);
+  const newEnergy = Math.min(ENERGY_CONFIG.max, energy + ENERGY_CONFIG.purchase.amount);
+  const now = new Date().toISOString();
+  db.prepare('UPDATE users SET energy = ?, last_energy_update = ?, credits = credits - ?, energy_purchases_today = ?, energy_purchases_date = ? WHERE id = ?')
+    .run(newEnergy, now, ENERGY_CONFIG.purchase.price, purchasesToday + 1, today, userId);
+
+  updateQuestProgress(userId, 'credits_spent', ENERGY_CONFIG.purchase.price);
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ success: true, energy: newEnergy, credits: newCredits, purchasesToday: purchasesToday + 1 });
+});
+
+// ============================================
+// CRAFT API
+// ============================================
+app.get('/api/craft/recipes', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const resources = getUserResourceCounts(userId);
+  const items = getUserItems(userId);
+  const user = db.prepare('SELECT excavation_essence FROM users WHERE id = ?').get(userId);
+
+  const recipes = CRAFT_RECIPES.map(r => {
+    const canAfford = Object.entries(r.cost).every(([res, amt]) => (resources[res] || 0) >= amt);
+    return { ...r, canAfford };
+  });
+
+  res.json({ recipes, resources, items, essence: user.excavation_essence || 0 });
+});
+
+app.post('/api/craft', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { recipeId } = req.body;
+  const recipe = CRAFT_RECIPES.find(r => r.id === recipeId);
+  if (!recipe) return res.status(400).json({ error: 'Recette inconnue' });
+
+  const resources = getUserResourceCounts(userId);
+  for (const [resource, amount] of Object.entries(recipe.cost)) {
+    if ((resources[resource] || 0) < amount) return res.status(400).json({ error: `Pas assez de ${MINE_RESOURCES[resource]?.name || resource}` });
+  }
+
+  // Deduct resources
+  deductResources(userId, recipe.cost);
+
+  // Grant result
+  let resultInfo = {};
+  const result = recipe.result;
+  if (result.type === 'item') {
+    addUserItem(userId, result.key, result.qty);
+    resultInfo = { type: 'item', name: CRAFT_ITEMS[result.key]?.name || result.key, qty: result.qty };
+  } else if (result.type === 'essence') {
+    db.prepare('UPDATE users SET excavation_essence = excavation_essence + ? WHERE id = ?').run(result.qty, userId);
+    resultInfo = { type: 'essence', qty: result.qty };
+  } else if (result.type === 'card') {
+    const card = db.prepare('SELECT * FROM cards WHERE rarity = ? ORDER BY RANDOM() LIMIT 1').get(result.rarity);
+    if (card) {
+      db.prepare('INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)').run(userId, card.id);
+      resultInfo = { type: 'card', card };
+    }
+  }
+
+  db.prepare('UPDATE users SET stat_crafts = stat_crafts + 1 WHERE id = ?').run(userId);
+  addBattlePassXP(userId, 15);
+  updateQuestProgress(userId, 'craft', 1);
+  checkAchievements(userId);
+
+  res.json({ success: true, result: resultInfo });
+});
+
+app.get('/api/items', requireAuth, (req, res) => {
+  const items = getUserItems(req.session.userId);
+  res.json(items.map(i => ({ ...i, ...(CRAFT_ITEMS[i.item_key] || {}) })));
+});
+
+// ============================================
+// AWAKENING (EVEIL) API
+// ============================================
+app.get('/api/awakening/available', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const cards = db.prepare(`
+    SELECT uc.id as user_card_id, uc.awakening_level, uc.is_fused, uc.is_shiny, c.*
+    FROM user_cards uc JOIN cards c ON uc.card_id = c.id
+    WHERE uc.user_id = ? AND uc.is_fused = 1 AND uc.awakening_level < 2
+    ORDER BY CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END, c.attack DESC
+  `).all(userId);
+
+  const user = db.prepare('SELECT credits, excavation_essence FROM users WHERE id = ?').get(userId);
+  const items = getUserItems(userId);
+  const pierreCount = items.find(i => i.item_key === 'pierre_eveil')?.quantity || 0;
+
+  const result = cards.map(card => {
+    const nextLevel = card.awakening_level + 1;
+    const config = AWAKENING_CONFIG[nextLevel - 1];
+    if (!config) return null;
+    const canAfford = user.credits >= config.cost.credits && user.excavation_essence >= config.cost.essence && pierreCount >= config.cost.pierre_eveil;
+    return { ...card, nextLevel, config, canAfford, pierreCount, userCredits: user.credits, userEssence: user.excavation_essence };
+  }).filter(Boolean);
+
+  res.json(result);
+});
+
+app.post('/api/awakening', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { userCardId } = req.body;
+  if (!userCardId) return res.status(400).json({ error: 'userCardId requis' });
+
+  const uc = db.prepare('SELECT uc.*, c.name, c.emoji, c.rarity FROM user_cards uc JOIN cards c ON uc.card_id = c.id WHERE uc.id = ? AND uc.user_id = ?').get(userCardId, userId);
+  if (!uc) return res.status(404).json({ error: 'Carte introuvable' });
+  if (!uc.is_fused) return res.status(400).json({ error: 'Carte non fusionnee' });
+  if (uc.awakening_level >= 2) return res.status(400).json({ error: 'Eveil maximum atteint' });
+
+  const nextLevel = uc.awakening_level + 1;
+  const config = AWAKENING_CONFIG[nextLevel - 1];
+  if (!config) return res.status(400).json({ error: 'Configuration introuvable' });
+
+  const user = db.prepare('SELECT credits, excavation_essence FROM users WHERE id = ?').get(userId);
+  if (user.credits < config.cost.credits) return res.status(400).json({ error: 'Pas assez de credits' });
+  if (user.excavation_essence < config.cost.essence) return res.status(400).json({ error: 'Pas assez d\'essence' });
+
+  const items = getUserItems(userId);
+  const pierreCount = items.find(i => i.item_key === 'pierre_eveil')?.quantity || 0;
+  if (pierreCount < config.cost.pierre_eveil) return res.status(400).json({ error: 'Pas assez de Pierre d\'Eveil' });
+
+  // Deduct costs
+  db.prepare('UPDATE users SET credits = credits - ?, excavation_essence = excavation_essence - ?, stat_awakenings = stat_awakenings + 1 WHERE id = ?')
+    .run(config.cost.credits, config.cost.essence, userId);
+  db.prepare('UPDATE user_items SET quantity = quantity - ? WHERE user_id = ? AND item_key = ?')
+    .run(config.cost.pierre_eveil, userId, 'pierre_eveil');
+  // Clean up 0-quantity items
+  db.prepare('DELETE FROM user_items WHERE user_id = ? AND item_key = ? AND quantity <= 0').run(userId, 'pierre_eveil');
+
+  // Upgrade card
+  db.prepare('UPDATE user_cards SET awakening_level = ? WHERE id = ?').run(nextLevel, userCardId);
+
+  addBattlePassXP(userId, 50);
+  checkAchievements(userId);
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ success: true, newLevel: nextLevel, label: config.label, bonuses: config.bonuses, credits: newCredits });
+});
+
+// ============================================
+// GUILD API
+// ============================================
+app.post('/api/guilds/create', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { name, emoji } = req.body;
+  if (!name || name.length < 2 || name.length > 20) return res.status(400).json({ error: 'Nom entre 2 et 20 caracteres' });
+
+  const user = db.prepare('SELECT credits, guild_id FROM users WHERE id = ?').get(userId);
+  if (user.guild_id) return res.status(400).json({ error: 'Tu es deja dans une guilde' });
+  if (user.credits < GUILD_CONFIG.create_cost) return res.status(400).json({ error: `Il faut ${GUILD_CONFIG.create_cost} credits` });
+
+  const existing = db.prepare('SELECT id FROM guilds WHERE name = ?').get(name);
+  if (existing) return res.status(400).json({ error: 'Nom deja pris' });
+
+  const guildEmoji = emoji || '⚔';
+  const result = db.prepare('INSERT INTO guilds (name, leader_id, emoji) VALUES (?, ?, ?)').run(name, userId, guildEmoji);
+  const guildId = result.lastInsertRowid;
+
+  db.prepare('INSERT INTO guild_members (guild_id, user_id, role) VALUES (?, ?, ?)').run(guildId, userId, 'leader');
+  db.prepare('UPDATE users SET guild_id = ?, credits = credits - ? WHERE id = ?').run(guildId, GUILD_CONFIG.create_cost, userId);
+
+  checkAchievements(userId);
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ success: true, guildId, credits: newCredits });
+});
+
+app.get('/api/guilds', requireAuth, (req, res) => {
+  const guilds = db.prepare(`
+    SELECT g.*, u.username as leader_name, u.avatar as leader_avatar,
+      (SELECT COUNT(*) FROM guild_members WHERE guild_id = g.id) as member_count
+    FROM guilds g JOIN users u ON g.leader_id = u.id
+    ORDER BY member_count DESC, g.created_at DESC
+  `).all();
+  res.json(guilds);
+});
+
+app.get('/api/guilds/my', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const user = db.prepare('SELECT guild_id FROM users WHERE id = ?').get(userId);
+  if (!user.guild_id) return res.json({ guild: null });
+
+  const guild = db.prepare('SELECT * FROM guilds WHERE id = ?').get(user.guild_id);
+  if (!guild) return res.json({ guild: null });
+
+  const members = db.prepare(`
+    SELECT gm.*, u.username, u.avatar, u.display_name, u.pvp_rating
+    FROM guild_members gm JOIN users u ON gm.user_id = u.id
+    WHERE gm.guild_id = ? ORDER BY CASE gm.role WHEN 'leader' THEN 0 WHEN 'officer' THEN 1 ELSE 2 END, gm.joined_at
+  `).all(guild.id);
+
+  const myMember = members.find(m => m.user_id === userId);
+  const boss = ensureGuildBoss(guild.id);
+
+  const today = new Date().toISOString().split('T')[0];
+  const canAttackBoss = myMember && myMember.last_boss_attack !== today && boss.boss_hp > 0;
+
+  res.json({ guild, members, myRole: myMember?.role || 'member', boss, canAttackBoss });
+});
+
+app.post('/api/guilds/join', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { guildId } = req.body;
+
+  const user = db.prepare('SELECT guild_id FROM users WHERE id = ?').get(userId);
+  if (user.guild_id) return res.status(400).json({ error: 'Tu es deja dans une guilde' });
+
+  const guild = db.prepare('SELECT * FROM guilds WHERE id = ?').get(guildId);
+  if (!guild) return res.status(404).json({ error: 'Guilde introuvable' });
+
+  const memberCount = db.prepare('SELECT COUNT(*) as c FROM guild_members WHERE guild_id = ?').get(guildId).c;
+  if (memberCount >= GUILD_CONFIG.max_members) return res.status(400).json({ error: 'Guilde pleine' });
+
+  db.prepare('INSERT INTO guild_members (guild_id, user_id, role) VALUES (?, ?, ?)').run(guildId, userId, 'member');
+  db.prepare('UPDATE users SET guild_id = ? WHERE id = ?').run(guildId, userId);
+
+  checkAchievements(userId);
+  res.json({ success: true });
+});
+
+app.post('/api/guilds/leave', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const user = db.prepare('SELECT guild_id FROM users WHERE id = ?').get(userId);
+  if (!user.guild_id) return res.status(400).json({ error: 'Pas dans une guilde' });
+
+  const guild = db.prepare('SELECT * FROM guilds WHERE id = ?').get(user.guild_id);
+  const member = db.prepare('SELECT * FROM guild_members WHERE guild_id = ? AND user_id = ?').get(user.guild_id, userId);
+
+  if (member.role === 'leader') {
+    // Transfer leadership or disband
+    const nextLeader = db.prepare("SELECT * FROM guild_members WHERE guild_id = ? AND user_id != ? ORDER BY CASE role WHEN 'officer' THEN 0 ELSE 1 END, joined_at LIMIT 1").get(user.guild_id, userId);
+    if (nextLeader) {
+      db.prepare("UPDATE guild_members SET role = 'leader' WHERE id = ?").run(nextLeader.id);
+      db.prepare('UPDATE guilds SET leader_id = ? WHERE id = ?').run(nextLeader.user_id, user.guild_id);
+    } else {
+      // Disband
+      db.prepare('DELETE FROM guild_members WHERE guild_id = ?').run(user.guild_id);
+      db.prepare('DELETE FROM guild_chat WHERE guild_id = ?').run(user.guild_id);
+      db.prepare('DELETE FROM guild_boss WHERE guild_id = ?').run(user.guild_id);
+      db.prepare('DELETE FROM guilds WHERE id = ?').run(user.guild_id);
+    }
+  }
+
+  db.prepare('DELETE FROM guild_members WHERE guild_id = ? AND user_id = ?').run(user.guild_id, userId);
+  db.prepare('UPDATE users SET guild_id = NULL WHERE id = ?').run(userId);
+  res.json({ success: true });
+});
+
+app.post('/api/guilds/kick', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { targetUserId } = req.body;
+  const user = db.prepare('SELECT guild_id FROM users WHERE id = ?').get(userId);
+  if (!user.guild_id) return res.status(400).json({ error: 'Pas dans une guilde' });
+
+  const myRole = db.prepare('SELECT role FROM guild_members WHERE guild_id = ? AND user_id = ?').get(user.guild_id, userId);
+  if (!myRole || (myRole.role !== 'leader' && myRole.role !== 'officer')) return res.status(403).json({ error: 'Permission refusee' });
+
+  const targetRole = db.prepare('SELECT role FROM guild_members WHERE guild_id = ? AND user_id = ?').get(user.guild_id, targetUserId);
+  if (!targetRole) return res.status(404).json({ error: 'Membre introuvable' });
+  if (targetRole.role === 'leader') return res.status(403).json({ error: 'Impossible de kick le leader' });
+
+  db.prepare('DELETE FROM guild_members WHERE guild_id = ? AND user_id = ?').run(user.guild_id, targetUserId);
+  db.prepare('UPDATE users SET guild_id = NULL WHERE id = ?').run(targetUserId);
+  res.json({ success: true });
+});
+
+app.post('/api/guilds/promote', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { targetUserId, role } = req.body;
+  if (!['officer', 'member'].includes(role)) return res.status(400).json({ error: 'Role invalide' });
+
+  const user = db.prepare('SELECT guild_id FROM users WHERE id = ?').get(userId);
+  const myRole = db.prepare('SELECT role FROM guild_members WHERE guild_id = ? AND user_id = ?').get(user.guild_id, userId);
+  if (!myRole || myRole.role !== 'leader') return res.status(403).json({ error: 'Seul le leader peut promouvoir' });
+
+  db.prepare('UPDATE guild_members SET role = ? WHERE guild_id = ? AND user_id = ?').run(role, user.guild_id, targetUserId);
+  res.json({ success: true });
+});
+
+app.post('/api/guilds/donate', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { amount } = req.body;
+  if (!amount || amount < GUILD_CONFIG.donate_min || amount > GUILD_CONFIG.donate_max) return res.status(400).json({ error: `Montant entre ${GUILD_CONFIG.donate_min} et ${GUILD_CONFIG.donate_max}` });
+
+  const user = db.prepare('SELECT credits, guild_id FROM users WHERE id = ?').get(userId);
+  if (!user.guild_id) return res.status(400).json({ error: 'Pas dans une guilde' });
+  if (user.credits < amount) return res.status(400).json({ error: 'Pas assez de credits' });
+
+  db.prepare('UPDATE users SET credits = credits - ? WHERE id = ?').run(amount, userId);
+  db.prepare('UPDATE guilds SET treasury = treasury + ? WHERE id = ?').run(amount, user.guild_id);
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  const guild = db.prepare('SELECT treasury FROM guilds WHERE id = ?').get(user.guild_id);
+  res.json({ success: true, credits: newCredits, treasury: guild.treasury });
+});
+
+app.get('/api/guilds/chat', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const user = db.prepare('SELECT guild_id FROM users WHERE id = ?').get(userId);
+  if (!user.guild_id) return res.json({ messages: [] });
+
+  const messages = db.prepare(`
+    SELECT gc.*, u.username, u.avatar, u.display_name
+    FROM guild_chat gc JOIN users u ON gc.sender_id = u.id
+    WHERE gc.guild_id = ? ORDER BY gc.id DESC LIMIT 50
+  `).all(user.guild_id);
+
+  res.json({ messages: messages.reverse() });
+});
+
+app.post('/api/guilds/chat', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { message } = req.body;
+  if (!message || message.length > 500) return res.status(400).json({ error: 'Message invalide' });
+
+  const user = db.prepare('SELECT guild_id, username, avatar, display_name FROM users WHERE id = ?').get(userId);
+  if (!user.guild_id) return res.status(400).json({ error: 'Pas dans une guilde' });
+
+  db.prepare('INSERT INTO guild_chat (guild_id, sender_id, message) VALUES (?, ?, ?)').run(user.guild_id, userId, message);
+
+  // Broadcast to online guild members via Socket.IO
+  const members = db.prepare('SELECT user_id FROM guild_members WHERE guild_id = ?').all(user.guild_id);
+  for (const m of members) {
+    if (m.user_id === userId) continue;
+    const sock = userSocketMap.get(m.user_id);
+    if (sock && sock.connected) {
+      sock.emit('guild:message', { senderId: userId, senderName: user.display_name || user.username, avatar: user.avatar, message, timestamp: new Date().toISOString() });
+    }
+  }
+
+  res.json({ success: true });
+});
+
+app.get('/api/guilds/boss', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const user = db.prepare('SELECT guild_id FROM users WHERE id = ?').get(userId);
+  if (!user.guild_id) return res.status(400).json({ error: 'Pas dans une guilde' });
+
+  const boss = ensureGuildBoss(user.guild_id);
+  const member = db.prepare('SELECT last_boss_attack FROM guild_members WHERE guild_id = ? AND user_id = ?').get(user.guild_id, userId);
+  const today = new Date().toISOString().split('T')[0];
+  const canAttack = member && member.last_boss_attack !== today && boss.boss_hp > 0;
+
+  res.json({ boss, canAttack });
+});
+
+app.post('/api/guilds/boss/attack', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const user = db.prepare('SELECT guild_id FROM users WHERE id = ?').get(userId);
+  if (!user.guild_id) return res.status(400).json({ error: 'Pas dans une guilde' });
+
+  const boss = ensureGuildBoss(user.guild_id);
+  if (boss.boss_hp <= 0) return res.status(400).json({ error: 'Boss deja vaincu cette semaine' });
+
+  const today = new Date().toISOString().split('T')[0];
+  const member = db.prepare('SELECT last_boss_attack FROM guild_members WHERE guild_id = ? AND user_id = ?').get(user.guild_id, userId);
+  if (member.last_boss_attack === today) return res.status(400).json({ error: 'Tu as deja attaque aujourd\'hui' });
+
+  // Simulate boss attack — random damage based on player's best cards
+  const topCards = db.prepare(`
+    SELECT c.attack, c.defense, uc.is_fused, uc.awakening_level FROM user_cards uc
+    JOIN cards c ON uc.card_id = c.id WHERE uc.user_id = ?
+    ORDER BY c.attack DESC LIMIT 5
+  `).all(userId);
+
+  let totalDamage = 0;
+  for (const card of topCards) {
+    const mult = card.is_fused ? 2 : 1;
+    const awBonus = card.awakening_level || 0;
+    const atk = card.attack * mult + awBonus;
+    totalDamage += atk + Math.floor(Math.random() * 3);
+  }
+  totalDamage = Math.max(50, Math.min(500, totalDamage));
+
+  const newHp = Math.max(0, boss.boss_hp - totalDamage);
+  db.prepare('UPDATE guild_boss SET boss_hp = ? WHERE guild_id = ?').run(newHp, user.guild_id);
+  db.prepare('UPDATE guild_members SET last_boss_attack = ? WHERE guild_id = ? AND user_id = ?').run(today, user.guild_id, userId);
+
+  // Reward based on damage
+  const reward = Math.floor(50 + (totalDamage / 500) * 150);
+  db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(reward, userId);
+
+  addBattlePassXP(userId, 20);
+  updateQuestProgress(userId, 'guild_boss', 1);
+
+  // If boss killed, distribute rewards
+  if (newHp <= 0) {
+    distributeGuildBossRewards(user.guild_id);
+  }
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ success: true, damage: totalDamage, bossHp: newHp, bossMaxHp: boss.boss_max_hp, reward, credits: newCredits, bossKilled: newHp <= 0 });
+});
+
+// ============================================
+// PAGE ROUTES
+// ============================================
 app.get('/tutorial', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'tutorial.html')); });
 app.get('/intro', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'intro.html')); });
 app.get('/menu', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'menu.html')); });
@@ -7332,6 +8048,7 @@ app.get('/pvp-battle', requireAuth, (req, res) => { res.sendFile(path.join(__dir
 app.get('/decks', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'decks.html')); });
 app.get('/battlepass', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'battlepass.html')); });
 app.get('/casino', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'casino.html')); });
+app.get('/guilds', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'guilds.html')); });
 app.get('/stats', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'stats.html')); });
 app.get('/admin', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
 app.get('/wiki', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'wiki.html')); });
@@ -7640,6 +8357,10 @@ io.on('connection', (socket) => {
     if (pvpQueue.find(q => q.userId === userId)) return;
     if (getPvpBattleForUser(userId)) { socket.emit('pvp:error', { error: 'Deja en combat' }); return; }
 
+    // Energy check for PvP
+    const energyResult = consumeEnergy(userId, ENERGY_CONFIG.costs.pvp_battle);
+    if (!energyResult.success) { socket.emit('pvp:error', { error: `Pas assez d'energie (${ENERGY_CONFIG.costs.pvp_battle} requis)`, noEnergy: true }); return; }
+
     // Charger le deck du joueur
     let playerCards;
     if (deckId === 'starter') {
@@ -7648,7 +8369,7 @@ io.on('connection', (socket) => {
       const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(deckId, userId);
       if (!deck) { socket.emit('pvp:error', { error: 'Deck introuvable' }); return; }
       const cards = db.prepare(`
-        SELECT dc.position, c.* FROM deck_cards dc
+        SELECT dc.position, uc.is_fused, uc.is_shiny, uc.is_temp, uc.awakening_level, c.* FROM deck_cards dc
         JOIN user_cards uc ON dc.user_card_id = uc.id
         JOIN cards c ON uc.card_id = c.id
         WHERE dc.deck_id = ? ORDER BY dc.position

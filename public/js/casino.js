@@ -11,6 +11,8 @@ async function loadNav() {
     const data = await res.json();
     document.getElementById('nav-credits').textContent = data.credits;
     document.getElementById('casino-credits').textContent = data.credits;
+    const eEl = document.getElementById('nav-energy');
+    if (eEl) eEl.textContent = data.energy != null ? data.energy : '--';
     const navUser = document.getElementById('nav-username');
     navUser.textContent = data.displayName || data.username;
     if (data.usernameEffect) navUser.className = 'dash-nav-username ' + data.usernameEffect;

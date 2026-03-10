@@ -81,6 +81,8 @@ function updateNav() {
     mineData.essence = d.essence || 0;
     document.getElementById('nav-credits').textContent = d.credits;
     document.getElementById('nav-essence').textContent = d.essence || 0;
+    const eEl = document.getElementById('nav-energy');
+    if (eEl) eEl.textContent = d.energy != null ? d.energy : '--';
   }).catch(() => {});
 }
 
@@ -164,6 +166,13 @@ async function hitRock(index, el) {
     });
     const data = await res.json();
 
+    if (data.noEnergy) {
+      showNotification("Pas assez d'\u00e9nergie !", 'error');
+      el.classList.remove('mine-rock--breaking');
+      el.style.animation = '';
+      return;
+    }
+
     if (data.success) {
       mineData.rocks[index].mined = true;
       mineData.rocks[index].mineral = data.mineral;
@@ -219,6 +228,7 @@ function setupShop() {
       document.getElementById(`stab-${tabName}`).classList.remove('hidden');
       tab.classList.add('active');
       if (tabName === 'upgrade') loadUpgrades();
+      if (tabName === 'craft') loadCraftRecipes();
     });
   });
 
@@ -409,6 +419,87 @@ function showNotification(text, type = 'info') {
   el.classList.remove('hidden');
   clearTimeout(el._timeout);
   el._timeout = setTimeout(() => el.classList.add('hidden'), 2500);
+}
+
+// === CRAFT ===
+let craftData = null;
+
+async function loadCraftRecipes() {
+  try {
+    const res = await fetch('/api/craft/recipes');
+    const data = await res.json();
+    craftData = data;
+    renderCraftTab();
+  } catch (e) {
+    console.error('Erreur load craft recipes:', e);
+  }
+}
+
+function renderCraftTab() {
+  const grid = document.getElementById('mine-craft-grid');
+  grid.innerHTML = '';
+
+  if (!craftData || !craftData.recipes || !craftData.recipes.length) {
+    grid.innerHTML = '<p class="mine-sell-empty">Aucune recette disponible.</p>';
+    return;
+  }
+
+  const resources = craftData.resources || {};
+  const essence = craftData.essence || 0;
+
+  craftData.recipes.forEach(recipe => {
+    const card = document.createElement('div');
+    card.className = 'mine-upgrade-card';
+
+    let costsHtml = '';
+    if (recipe.costs) {
+      for (const [res, amount] of Object.entries(recipe.costs)) {
+        let owned;
+        if (res === 'essence') {
+          owned = essence;
+        } else {
+          owned = resources[res] || 0;
+        }
+        const enough = owned >= amount;
+        const color = enough ? '#4f4' : '#f44';
+        const label = res === 'essence' ? 'Essence' : (RESOURCE_NAMES[res] || res);
+        costsHtml += `<span style="color:${color}">${label}: ${owned}/${amount}</span><br>`;
+      }
+    }
+
+    card.innerHTML = `
+      <div class="mine-upgrade-emoji">${recipe.emoji || '\u2728'}</div>
+      <h3 class="mine-upgrade-name">${recipe.name}</h3>
+      <div class="mine-craft-costs">${costsHtml}</div>
+      <button class="mine-upgrade-btn mine-craft-btn" data-recipe="${recipe.id}">FABRIQUER</button>
+    `;
+    grid.appendChild(card);
+  });
+
+  grid.querySelectorAll('.mine-craft-btn').forEach(btn => {
+    btn.addEventListener('click', () => doCraft(btn.dataset.recipe));
+  });
+}
+
+async function doCraft(recipeId) {
+  try {
+    const res = await fetch('/api/craft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipeId })
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      showNotification(data.message || 'Objet fabrique !', 'upgrade');
+      updateNav();
+      loadCraftRecipes();
+    } else {
+      showNotification(data.error || 'Craft impossible', 'error');
+    }
+  } catch (e) {
+    console.error('Erreur craft:', e);
+  }
 }
 
 // === START ===

@@ -267,5 +267,113 @@ function screenFlash() {
   setTimeout(() => { flash.classList.remove('flash-active'); flash.classList.add('hidden'); }, 400);
 }
 
+// ============================================
+// EVEIL (AWAKENING) TAB
+// ============================================
+let currentForgeTab = 'fusion';
+
+function switchForgeTab(tab) {
+  currentForgeTab = tab;
+  document.querySelectorAll('.fusion-tab').forEach(t => t.classList.remove('fusion-tab--active'));
+  document.querySelector(`.fusion-tab[data-tab="${tab}"]`).classList.add('fusion-tab--active');
+
+  document.getElementById('tab-fusion').classList.toggle('hidden', tab !== 'fusion');
+  document.getElementById('tab-eveil').classList.toggle('hidden', tab !== 'eveil');
+
+  // Hide fusion panel when switching tabs
+  document.getElementById('fusion-panel').classList.add('hidden');
+
+  if (tab === 'eveil') loadAwakeningCards();
+}
+
+async function loadAwakeningCards() {
+  try {
+    const res = await fetch('/api/awakening/available');
+    if (!res.ok) return;
+    const cards = await res.json();
+
+    const grid = document.getElementById('eveil-grid');
+    const emptyMsg = document.getElementById('eveil-empty-msg');
+    const resourcesDiv = document.getElementById('eveil-resources');
+
+    // Show resources
+    const itemsRes = await fetch('/api/items');
+    const items = await itemsRes.json();
+    const meRes = await fetch('/api/me');
+    const me = await meRes.json();
+    const pierreCount = items.find(i => i.item_key === 'pierre_eveil')?.quantity || 0;
+
+    resourcesDiv.innerHTML = `
+      <div class="eveil-resource-bar">
+        <span>💰 ${me.credits} CR</span>
+        <span>⛏ ${me.essence} Essence</span>
+        <span>🌟 ${pierreCount} Pierre(s) d'Eveil</span>
+      </div>
+    `;
+
+    if (cards.length === 0) {
+      grid.innerHTML = '';
+      emptyMsg.classList.remove('hidden');
+      return;
+    }
+
+    emptyMsg.classList.add('hidden');
+    grid.innerHTML = cards.map(card => {
+      const r = RARITY_COLORS[card.rarity];
+      const conf = card.config;
+      const stars = '★'.repeat(card.nextLevel);
+      return `
+        <div class="fusion-card rarity-${card.rarity} ${card.canAfford ? 'eveil-affordable' : 'eveil-locked'}"
+             style="border-color:${r.color}; box-shadow:0 0 12px ${r.glow}">
+          ${renderHolo(card.rarity)}
+          <div class="card-rarity" style="background:gold;color:#000">${stars} EVEIL ${card.nextLevel}</div>
+          ${renderCardVisual(card)}
+          <div class="card-name">${card.name}</div>
+          ${renderStatBars(card)}
+          <div class="eveil-cost">
+            <div>💰 ${conf.cost.credits} CR</div>
+            <div>⛏ ${conf.cost.essence} Essence</div>
+            <div>🌟 ${conf.cost.pierre_eveil} Pierre(s)</div>
+          </div>
+          <div class="eveil-bonus">+${conf.bonuses.attack} ATK / +${conf.bonuses.defense} DEF / +${conf.bonuses.hp} HP</div>
+          <button class="submit-btn eveil-btn" ${!card.canAfford ? 'disabled' : ''}
+                  onclick="doAwakening(${card.user_card_id})">
+            ${card.canAfford ? 'EVEILLER ⭐' : 'RESSOURCES MANQUANTES'}
+          </button>
+        </div>
+      `;
+    }).join('');
+  } catch (e) {
+    console.error('Erreur chargement eveil:', e);
+  }
+}
+
+async function doAwakening(userCardId) {
+  try {
+    const res = await fetch('/api/awakening', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userCardId })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      if (window.showToast) showToast(data.error, 'error');
+      else alert(data.error);
+      return;
+    }
+
+    // Success animation
+    screenFlash();
+    if (window.showToast) showToast(`${data.label} reussi ! +${data.bonuses.attack} ATK / +${data.bonuses.defense} DEF / +${data.bonuses.hp} HP`, 'success', 5000);
+
+    // Reload
+    loadCredits();
+    loadAwakeningCards();
+  } catch (e) {
+    if (window.showToast) showToast('Erreur reseau', 'error');
+  }
+}
+
+// Init
 loadCredits();
 loadFusionCards();

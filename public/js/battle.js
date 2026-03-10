@@ -192,7 +192,7 @@ function renderFieldSlot(unit, slotIndex, side) {
 
   let statusIcons = '';
   if (unit.poisonDotTurns > 0) statusIcons += `<span class="bt-status-icon bt-status-poison" title="Poison (${unit.poisonDotTurns} tours)"><img src="/img/poison-badge.png" class="bt-poison-img" alt="poison">${unit.poisonDotTurns}</span>`;
-  if (unit.stunned) statusIcons += '<span class="bt-status-icon bt-status-stun">\uD83D\uDCAB</span>';
+  if (unit.stunned) statusIcons += '<span class="bt-status-icon bt-status-stun" title="Stun (1 tour)"><img src="/img/stun-badge.png" class="bt-stun-img" alt="stun"></span>';
   if (unit.shield > 0) statusIcons += `<span class="bt-status-icon bt-status-shield">\uD83D\uDEE1${unit.shield}</span>`;
   if (unit.marked > 0) statusIcons += '<span class="bt-status-icon bt-status-mark">\uD83C\uDFAF</span>';
   if (unit.reactiveArmor > 0) statusIcons += '<span class="bt-status-icon bt-status-reactive">\uD83E\uDD80</span>';
@@ -218,6 +218,8 @@ function renderFieldSlot(unit, slotIndex, side) {
   const sicknessClass = unit.justDeployed ? 'bt-sickness' : '';
   // Poison glow class
   const poisonedClass = (unit.poisonDotTurns > 0) ? 'bt-poisoned' : '';
+  // Stun glow class
+  const stunnedClass = unit.stunned ? 'bt-stunned' : '';
 
   const abilityHtml = unit.ability_name ? `
     <div class="bt-unit-ability ${unit.usedAbility ? 'bt-ability-used' : ''}">
@@ -233,7 +235,7 @@ function renderFieldSlot(unit, slotIndex, side) {
   const manaCost = unit.mana_cost || unit.manaCost || '?';
 
   return `
-    <div class="bt-unit ${isSelected ? 'bt-selected' : ''} ${isTarget ? 'bt-targetable' : ''} ${attackedClass} ${sicknessClass} ${poisonedClass}"
+    <div class="bt-unit ${isSelected ? 'bt-selected' : ''} ${isTarget ? 'bt-targetable' : ''} ${attackedClass} ${sicknessClass} ${poisonedClass} ${stunnedClass}"
          style="border-color: ${r.color}" data-slot="${slotIndex}" data-side="${side}">
       <div class="bt-unit-type">${unit.type || ''}</div>
       <div class="bt-unit-mana">\u26A1${manaCost}</div>

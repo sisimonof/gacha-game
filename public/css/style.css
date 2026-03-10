@@ -4269,7 +4269,25 @@ body.battle-page {
   0%, 100% { opacity: 1; filter: drop-shadow(0 0 3px rgba(124, 223, 48, 0.4)); }
   50% { opacity: 0.8; filter: drop-shadow(0 0 6px rgba(124, 223, 48, 0.8)); }
 }
-.bt-status-stun { color: #ffcc00; }
+.bt-status-stun {
+  color: #ffcc00;
+  font-size: 14px;
+  background: rgba(120, 100, 10, 0.25);
+  border: 1px solid rgba(255, 204, 0, 0.4);
+  border-radius: 4px;
+  padding: 1px 5px 1px 2px;
+  animation: stun-pulse 1.5s ease-in-out infinite;
+}
+.bt-stun-img {
+  height: 22px;
+  width: auto;
+  vertical-align: middle;
+  filter: drop-shadow(0 0 3px rgba(255, 204, 0, 0.6));
+}
+@keyframes stun-pulse {
+  0%, 100% { opacity: 1; filter: drop-shadow(0 0 3px rgba(255, 204, 0, 0.4)); }
+  50% { opacity: 0.8; filter: drop-shadow(0 0 6px rgba(255, 204, 0, 0.8)); }
+}
 .bt-status-shield { color: #44cccc; }
 .bt-status-mark { color: #ffaa00; }
 
@@ -5516,6 +5534,52 @@ body.battle-page {
     box-shadow: 0 0 20px rgba(34, 204, 34, 0.45), inset 0 -10px 30px rgba(34, 204, 34, 0.15);
     opacity: 1;
   }
+}
+
+/* ==============================
+   STUNNED GLOW (on field units)
+   ============================== */
+.bt-stunned {
+  position: relative;
+}
+.bt-stunned::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30%;
+  background: linear-gradient(to bottom, rgba(255, 204, 0, 0.18), transparent);
+  pointer-events: none;
+  border-radius: 6px 6px 0 0;
+  animation: stunGlow 1.8s ease-in-out infinite;
+  z-index: 4;
+}
+.bt-stunned::after {
+  content: '💫';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 18px;
+  animation: stunSpin 2s linear infinite;
+  z-index: 5;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px rgba(255, 204, 0, 0.7));
+}
+@keyframes stunGlow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(255, 204, 0, 0.2), inset 0 10px 20px rgba(255, 204, 0, 0.06);
+    opacity: 0.7;
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(255, 204, 0, 0.45), inset 0 10px 30px rgba(255, 204, 0, 0.12);
+    opacity: 1;
+  }
+}
+@keyframes stunSpin {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  100% { transform: translateX(-50%) rotate(360deg); }
 }
 
 /* ==============================
@@ -10484,6 +10548,798 @@ body.casino-page {
   .tut-vs-card-emoji { font-size: 30px; }
 
   .tut-field-slot { width: 80px; height: 65px; }
+}
+
+/* ============================================ */
+/* ======= PHASE 1 — ENERGY SYSTEM CSS ======= */
+/* ============================================ */
+
+.energy-stat {
+  color: #ffcc00 !important;
+  font-weight: bold;
+}
+
+.energy-stat span {
+  color: #ffcc00;
+}
+
+@keyframes energyPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.energy-low {
+  animation: energyPulse 1s ease-in-out infinite;
+}
+
+/* ============================================ */
+/* ======= PHASE 2 — CRAFT SYSTEM CSS ========= */
+/* ============================================ */
+
+.mine-craft-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  padding: 10px;
+}
+
+.craft-recipe-card {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  transition: all 0.3s;
+}
+
+.craft-recipe-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.3);
+}
+
+.craft-recipe-emoji {
+  font-size: 36px;
+  margin-bottom: 6px;
+}
+
+.craft-recipe-name {
+  font-size: 18px;
+  color: var(--primary);
+  margin-bottom: 8px;
+}
+
+.craft-recipe-costs {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.craft-cost-line {
+  margin: 2px 0;
+}
+
+.craft-btn {
+  margin-top: 6px;
+  padding: 6px 16px;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  background: var(--primary-dark);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.craft-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: #000;
+}
+
+.craft-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ============================================ */
+/* ===== PHASE 3 — AWAKENING / EVEIL CSS ====== */
+/* ============================================ */
+
+.badge-awakened {
+  background: linear-gradient(135deg, #ffd700, #ffaa00) !important;
+  color: #000 !important;
+  font-weight: bold;
+  text-shadow: none !important;
+}
+
+.badge-awakened-1 {
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.6);
+}
+
+.badge-awakened-2 {
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+  animation: awakenGlow 2s ease-in-out infinite;
+}
+
+@keyframes awakenGlow {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 215, 0, 0.6); }
+  50% { box-shadow: 0 0 16px rgba(255, 215, 0, 1), 0 0 24px rgba(255, 170, 0, 0.5); }
+}
+
+.modal-badge-awakened {
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #000;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.battle-awakened-badge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  background: linear-gradient(135deg, #ffd700, #ffaa00);
+  color: #000;
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: bold;
+  z-index: 5;
+}
+
+.eveil-affordable {
+  cursor: pointer;
+}
+
+.eveil-locked {
+  opacity: 0.6;
+}
+
+.eveil-cost {
+  font-size: 13px;
+  padding: 4px 6px;
+  margin-top: 4px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.eveil-cost div {
+  margin: 2px 0;
+}
+
+.eveil-bonus {
+  font-size: 12px;
+  color: #44dd44;
+  text-align: center;
+  margin-top: 4px;
+}
+
+.eveil-btn {
+  font-size: 14px !important;
+  padding: 6px 10px !important;
+  margin-top: 6px;
+  width: 100%;
+}
+
+.eveil-resource-bar {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  padding: 10px;
+  font-size: 18px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid #333;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+/* Fusion tabs */
+.fusion-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.fusion-tab {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  padding: 8px 24px;
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #444;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.3s;
+  border-radius: 4px;
+}
+
+.fusion-tab:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.fusion-tab--active {
+  background: var(--primary-dark);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 8px rgba(var(--primary-rgb), 0.3);
+}
+
+/* ============================================ */
+/* == PHASE 4 — SPECIAL CHALLENGES CSS ======== */
+/* ============================================ */
+
+#tab-special {
+  background: linear-gradient(135deg, rgba(255, 170, 0, 0.15), transparent);
+  border-color: #ffaa00;
+  color: #ffaa00;
+}
+
+#tab-special.quests-tab--active {
+  background: rgba(255, 170, 0, 0.2);
+  border-color: #ffaa00;
+  color: #ffaa00;
+  box-shadow: 0 0 8px rgba(255, 170, 0, 0.3);
+}
+
+/* ============================================ */
+/* ======= PHASE 5 — GUILDS CSS =============== */
+/* ============================================ */
+
+.dash-nav-link--guild {
+  color: #00cc66 !important;
+}
+
+.dash-nav-link--guild:hover,
+.dash-nav-link--guild.dash-nav-link--active {
+  background: rgba(0, 204, 102, 0.15) !important;
+  border-color: #00cc66 !important;
+}
+
+/* Guild page layout */
+.guilds-page {
+  overflow-y: auto !important;
+}
+
+.guild-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 20px;
+  width: 100%;
+}
+
+.guild-title {
+  text-align: center;
+  font-size: 36px;
+  color: #00cc66;
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(0, 204, 102, 0.5);
+}
+
+/* Create guild */
+.guild-create-section {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid #00cc66;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.guild-create-section h2 {
+  color: #00cc66;
+  font-size: 24px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.guild-create-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.guild-name-input {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  padding: 8px 16px;
+  background: #111;
+  border: 1px solid #444;
+  color: var(--primary);
+  width: 100%;
+  max-width: 300px;
+  text-align: center;
+}
+
+.guild-name-input:focus {
+  border-color: #00cc66;
+  outline: none;
+}
+
+.guild-emoji-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  max-width: 350px;
+}
+
+.guild-emoji-btn {
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  background: #111;
+  border: 1px solid #333;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.guild-emoji-btn:hover {
+  border-color: #00cc66;
+  transform: scale(1.15);
+}
+
+.guild-emoji-btn.selected {
+  border-color: #00cc66;
+  background: rgba(0, 204, 102, 0.2);
+  box-shadow: 0 0 6px rgba(0, 204, 102, 0.4);
+}
+
+/* Guild browse list */
+.guild-browse-section h2 {
+  color: #00cc66;
+  font-size: 22px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.guild-browse-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.guild-browse-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #333;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.guild-browse-item:hover {
+  border-color: #00cc66;
+}
+
+.guild-browse-name {
+  font-size: 20px;
+  color: #00cc66;
+}
+
+.guild-browse-info {
+  font-size: 14px;
+  color: #888;
+}
+
+.guild-join-btn {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 6px 16px;
+  background: rgba(0, 204, 102, 0.2);
+  border: 1px solid #00cc66;
+  color: #00cc66;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.guild-join-btn:hover {
+  background: #00cc66;
+  color: #000;
+}
+
+/* In-guild view */
+.guild-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.guild-header-emoji {
+  font-size: 48px;
+}
+
+.guild-header-name {
+  font-size: 28px;
+  color: #00cc66;
+  text-shadow: 0 0 8px rgba(0, 204, 102, 0.5);
+}
+
+.guild-header-level {
+  font-size: 16px;
+  color: #888;
+}
+
+/* Guild tabs */
+.guild-tabs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.guild-tab {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  padding: 8px 20px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #444;
+  color: #888;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.guild-tab:hover {
+  border-color: #00cc66;
+  color: #00cc66;
+}
+
+.guild-tab.active {
+  background: rgba(0, 204, 102, 0.15);
+  border-color: #00cc66;
+  color: #00cc66;
+}
+
+/* Guild panels */
+.guild-panel {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 16px;
+  min-height: 300px;
+}
+
+/* Members */
+.guild-member-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid #222;
+}
+
+.guild-member-item:last-child {
+  border-bottom: none;
+}
+
+.guild-member-name {
+  font-size: 18px;
+}
+
+.guild-member-role {
+  font-size: 14px;
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.role-leader {
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+  border: 1px solid #ffd700;
+}
+
+.role-officer {
+  background: rgba(0, 136, 255, 0.2);
+  color: #4488ff;
+  border: 1px solid #4488ff;
+}
+
+.role-member {
+  background: rgba(136, 136, 136, 0.2);
+  color: #888;
+  border: 1px solid #555;
+}
+
+.guild-member-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.guild-member-actions button {
+  font-family: 'VT323', monospace;
+  font-size: 13px;
+  padding: 3px 8px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #555;
+  color: #aaa;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s;
+}
+
+.guild-member-actions button:hover {
+  border-color: #00cc66;
+  color: #00cc66;
+}
+
+.guild-member-actions .kick-btn:hover {
+  border-color: #ff4444;
+  color: #ff4444;
+}
+
+/* Guild chat */
+.guild-chat-messages {
+  height: 250px;
+  overflow-y: auto;
+  padding: 8px;
+  background: #0a0a0a;
+  border: 1px solid #222;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  font-size: 15px;
+}
+
+.guild-chat-msg {
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+
+.guild-chat-time {
+  color: #555;
+}
+
+.guild-chat-sender {
+  color: #00cc66;
+  font-weight: bold;
+}
+
+.guild-chat-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.guild-chat-input {
+  flex: 1;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 6px 10px;
+  background: #111;
+  border: 1px solid #444;
+  color: var(--primary);
+}
+
+.guild-chat-input:focus {
+  border-color: #00cc66;
+  outline: none;
+}
+
+.guild-chat-send {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 6px 14px;
+  background: rgba(0, 204, 102, 0.2);
+  border: 1px solid #00cc66;
+  color: #00cc66;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.guild-chat-send:hover {
+  background: #00cc66;
+  color: #000;
+}
+
+/* Guild boss */
+.guild-boss-display {
+  text-align: center;
+}
+
+.guild-boss-emoji {
+  font-size: 64px;
+  margin-bottom: 8px;
+}
+
+.guild-boss-name {
+  font-size: 24px;
+  color: #ff4444;
+  text-shadow: 0 0 8px rgba(255, 68, 68, 0.5);
+  margin-bottom: 12px;
+}
+
+.guild-boss-hp-container {
+  margin: 12px auto;
+  max-width: 400px;
+}
+
+.guild-boss-hp-bar {
+  width: 100%;
+  height: 24px;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.guild-boss-hp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ff2222, #ff6644);
+  transition: width 0.5s ease;
+  border-radius: 4px;
+}
+
+.guild-boss-hp-text {
+  text-align: center;
+  font-size: 16px;
+  color: #ff4444;
+  margin-top: 4px;
+}
+
+.guild-boss-attack-btn {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  padding: 10px 30px;
+  margin-top: 16px;
+  background: rgba(255, 68, 68, 0.2);
+  border: 2px solid #ff4444;
+  color: #ff4444;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.guild-boss-attack-btn:hover:not(:disabled) {
+  background: #ff4444;
+  color: #000;
+  box-shadow: 0 0 15px rgba(255, 68, 68, 0.5);
+}
+
+.guild-boss-attack-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Guild footer */
+.guild-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid #333;
+  border-radius: 8px;
+}
+
+.guild-treasury {
+  font-size: 20px;
+  color: #ffcc00;
+}
+
+.guild-footer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.guild-donate-btn {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 6px 14px;
+  background: rgba(255, 204, 0, 0.2);
+  border: 1px solid #ffcc00;
+  color: #ffcc00;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.guild-donate-btn:hover {
+  background: #ffcc00;
+  color: #000;
+}
+
+.guild-leave-btn {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 6px 14px;
+  background: rgba(255, 68, 68, 0.15);
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.guild-leave-btn:hover {
+  background: #ff4444;
+  color: #000;
+}
+
+/* Donate modal */
+.guild-donate-modal {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.guild-donate-modal-content {
+  background: #111;
+  border: 2px solid #ffcc00;
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  max-width: 320px;
+}
+
+.guild-donate-modal-content h3 {
+  color: #ffcc00;
+  font-size: 22px;
+  margin-bottom: 12px;
+}
+
+.guild-donate-input {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  padding: 8px;
+  background: #0a0a0a;
+  border: 1px solid #444;
+  color: #ffcc00;
+  text-align: center;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.guild-donate-input:focus {
+  border-color: #ffcc00;
+  outline: none;
+}
+
+/* Boss damage animation */
+@keyframes bossShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  50% { transform: translateX(8px); }
+  75% { transform: translateX(-4px); }
+}
+
+.boss-shaking {
+  animation: bossShake 0.3s ease-in-out;
+}
+
+@keyframes floatDamage {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-60px) scale(1.5); }
+}
+
+.boss-damage-float {
+  position: absolute;
+  font-size: 32px;
+  color: #ff4444;
+  font-weight: bold;
+  text-shadow: 0 0 10px rgba(255, 68, 68, 0.8);
+  animation: floatDamage 1.2s ease-out forwards;
+  pointer-events: none;
+  z-index: 100;
+}
+
+/* ============================================ */
+/* ====== RESPONSIVE GUILD ==================== */
+/* ============================================ */
+
+@media (max-width: 768px) {
+  .guild-container { padding: 10px; }
+  .guild-title { font-size: 28px; }
+  .guild-browse-item { flex-direction: column; gap: 6px; text-align: center; }
+  .guild-footer { flex-direction: column; gap: 8px; }
+  .guild-chat-messages { height: 180px; }
 }
 
 /* Utility */

@@ -26,9 +26,11 @@
         <a href="/casino" class="dash-nav-link dash-nav-link--casino">CASINO</a>
         <a href="/stats" class="dash-nav-link dash-nav-link--stats">STATS</a>
         <a href="/wiki" class="dash-nav-link">WIKI</a>
+        <a href="/guilds" class="dash-nav-link dash-nav-link--guild">GUILDES</a>
       </div>
       <div class="dash-nav-user">
         <span class="dash-nav-stat" title="Credits">&#128176; <span id="nav-credits">0</span></span>
+        <span class="dash-nav-stat energy-stat">&#9889; <span id="nav-energy">--</span></span>
         <span class="dash-nav-stat mine-essence-stat" title="Essence">&#9935; <span id="nav-essence">0</span></span>
         <span class="dash-nav-username" id="nav-username">???</span>
       </div>
@@ -74,6 +76,7 @@
       <div class="mine-shop-tabs">
         <button class="mine-shop-tab active" data-stab="sell">VENDRE</button>
         <button class="mine-shop-tab" data-stab="upgrade">AMELIORATIONS</button>
+        <button class="mine-shop-tab" data-stab="craft">CRAFT</button>
       </div>
 
       <!-- Tab Vendre -->
@@ -94,6 +97,11 @@
         <p class="mine-essence-display">Essence d'Excavation : &#9935; <span id="shop-essence">0</span></p>
         <p class="mine-essence-hint">Obtenez de l'essence en ouvrant des boosters</p>
         <div class="mine-upgrades-grid" id="mine-upgrades-grid"></div>
+      </div>
+
+      <!-- Tab Craft -->
+      <div class="mine-shop-panel hidden" id="stab-craft">
+        <div class="mine-craft-grid" id="mine-craft-grid"></div>
       </div>
     </div>
   </div>

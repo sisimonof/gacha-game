@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Guildes</title>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
+</head>
+<body class="guilds-page">
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
+
+  <!-- ===== TOP NAVBAR ===== -->
+  <nav class="dash-navbar">
+    <div class="dash-navbar-inner">
+      <div class="dash-nav-logo" data-text="GACHA CARDS">GACHA CARDS</div>
+      <div class="dash-nav-links">
+        <a href="/menu" class="dash-nav-link">ACCUEIL</a>
+        <a href="/shop" class="dash-nav-link dash-nav-link--shop">BOUTIQUE</a>
+        <a href="/collection" class="dash-nav-link">COLLECTION</a>
+        <a href="/mine" class="dash-nav-link dash-nav-link--mine">MINE</a>
+        <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
+        <a href="/battlepass" class="dash-nav-link dash-nav-link--bp">PASSE</a>
+        <a href="/market" class="dash-nav-link dash-nav-link--market">MARCHE</a>
+        <a href="/casino" class="dash-nav-link dash-nav-link--casino">CASINO</a>
+        <a href="/stats" class="dash-nav-link dash-nav-link--stats">STATS</a>
+        <a href="/wiki" class="dash-nav-link">WIKI</a>
+        <a href="/guilds" class="dash-nav-link dash-nav-link--active dash-nav-link--guild">GUILDES</a>
+      </div>
+      <div class="dash-nav-user">
+        <span class="dash-nav-stat" title="Credits">&#128176; <span id="nav-credits">0</span></span>
+        <span class="dash-nav-stat energy-stat">&#9889; <span id="nav-energy">--</span></span>
+        <span class="dash-nav-username" id="nav-username">???</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ===== GUILD CONTENT ===== -->
+  <div class="crt-screen">
+
+    <div class="guild-container">
+      <h1 class="guild-page-title">&#9876; GUILDES</h1>
+
+      <!-- ========== NO GUILD VIEW ========== -->
+      <div class="guild-no-guild" id="no-guild-view">
+
+        <!-- Create Guild -->
+        <section class="guild-create-section">
+          <h2 class="guild-section-title">> CREER UNE GUILDE</h2>
+          <div class="guild-create-form">
+            <div class="guild-create-row">
+              <label class="guild-label" for="guild-name-input">NOM</label>
+              <input type="text" id="guild-name-input" class="guild-input" placeholder="Nom de la guilde..." maxlength="24" autocomplete="off">
+            </div>
+            <div class="guild-create-row">
+              <label class="guild-label">EMBLEME</label>
+              <div class="guild-emoji-picker" id="emoji-picker">
+                <button class="guild-emoji-btn" type="button" data-emoji="&#9876;">&#9876;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#128293;">&#128293;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#9889;">&#9889;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#128142;">&#128142;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#9733;">&#9733;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#128081;">&#128081;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#127942;">&#127942;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#128737;">&#128737;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#128171;">&#128171;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#9760;">&#9760;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#128126;">&#128126;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#129409;">&#129409;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#128038;">&#128038;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#128050;">&#128050;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#128009;">&#128009;</button>
+                <button class="guild-emoji-btn" type="button" data-emoji="&#127775;">&#127775;</button>
+              </div>
+              <div class="guild-emoji-selected">Selectionne : <span id="selected-emoji">&#9876;</span></div>
+            </div>
+            <button class="guild-create-btn" id="create-guild-btn" onclick="createGuild()">
+              FONDER LA GUILDE &mdash; 500 &#128176;
+            </button>
+          </div>
+        </section>
+
+        <!-- Browse Guilds -->
+        <section class="guild-browse-section">
+          <h2 class="guild-section-title">> GUILDES DISPONIBLES</h2>
+          <div class="guild-browse-list" id="guild-browse-list">
+            <div class="guild-loading">Chargement des guildes...</div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ========== IN GUILD VIEW ========== -->
+      <div class="guild-in-guild hidden" id="in-guild-view">
+
+        <!-- Guild Header -->
+        <div class="guild-header">
+          <span class="guild-header-emoji" id="guild-emoji">&#9876;</span>
+          <span class="guild-header-name" id="guild-name">---</span>
+          <span class="guild-header-level" id="guild-level">Nv. 1</span>
+        </div>
+
+        <!-- Tabs -->
+        <div class="guild-tabs">
+          <button class="guild-tab guild-tab--active" id="tab-members" onclick="switchGuildTab('members')">MEMBRES</button>
+          <button class="guild-tab" id="tab-chat" onclick="switchGuildTab('chat')">CHAT</button>
+          <button class="guild-tab" id="tab-boss" onclick="switchGuildTab('boss')">BOSS</button>
+        </div>
+
+        <!-- MEMBRES TAB -->
+        <div class="guild-tab-content" id="panel-members">
+          <div class="guild-members-list" id="guild-members-list">
+            <div class="guild-loading">Chargement...</div>
+          </div>
+        </div>
+
+        <!-- CHAT TAB -->
+        <div class="guild-tab-content hidden" id="panel-chat">
+          <div class="guild-chat-box" id="guild-chat-box">
+            <div class="guild-chat-messages" id="guild-chat-messages">
+              <div class="guild-chat-system">Bienvenue dans le chat de guilde.</div>
+            </div>
+            <div class="guild-chat-input-row">
+              <input type="text" id="guild-chat-input" class="guild-chat-input" placeholder="Ecrire un message..." maxlength="200" autocomplete="off">
+              <button class="guild-chat-send-btn" id="guild-chat-send" onclick="sendGuildMessage()">ENVOYER</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOSS TAB -->
+        <div class="guild-tab-content hidden" id="panel-boss">
+          <div class="guild-boss-area">
+            <div class="guild-boss-info">
+              <span class="guild-boss-emoji">&#128009;</span>
+              <span class="guild-boss-name" id="boss-name">Dragon Ancien</span>
+            </div>
+            <div class="guild-boss-hp-section">
+              <div class="guild-boss-hp-label">
+                PV : <span id="boss-hp-current">???</span> / <span id="boss-hp-max">???</span>
+              </div>
+              <div class="guild-boss-hp-bar-bg">
+                <div class="guild-boss-hp-bar-fill" id="boss-hp-bar"></div>
+              </div>
+            </div>
+            <button class="guild-boss-attack-btn" id="boss-attack-btn" onclick="attackBoss()">
+              &#9876; ATTAQUER LE BOSS
+            </button>
+            <div class="guild-boss-rewards">
+              <h3 class="guild-boss-rewards-title">RECOMPENSES</h3>
+              <ul class="guild-boss-rewards-list" id="boss-rewards-list">
+                <li>&#128176; Credits pour tous les membres</li>
+                <li>&#127942; XP de guilde</li>
+                <li>&#128230; Booster rare partage</li>
+              </ul>
+            </div>
+            <div class="guild-boss-log" id="boss-attack-log"></div>
+          </div>
+        </div>
+
+        <!-- Guild Footer -->
+        <div class="guild-footer">
+          <div class="guild-treasury">
+            TRESOR : <span id="guild-treasury">0</span> &#128176;
+          </div>
+          <div class="guild-footer-actions">
+            <button class="guild-donate-btn" id="donate-btn" onclick="openDonateModal()">&#128176; DONNER</button>
+            <button class="guild-leave-btn" id="leave-btn" onclick="leaveGuild()">QUITTER LA GUILDE</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Donate Modal -->
+  <div class="guild-modal-overlay hidden" id="donate-overlay">
+    <div class="guild-modal">
+      <button class="guild-modal-close" onclick="closeDonateModal()">&times;</button>
+      <h2 class="guild-modal-title">DONNER AU TRESOR</h2>
+      <div class="guild-modal-body">
+        <label class="guild-label" for="donate-amount">MONTANT</label>
+        <input type="number" id="donate-amount" class="guild-input" placeholder="100" min="1">
+        <button class="guild-create-btn" onclick="donateToGuild()">CONFIRMER LE DON</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="version-tag">v1.0.0</div>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/toast.js"></script>
+  <script src="/js/guilds.js"></script>
+</body>
+</html>

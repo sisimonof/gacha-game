@@ -121,7 +121,7 @@ async function loadDecksPreview() {
 }
 
 // === QUETES ===
-let questData = { daily: [], weekly: [] };
+let questData = { daily: [], weekly: [], special: [] };
 let activeQuestTab = 'daily';
 
 async function loadQuests() {
@@ -137,11 +137,13 @@ function switchQuestTab(tab) {
   activeQuestTab = tab;
   document.getElementById('tab-daily').classList.toggle('quests-tab--active', tab === 'daily');
   document.getElementById('tab-weekly').classList.toggle('quests-tab--active', tab === 'weekly');
+  const tabSpecial = document.getElementById('tab-special');
+  if (tabSpecial) tabSpecial.classList.toggle('quests-tab--active', tab === 'special');
   renderActiveQuests();
 }
 
 function renderActiveQuests() {
-  const quests = activeQuestTab === 'daily' ? questData.daily : questData.weekly;
+  const quests = activeQuestTab === 'daily' ? questData.daily : (activeQuestTab === 'special' ? (questData.special || []) : questData.weekly);
   const container = document.getElementById('quests-grid');
 
   if (!quests || quests.length === 0) {

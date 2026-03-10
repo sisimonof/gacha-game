@@ -13,12 +13,28 @@
 
   <div class="crt-screen">
     <div class="fusion-wrapper">
-      <h1 class="menu-title">FUSION</h1>
-      <p class="shop-subtitle">- Fusionnez 5 cartes identiques (35% de succes) -</p>
+      <h1 class="menu-title">FORGE</h1>
 
-      <!-- Available cards -->
-      <div class="fusion-grid" id="fusion-grid"></div>
-      <p class="collection-empty hidden" id="empty-msg">Aucune carte eligible. Il faut 5 copies identiques non-fusionnees.</p>
+      <!-- Tabs -->
+      <div class="fusion-tabs">
+        <button class="fusion-tab fusion-tab--active" data-tab="fusion" onclick="switchForgeTab('fusion')">🔮 FUSION</button>
+        <button class="fusion-tab" data-tab="eveil" onclick="switchForgeTab('eveil')">⭐ EVEIL</button>
+      </div>
+
+      <!-- FUSION TAB -->
+      <div class="forge-tab-content" id="tab-fusion">
+        <p class="shop-subtitle">- Fusionnez 5 cartes identiques (35% de succes) -</p>
+        <div class="fusion-grid" id="fusion-grid"></div>
+        <p class="collection-empty hidden" id="empty-msg">Aucune carte eligible. Il faut 5 copies identiques non-fusionnees.</p>
+      </div>
+
+      <!-- EVEIL TAB -->
+      <div class="forge-tab-content hidden" id="tab-eveil">
+        <p class="shop-subtitle">- Eveillez vos cartes fusionnees pour booster leurs stats -</p>
+        <div class="eveil-resources" id="eveil-resources"></div>
+        <div class="fusion-grid" id="eveil-grid"></div>
+        <p class="collection-empty hidden" id="eveil-empty-msg">Aucune carte fusionnee eligible. Fusionnez d'abord 5 copies identiques.</p>
+      </div>
 
       <!-- Fusion panel -->
       <div class="fusion-panel hidden" id="fusion-panel">

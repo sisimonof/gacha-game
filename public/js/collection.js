@@ -40,6 +40,8 @@ async function loadUserInfo() {
     if (navCredits) navCredits.textContent = data.credits;
     if (navCards) navCards.textContent = data.cardCount;
     if (navUsername) navUsername.textContent = data.username;
+    const eEl = document.getElementById('nav-energy');
+    if (eEl) eEl.textContent = data.energy != null ? data.energy : '--';
   } catch {
     window.location.href = '/';
   }
