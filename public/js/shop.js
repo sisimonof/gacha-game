@@ -10,8 +10,6 @@ const BOOSTER_IMAGES = {
 };
 
 let currentCredits = 0;
-let allShopCards = [];
-let currentFilter = 'all';
 
 // === INIT ===
 async function loadCredits() {
@@ -41,6 +39,8 @@ function markFreeClaimed() {
   const booster = document.getElementById('free-booster');
   if (btn) { btn.textContent = 'RECUPERE'; btn.disabled = true; btn.classList.add('shop-v2-free-btn--claimed'); }
   if (booster) booster.classList.add('shop-v2-free--claimed');
+  const badge = document.querySelector('.shop-v2-free-badge');
+  if (badge) { badge.textContent = 'FAIT'; badge.style.background = '#444'; }
 }
 
 // === BOOSTERS ===
@@ -125,12 +125,13 @@ async function loadDailyShop() {
 
     container.innerHTML = data.cards.map(function(card) {
       const r = RARITY_COLORS[card.rarity] || RARITY_COLORS['rare'];
-      return '<div class="daily-shop-card rarity-' + card.rarity + '" style="border-color:' + r.color + '">' +
-        '<div class="daily-shop-card-visual">' + (card.emoji || '?') + '</div>' +
-        '<div class="daily-shop-card-name">' + card.name + '</div>' +
-        '<div class="daily-shop-card-rarity" style="color:' + r.color + '">' + card.rarity.toUpperCase() + '</div>' +
-        '<div class="daily-shop-card-stats">' + card.attack + '/' + card.defense + '/' + card.hp + '</div>' +
-        '<button class="daily-shop-buy-btn" onclick="buyDailyCard(' + card.id + ',' + card.shopPrice + ')">' + card.shopPrice + ' CR</button>' +
+      return '<div class="daily-card-wrapper">' +
+        '<div class="daily-card-render rarity-' + card.rarity + '" style="border-color:' + r.color + '; box-shadow: 0 0 20px ' + r.glow + '">' +
+          renderCardFront(card) +
+        '</div>' +
+        '<button class="daily-card-buy-btn" onclick="buyDailyCard(' + card.id + ',' + card.shopPrice + ')">' +
+          '<span class="daily-card-price">' + card.shopPrice + ' CR</span>' +
+        '</button>' +
       '</div>';
     }).join('');
 
@@ -169,65 +170,6 @@ function startDailyShopTimer(seconds) {
     timerEl.textContent = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
     remaining--;
   }, 1000);
-}
-
-// === CARD SHOP ===
-async function loadCardShop() {
-  try {
-    const res = await fetch('/api/shop/all-cards');
-    const data = await res.json();
-    allShopCards = data.cards || [];
-    renderCardShop();
-  } catch {}
-}
-
-function filterShopCards(filter) {
-  currentFilter = filter;
-  document.querySelectorAll('.shop-v2-filter-btn').forEach(b => b.classList.remove('shop-v2-filter--active'));
-  document.querySelector(`.shop-v2-filter-btn[data-filter="${filter}"]`).classList.add('shop-v2-filter--active');
-  renderCardShop();
-}
-
-function renderCardShop() {
-  const container = document.getElementById('shop-cards-list');
-  if (!container) return;
-
-  const filtered = currentFilter === 'all' ? allShopCards : allShopCards.filter(c => c.rarity === currentFilter);
-
-  container.innerHTML = filtered.map(card => {
-    const r = RARITY_COLORS[card.rarity] || RARITY_COLORS['commune'];
-    return `
-      <div class="shop-v2-card-item" onclick="buyShopCard(${card.id}, ${card.shopPrice})">
-        <div class="shop-v2-card-render rarity-${card.rarity}" style="border-color:${r.color}; box-shadow: 0 0 15px ${r.glow}">
-          ${renderCardFront(card)}
-        </div>
-        <button class="shop-v2-card-buy-btn">${card.shopPrice} CR</button>
-      </div>
-    `;
-  }).join('');
-
-  if (filtered.length === 0) {
-    container.innerHTML = '<p style="color:#666; font-family: VT323, monospace; font-size: 20px; padding: 20px;">Aucune carte disponible</p>';
-  }
-}
-
-async function buyShopCard(cardId, price) {
-  if (currentCredits < price) { screenShake(); return; }
-  try {
-    const res = await fetch('/api/shop/buy-single-card', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cardId })
-    });
-    const data = await res.json();
-    if (data.success) {
-      updateCreditsDisplay(data.credits);
-      screenFlash();
-      if (window.showToast) showToast('Carte achetee: ' + (data.card.emoji || '') + ' ' + data.card.name, 'success');
-    } else {
-      if (window.showToast) showToast(data.error, 'error');
-    }
-  } catch { if (window.showToast) showToast('Erreur serveur', 'error'); }
 }
 
 // === TEAR ANIMATION ===
@@ -454,4 +396,3 @@ document.addEventListener('DOMContentLoaded', () => {
 loadCredits();
 loadBoosters();
 loadDailyShop();
-loadCardShop();
