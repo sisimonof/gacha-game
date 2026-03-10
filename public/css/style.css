@@ -2510,137 +2510,157 @@ body.shop-page-v2 .credits-display {
   border-radius: 4px;
 }
 
-.shop-v2-content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px 24px 40px;
+/* ========================================
+   SHOP — HORIZONTAL SCROLL LAYOUT
+   ======================================== */
+.shop-scroll-wrapper {
   width: 100%;
-  box-sizing: border-box;
-}
-
-.shop-v2-section-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 11px;
-  color: var(--primary);
-  text-shadow: 0 0 12px rgba(var(--primary-rgb), 0.4);
-  letter-spacing: 2px;
-  margin: 0 0 14px 0;
-}
-
-/* --- TOP ROW: FREE + BOOSTERS --- */
-.shop-v2-top-row {
+  height: calc(100vh - 55px);
+  overflow-x: auto;
+  overflow-y: hidden;
   display: flex;
-  gap: 20px;
-  align-items: stretch;
-  margin-bottom: 32px;
+  align-items: center;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--primary-rgb), 0.3) transparent;
+}
+.shop-scroll-wrapper::-webkit-scrollbar { height: 6px; }
+.shop-scroll-wrapper::-webkit-scrollbar-track { background: transparent; }
+.shop-scroll-wrapper::-webkit-scrollbar-thumb { background: rgba(var(--primary-rgb), 0.3); border-radius: 3px; }
+
+.shop-scroll-track {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  padding: 20px 40px;
+  width: max-content;
+  height: 100%;
 }
 
-/* Free daily booster card */
-.shop-v2-free-card {
-  position: relative;
-  flex: 0 0 180px;
+/* === GENERIC SHOP ITEM (free booster, gift code) === */
+.shop-item {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px 16px;
-  background: rgba(0, 200, 80, 0.04);
-  border: 2px solid rgba(0, 200, 80, 0.25);
-  border-radius: 12px;
+  text-align: center;
+  padding: 24px 20px;
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.3s;
-  text-align: center;
+  position: relative;
+  width: 160px;
+  min-height: 320px;
 }
-.shop-v2-free-card:hover {
+.shop-item:hover { transform: translateY(-6px); }
+
+.shop-item--free {
+  background: rgba(0, 200, 80, 0.04);
+  border: 2px solid rgba(0, 200, 80, 0.25);
+}
+.shop-item--free:hover {
   border-color: #00cc55;
-  box-shadow: 0 0 25px rgba(0, 200, 80, 0.15);
-  transform: translateY(-4px);
+  box-shadow: 0 0 30px rgba(0, 200, 80, 0.15);
 }
-.shop-v2-free-badge {
+.shop-item--free.shop-v2-free--claimed {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.shop-item--giftcode {
+  background: rgba(var(--primary-rgb), 0.04);
+  border: 2px dashed rgba(var(--primary-rgb), 0.2);
+}
+.shop-item--giftcode:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 25px rgba(var(--primary-rgb), 0.15);
+}
+
+.shop-item-badge {
   position: absolute;
   top: -10px;
   left: 50%;
   transform: translateX(-50%);
   font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  color: #000;
-  background: #00cc55;
+  font-size: 6px;
   padding: 4px 10px;
   border-radius: 4px;
   letter-spacing: 1px;
+  white-space: nowrap;
 }
-.shop-v2-free-visual {
-  font-size: 48px;
-  margin: 8px 0 12px;
-}
-.shop-v2-free-label {
+.shop-item-badge--free { color: #000; background: #00cc55; }
+
+.shop-item-visual { font-size: 52px; margin: 10px 0 16px; }
+
+.shop-item-name {
   font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  color: #00cc55;
-  text-shadow: 0 0 10px rgba(0, 200, 80, 0.4);
+  font-size: 8px;
+  color: #ccc;
   margin-bottom: 4px;
 }
-.shop-v2-free-sub {
+.shop-item--free .shop-item-name { color: #00cc55; text-shadow: 0 0 10px rgba(0,200,80,0.4); }
+.shop-item--giftcode .shop-item-name { color: var(--primary); }
+
+.shop-item-sub {
   font-family: 'VT323', monospace;
   font-size: 16px;
-  color: #666;
-  margin-bottom: 12px;
+  color: #555;
+  margin-bottom: 14px;
 }
-.shop-v2-free-btn {
+
+.shop-item-btn {
   font-family: 'Press Start 2P', monospace;
   font-size: 9px;
-  color: #00cc55;
-  background: rgba(0, 200, 80, 0.1);
-  border: 2px solid #00cc55;
-  padding: 8px 16px;
+  padding: 10px 18px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.2s;
   white-space: nowrap;
 }
-.shop-v2-free-btn:hover:not(:disabled) {
+.shop-item-btn--free {
+  color: #00cc55;
+  background: rgba(0, 200, 80, 0.1);
+  border: 2px solid #00cc55;
+}
+.shop-item-btn--free:hover:not(:disabled) {
   background: rgba(0, 200, 80, 0.25);
   box-shadow: 0 0 15px rgba(0, 200, 80, 0.3);
 }
-.shop-v2-free-btn--claimed {
-  opacity: 0.4;
-  cursor: not-allowed;
-  border-color: #444;
-  color: #444;
-  background: transparent;
+.shop-item-btn--free.shop-v2-free-btn--claimed {
+  opacity: 0.4; cursor: not-allowed;
+  border-color: #444; color: #444; background: transparent;
 }
-.shop-v2-free-card.shop-v2-free--claimed {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
+.shop-item-btn--code {
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.1);
+  border: 2px solid var(--primary);
 }
-
-/* Boosters row */
-.shop-v2-boosters {
-  display: flex;
-  gap: 20px;
-  flex: 1;
-  justify-content: center;
+.shop-item-btn--code:hover {
+  background: rgba(var(--primary-rgb), 0.25);
+  box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.3);
 }
 
+/* === BOOSTERS INLINE === */
+.shop-boosters-inline {
+  display: contents;
+}
 .shop-v2-booster {
+  flex: 0 0 auto;
   position: relative;
   cursor: pointer;
   text-align: center;
   transition: transform 0.3s;
-  flex: 0 0 auto;
-  width: 200px;
+  width: 240px;
 }
-.shop-v2-booster:hover {
-  transform: translateY(-6px);
-}
+.shop-v2-booster:hover { transform: translateY(-8px); }
 
 .shop-v2-booster-img {
   width: 100%;
-  height: 260px;
+  height: 340px;
   overflow: hidden;
-  border-radius: 10px;
-  margin-bottom: 8px;
+  border-radius: 12px;
+  margin-bottom: 10px;
 }
 .shop-v2-booster-img img {
   width: 100%;
@@ -2649,81 +2669,87 @@ body.shop-page-v2 .credits-display {
   transition: transform 0.4s;
   display: block;
 }
-.shop-v2-booster:hover .shop-v2-booster-img img {
-  transform: scale(1.05);
-}
+.shop-v2-booster:hover .shop-v2-booster-img img { transform: scale(1.05); }
 
 .shop-v2-booster-name {
   font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
+  font-size: 8px;
   color: #ccc;
-  margin-bottom: 3px;
+  margin-bottom: 4px;
 }
 .shop-v2-booster-count {
   font-family: 'VT323', monospace;
-  font-size: 15px;
+  font-size: 16px;
   color: #666;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 }
 .shop-v2-booster-price {
   font-family: 'Press Start 2P', monospace;
-  font-size: 12px;
+  font-size: 14px;
   color: var(--primary);
   text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.4);
 }
 .shop-v2-booster[data-id="rift"] .shop-v2-booster-price { color: #ccc; text-shadow: 0 0 10px rgba(200, 200, 200, 0.3); }
 .shop-v2-booster[data-id="avance"] .shop-v2-booster-price { color: #ffaa00; text-shadow: 0 0 10px rgba(255, 170, 0, 0.4); }
 
-/* --- DAILY SHOP V2 --- */
-.shop-v2-daily-section {
-  margin-bottom: 32px;
-}
-.shop-v2-daily-header {
+/* === SEPARATOR === */
+.shop-separator {
+  flex: 0 0 auto;
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 6px;
-}
-.shop-v2-daily-desc {
-  font-family: 'VT323', monospace;
-  font-size: 16px;
-  color: #555;
-  margin: 0 0 16px 0;
-}
-.shop-v2-daily-timer {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 9px;
-  color: #ff4444;
-  text-shadow: 0 0 6px rgba(255, 68, 68, 0.3);
-}
-.shop-v2-daily-cards {
-  display: flex;
-  gap: 20px;
+  gap: 8px;
+  padding: 0 10px;
+  height: 300px;
   justify-content: center;
 }
+.shop-sep-line {
+  width: 2px;
+  flex: 1;
+  background: linear-gradient(to bottom, transparent, rgba(var(--primary-rgb), 0.3), transparent);
+}
+.shop-sep-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--primary);
+  text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.4);
+  writing-mode: vertical-lr;
+  text-orientation: mixed;
+  letter-spacing: 3px;
+  white-space: nowrap;
+}
+.shop-sep-timer {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #ff4444;
+  text-shadow: 0 0 6px rgba(255, 68, 68, 0.3);
+  writing-mode: vertical-lr;
+}
 
-/* Daily card wrappers with full card render */
+/* === DAILY CARDS INLINE === */
+.shop-daily-inline {
+  display: contents;
+}
 .daily-card-wrapper {
   flex: 0 0 auto;
   width: 200px;
   text-align: center;
   transition: transform 0.3s;
 }
-.daily-card-wrapper:hover {
-  transform: translateY(-6px);
-}
+.daily-card-wrapper:hover { transform: translateY(-6px); }
+
 .daily-card-render {
   border: 2px solid;
   border-radius: 10px;
   padding: 10px;
   background: rgba(0, 0, 0, 0.9);
-  min-height: 280px;
+  min-height: 300px;
   position: relative;
   overflow: hidden;
   font-size: 11px;
 }
-.daily-card-render .card-visual { height: 90px; }
-.daily-card-render .card-visual-fallback { font-size: 44px !important; }
+.daily-card-render .card-visual { height: 100px; }
+.daily-card-render .card-visual-fallback { font-size: 48px !important; }
 .daily-card-render .card-name { font-size: 9px; }
 .daily-card-render .card-element { font-size: 9px; padding: 2px 6px; margin: 3px auto; }
 .daily-card-render .card-rarity { font-size: 7px; padding: 2px 8px; }
@@ -2757,15 +2783,81 @@ body.shop-page-v2 .credits-display {
   border-color: #ffcc00;
 }
 
-/* --- GIFT CODE V2 --- */
-.shop-v2-giftcode {
+/* === GIFT CODE MODAL === */
+.giftcode-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
-  gap: 14px;
-  background: rgba(var(--primary-rgb), 0.03);
-  border: 1px solid var(--primary-border);
-  border-radius: 8px;
-  padding: 12px 16px;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+.giftcode-modal {
+  background: #0a0a0a;
+  border: 2px solid var(--primary-border);
+  border-radius: 14px;
+  padding: 30px 28px;
+  text-align: center;
+  max-width: 400px;
+  width: 90%;
+  position: relative;
+}
+.giftcode-modal-close {
+  position: absolute;
+  top: 10px; right: 14px;
+  background: none; border: none;
+  color: #666; font-size: 24px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.giftcode-modal-close:hover { color: #fff; }
+.giftcode-modal-icon { font-size: 48px; margin-bottom: 12px; }
+.giftcode-modal-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--primary);
+  text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.4);
+  margin: 0 0 20px 0;
+}
+.giftcode-modal-form {
+  display: flex;
+  gap: 8px;
+}
+.giftcode-modal-input {
+  flex: 1;
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: #fff;
+  background: rgba(255,255,255,0.05);
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 10px 14px;
+  text-align: center;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+.giftcode-modal-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 10px rgba(var(--primary-rgb), 0.2);
+}
+.giftcode-modal-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.1);
+  border: 2px solid var(--primary);
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.giftcode-modal-btn:hover {
+  background: rgba(var(--primary-rgb), 0.25);
+  box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.3);
 }
 
 /* ==============================
@@ -11863,92 +11955,24 @@ body.casino-page {
     flex-wrap: wrap; gap: 6px; justify-content: center;
   }
 
-  /* --- SHOP V2 mobile --- */
+  /* --- SHOP SCROLL mobile --- */
   body.shop-page-v2 .credits-display {
     top: 50px; right: 8px; font-size: 7px; padding: 4px 8px;
   }
-  .shop-v2-content { padding: 14px 12px 40px; }
-  .shop-v2-section-title { font-size: 9px; margin-bottom: 10px; }
-
-  .shop-v2-top-row {
-    flex-direction: column;
-    gap: 14px;
-  }
-  .shop-v2-free-card {
-    flex: 0 0 auto;
-    flex-direction: row;
-    padding: 14px 16px;
-    gap: 12px;
-  }
-  .shop-v2-free-badge {
-    top: -8px;
-    left: 16px;
-    transform: none;
-  }
-  .shop-v2-free-visual { font-size: 36px; margin: 0; }
-  .shop-v2-free-label { font-size: 7px; }
-  .shop-v2-free-sub { font-size: 14px; margin-bottom: 0; }
-  .shop-v2-free-btn {
-    font-size: 9px; padding: 10px 16px;
-    min-height: 40px;
-    border-radius: 8px;
-  }
-
-  .shop-v2-boosters {
-    gap: 10px;
-    overflow-x: auto;
-    justify-content: flex-start;
-    padding: 4px 0 8px;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-  }
-  .shop-v2-booster {
-    width: 160px;
-    flex-shrink: 0;
-    scroll-snap-align: center;
-  }
-  .shop-v2-booster-img { height: 200px; border-radius: 10px; }
+  .shop-scroll-wrapper { height: calc(100vh - 44px - 60px); }
+  .shop-scroll-track { gap: 20px; padding: 14px 20px; }
+  .shop-item { width: 130px; min-height: 240px; padding: 16px 12px; }
+  .shop-item-visual { font-size: 38px; margin: 6px 0 10px; }
+  .shop-item-btn { font-size: 8px; padding: 8px 12px; }
+  .shop-v2-booster { width: 180px; }
+  .shop-v2-booster-img { height: 250px; }
   .shop-v2-booster-name { font-size: 6px; }
-  .shop-v2-booster-price { font-size: 11px; margin-top: 4px; }
-  .shop-v2-booster-count { font-size: 14px; }
-
-  .shop-v2-daily-cards {
-    gap: 12px;
-    overflow-x: auto;
-    justify-content: flex-start;
-    padding-bottom: 8px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .daily-card-wrapper {
-    width: 170px;
-    flex-shrink: 0;
-  }
+  .shop-v2-booster-price { font-size: 11px; }
+  .shop-separator { height: 220px; }
+  .daily-card-wrapper { width: 160px; }
   .daily-card-render { min-height: 240px; padding: 8px; }
   .daily-card-render .card-visual { height: 70px; }
   .daily-card-render .card-name { font-size: 8px; }
-
-  .shop-v2-daily-cards,
-  .daily-shop-cards {
-    flex-wrap: wrap; gap: 8px; justify-content: center;
-  }
-  .daily-shop-card {
-    flex: 0 0 calc(50% - 4px); max-width: 180px;
-    border-radius: 10px;
-  }
-  .daily-shop-buy-btn { min-height: 36px; }
-
-  .shop-v2-cards-filters {
-    gap: 4px;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding-bottom: 4px;
-  }
-  .shop-v2-filter-btn {
-    font-size: 6px; padding: 7px 10px;
-    min-height: 32px;
-    flex-shrink: 0;
-    border-radius: 6px;
-  }
   .shop-v2-card-item { width: 150px; }
   .shop-v2-card-render { min-height: 220px; padding: 6px; border-radius: 10px; }
   .shop-v2-card-buy-btn { min-height: 36px; border-radius: 6px; }
@@ -12144,23 +12168,22 @@ body.casino-page {
   .quests-tab { font-size: 6px; padding: 6px 8px; }
 
   /* Shop compact */
-  .shop-v2-content { padding: 10px 8px 40px; }
-  .shop-v2-boosters { gap: 8px; padding-left: 8px; }
-  .shop-v2-booster { width: 130px; }
-  .shop-v2-booster-img { height: 160px; }
+  .shop-scroll-track { gap: 14px; padding: 10px 12px; }
+  .shop-item { width: 110px; min-height: 200px; padding: 12px 10px; }
+  .shop-item-visual { font-size: 32px; }
+  .shop-item-name { font-size: 7px; }
+  .shop-item-sub { font-size: 13px; }
+  .shop-item-btn { font-size: 7px; padding: 6px 10px; }
+  .shop-v2-booster { width: 150px; }
+  .shop-v2-booster-img { height: 200px; }
   .shop-v2-booster-name { font-size: 5px; }
   .shop-v2-booster-count { font-size: 12px; }
   .shop-v2-booster-price { font-size: 10px; }
   .booster-badge { font-size: 4px; padding: 2px 16px; top: 5px; right: -18px; }
-
-  .shop-v2-free-card {
-    padding: 10px 12px;
-  }
-  .shop-v2-free-visual { font-size: 28px; }
-  .shop-v2-free-btn { width: auto; font-size: 8px; }
-
-  .daily-card-wrapper { width: 150px; }
-  .daily-card-render { min-height: 210px; padding: 6px; }
+  .shop-separator { height: 170px; }
+  .shop-sep-label { font-size: 6px; }
+  .daily-card-wrapper { width: 140px; }
+  .daily-card-render { min-height: 200px; padding: 6px; }
   .daily-card-buy-btn { font-size: 8px; padding: 8px 10px; }
 
   /* Collection compact */
@@ -12206,8 +12229,10 @@ body.casino-page {
   .dash-nav-username { display: none; }
   .dash-nav-user { border: none; }
 
-  .shop-v2-booster { width: 110px; }
-  .shop-v2-booster-img { height: 135px; }
+  .shop-v2-booster { width: 130px; }
+  .shop-v2-booster-img { height: 170px; }
+  .shop-item { width: 95px; min-height: 170px; }
+  .daily-card-wrapper { width: 120px; }
 
   .mobile-more-grid { grid-template-columns: repeat(3, 1fr); }
 
