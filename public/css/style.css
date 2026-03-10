@@ -3687,6 +3687,13 @@ body.shop-page-v2 .credits-display {
 .collection-card-fused {
   border-color: #00cccc !important;
   box-shadow: 0 0 15px rgba(0,204,204,0.4) !important;
+}
+
+.collection-card-fused.card-appear {
+  animation: cardAppear 0.35s ease-out forwards, fusedCardPulse 2s ease-in-out 0.35s infinite;
+}
+
+.collection-card-fused:not(.card-appear) {
   animation: fusedCardPulse 2s ease-in-out infinite;
 }
 
