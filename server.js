@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const session = require('express-session');
 const SqliteStore = require('better-sqlite3-session-store')(session);
 const bcrypt = require('bcryptjs');
+const cookieParser = require('cookie-parser');
 const Database = require('better-sqlite3');
 const crypto = require('crypto');
 const path = require('path');
@@ -4353,6 +4354,7 @@ function aiDeckTurn(battle) {
 }
 
 // --- Middleware ---
+app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 const sessionDb = new Database(path.join(__dirname, 'sessions.db'));
@@ -4365,15 +4367,44 @@ const sessionMiddleware = session({
 });
 app.use(sessionMiddleware);
 
-function generateAuthToken(userId) {
+const AUTH_COOKIE = 'gacha_remember';
+const AUTH_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+function generateAuthToken(userId, res) {
   const token = crypto.randomBytes(48).toString('hex');
   db.prepare('DELETE FROM auth_tokens WHERE user_id = ?').run(userId);
   db.prepare('INSERT INTO auth_tokens (user_id, token) VALUES (?, ?)').run(userId, token);
+  if (res) {
+    res.cookie(AUTH_COOKIE, token, { maxAge: AUTH_COOKIE_MAX_AGE, httpOnly: true, sameSite: 'lax' });
+  }
   return token;
+}
+
+function clearAuthCookie(res) {
+  res.clearCookie(AUTH_COOKIE);
+}
+
+// Try to restore session from remember-me cookie
+function tryAutoReconnect(req) {
+  const token = req.cookies && req.cookies[AUTH_COOKIE];
+  if (!token) return false;
+  const row = db.prepare('SELECT user_id FROM auth_tokens WHERE token = ?').get(token);
+  if (!row) return false;
+  const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(row.user_id);
+  if (!user) return false;
+  req.session.userId = user.id;
+  req.session.username = user.username;
+  return true;
 }
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) {
+    // Try auto-reconnect from remember cookie
+    if (tryAutoReconnect(req)) {
+      // Session restored, rotate token for security
+      generateAuthToken(req.session.userId, res);
+      return next();
+    }
     const isApi = req.path.startsWith('/api/');
     if (isApi) {
       return res.status(401).json({ error: 'Non connecte' });
@@ -4405,8 +4436,8 @@ app.post('/api/register', (req, res) => {
   const result = db.prepare('INSERT INTO users (username, password, credits) VALUES (?, ?, 1000)').run(username, hash);
   req.session.userId = result.lastInsertRowid;
   req.session.username = username;
-  const authToken = generateAuthToken(result.lastInsertRowid);
-  res.json({ success: true, username, authToken });
+  generateAuthToken(result.lastInsertRowid, res);
+  res.json({ success: true, username });
 });
 
 app.post('/api/login', (req, res) => {
@@ -4419,28 +4450,15 @@ app.post('/api/login', (req, res) => {
   }
   req.session.userId = user.id;
   req.session.username = user.username;
-  const authToken = generateAuthToken(user.id);
-  res.json({ success: true, username: user.username, authToken });
-});
-
-app.post('/api/auto-reconnect', (req, res) => {
-  const { token } = req.body;
-  if (!token) return res.status(400).json({ error: 'Token manquant' });
-  const row = db.prepare('SELECT user_id FROM auth_tokens WHERE token = ?').get(token);
-  if (!row) return res.status(401).json({ error: 'Token invalide' });
-  const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(row.user_id);
-  if (!user) return res.status(401).json({ error: 'Utilisateur introuvable' });
-  req.session.userId = user.id;
-  req.session.username = user.username;
-  // Rotate token for security
-  const newToken = generateAuthToken(user.id);
-  res.json({ success: true, username: user.username, authToken: newToken });
+  generateAuthToken(user.id, res);
+  res.json({ success: true, username: user.username });
 });
 
 app.post('/api/logout', (req, res) => {
   if (req.session.userId) {
     db.prepare('DELETE FROM auth_tokens WHERE user_id = ?').run(req.session.userId);
   }
+  clearAuthCookie(res);
   req.session.destroy();
   res.json({ success: true });
 });
