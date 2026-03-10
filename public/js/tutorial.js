@@ -575,9 +575,195 @@ async function step7_victory() {
 }
 
 // ===========================================
-// ÉTAPE 8 : FIN
+// ÉTAPE 8 : TOUR DES FONCTIONNALITÉS
 // ===========================================
-async function step8_end() {
+async function step8_features() {
+  if (aborted) return;
+  tutBody.innerHTML = '<div class="tut-text" id="tut-text"></div>';
+  const txt = document.getElementById('tut-text');
+
+  await typeLine(txt, '> Excellent ! Vous maitrisez les bases du combat.', 25);
+  await typeLine(txt, '> Mais l\'univers des Invocateurs offre bien plus...', 25);
+  await sleep(500);
+
+  const features = [
+    {
+      icon: '🛒', title: 'LA BOUTIQUE',
+      color: '#00ff41',
+      lines: [
+        'Ouvrez des BOOSTERS pour obtenir de nouvelles cartes.',
+        'Chaque booster contient 5 cartes aleatoires.',
+        'Plus le booster est cher, plus les chances de',
+        'cartes rares, epiques ou legendaires augmentent !',
+        'La boutique propose aussi des offres du jour.'
+      ]
+    },
+    {
+      icon: '📦', title: 'LES DECKS',
+      color: '#4488ff',
+      lines: [
+        'Assemblez un DECK de 20 cartes pour le combat.',
+        'Vous pouvez creer jusqu\'a 3 decks differents.',
+        'Equilibrez votre deck : creatures pas cheres pour',
+        'le debut, et creatures puissantes pour la fin.',
+        'Un bon deck utilise les ELEMENTS a son avantage !'
+      ]
+    },
+    {
+      icon: '⛏', title: 'LA MINE',
+      color: '#ffaa00',
+      lines: [
+        'Explorez les profondeurs pour extraire des ESSENCES.',
+        'Chaque excavation peut reveler des tresors caches :',
+        'credits, experience, et meme des cartes rares !',
+        'Plus vous creusez profond, plus les recompenses',
+        'sont exceptionnelles. Attention a votre energie !'
+      ]
+    },
+    {
+      icon: '🔥', title: 'LA FORGE (FUSION)',
+      color: '#ff6600',
+      lines: [
+        'Combinez des cartes pour en creer de PLUS PUISSANTES.',
+        'La fusion peut ameliorer la rarete d\'une carte !',
+        'Mais attention : la fusion peut aussi echouer...',
+        'Les cartes fusionnees gagnent un bonus permanent.',
+        'L\'eveil permet de transcender les limites d\'une carte.'
+      ]
+    },
+    {
+      icon: '🎰', title: 'LE CASINO',
+      color: '#ff4444',
+      lines: [
+        'Tentez votre chance a la ROULETTE pour 200 CR.',
+        'Gagnez des credits, de l\'XP, et meme des cartes !',
+        'Le JACKPOT PROGRESSIF augmente a chaque spin.',
+        'Quand quelqu\'un gagne le jackpot, tout le monde',
+        'est notifie. La cagnotte repart alors a 5000 CR.'
+      ]
+    },
+    {
+      icon: '🏪', title: 'LE MARCHE',
+      color: '#cc44ff',
+      lines: [
+        'Achetez et vendez des cartes avec d\'autres joueurs.',
+        'Fixez vos prix et mettez vos doublons en vente.',
+        'Trouvez des rarites que vous n\'arrivez pas',
+        'a obtenir dans les boosters !',
+        'Les bonnes affaires partent vite. Soyez vigilant !'
+      ]
+    },
+    {
+      icon: '👥', title: 'LES AMIS & DUELS',
+      color: '#00ccff',
+      lines: [
+        'Ajoutez des amis et consultez leurs PROFILS.',
+        'Envoyez-leur des messages en temps reel.',
+        'Defiez vos amis en DUEL DIRECT depuis leur profil !',
+        'Montrez vos meilleures cartes dans votre VITRINE.',
+        'Les vrais Invocateurs combattent ensemble.'
+      ]
+    },
+    {
+      icon: '🏰', title: 'LES GUILDES',
+      color: '#ffcc00',
+      lines: [
+        'Rejoignez une GUILDE pour combattre en equipe.',
+        'Contribuez au tresor de guilde et montez en rang.',
+        'Discutez strategie dans le chat de guilde.',
+        'Les meilleures guildes dominent le classement !',
+      ]
+    }
+  ];
+
+  const featureContainer = document.createElement('div');
+  featureContainer.className = 'tut-features-container';
+  tutBody.appendChild(featureContainer);
+
+  for (let i = 0; i < features.length; i++) {
+    if (aborted) return;
+    const f = features[i];
+
+    const card = document.createElement('div');
+    card.className = 'tut-feature-card tut-fade-in';
+    card.style.borderColor = f.color;
+    card.innerHTML = `
+      <div class="tut-feature-header" style="color:${f.color}">
+        <span class="tut-feature-icon">${f.icon}</span>
+        <span class="tut-feature-title">${f.title}</span>
+      </div>
+      <div class="tut-feature-body">
+        ${f.lines.map(l => '<div class="tut-feature-line">' + l + '</div>').join('')}
+      </div>
+    `;
+    featureContainer.appendChild(card);
+    tutBody.scrollTop = tutBody.scrollHeight;
+
+    await sleep(1200);
+  }
+
+  await sleep(500);
+  await showContinueBtn();
+}
+
+// ===========================================
+// ÉTAPE 9 : PROGRESSION & CONSEILS
+// ===========================================
+async function step9_progression() {
+  if (aborted) return;
+  tutBody.innerHTML = '<div class="tut-text" id="tut-text"></div>';
+  const txt = document.getElementById('tut-text');
+
+  await typeLine(txt, '> DERNIERES INFORMATIONS AVANT DEPLOIEMENT...', 25);
+  await sleep(400);
+
+  const tips = document.createElement('div');
+  tips.className = 'tut-tips-zone';
+  tips.innerHTML = `
+    <div class="tut-tip tut-fade-in" style="animation-delay:0.2s">
+      <span class="tut-tip-icon">📋</span>
+      <div class="tut-tip-text">
+        <strong style="color:var(--primary)">QUETES QUOTIDIENNES</strong><br>
+        Completez des missions chaque jour pour gagner des credits et de l'XP.
+        Les quetes se renouvellent tous les jours !
+      </div>
+    </div>
+    <div class="tut-tip tut-fade-in" style="animation-delay:0.5s">
+      <span class="tut-tip-icon">🎖</span>
+      <div class="tut-tip-text">
+        <strong style="color:#ffaa00">PASSE DE COMBAT</strong><br>
+        Gagnez de l'XP en jouant pour debloquer des recompenses exclusives.
+        Atteignez le palier 30 pour les meilleures recompenses !
+      </div>
+    </div>
+    <div class="tut-tip tut-fade-in" style="animation-delay:0.8s">
+      <span class="tut-tip-icon">⚡</span>
+      <div class="tut-tip-text">
+        <strong style="color:#4488ff">ENERGIE</strong><br>
+        L'energie se regenere avec le temps. Chaque combat et excavation en consomme.
+        Gerez votre energie pour optimiser votre progression !
+      </div>
+    </div>
+    <div class="tut-tip tut-fade-in" style="animation-delay:1.1s">
+      <span class="tut-tip-icon">🔑</span>
+      <div class="tut-tip-text">
+        <strong style="color:#cc44ff">RECOMPENSE QUOTIDIENNE</strong><br>
+        Connectez-vous chaque jour pour obtenir des bonus croissants.
+        Maintenez votre serie pour des recompenses de plus en plus rares !
+      </div>
+    </div>
+  `;
+  tutBody.appendChild(tips);
+  tutBody.scrollTop = tutBody.scrollHeight;
+
+  await sleep(3000);
+  await showContinueBtn();
+}
+
+// ===========================================
+// ÉTAPE FINALE : FIN
+// ===========================================
+async function stepFinal_end() {
   if (aborted) return;
   tutBody.innerHTML = '<div class="tut-text" id="tut-text"></div>';
   const txt = document.getElementById('tut-text');
@@ -586,11 +772,19 @@ async function step8_end() {
     '> ENTRAINEMENT TERMINE.',
     '> Vos 5 cartes ont ete ajoutees a votre collection.',
     '',
-    '> Conseil : ouvrez des BOOSTERS dans la BOUTIQUE',
-    '> pour agrandir votre collection, puis construisez',
-    '> un DECK de 20 cartes pour le COMBAT !',
+    '> PROTOCOLE DE DEPLOIEMENT INITIALISE.',
     '',
-    '> Bonne chance, Invocateur.'
+    '> Rappel de vos priorites :',
+    '>   1. Ouvrez des BOOSTERS dans la BOUTIQUE',
+    '>   2. Construisez un DECK de 20 cartes',
+    '>   3. Lancez votre premier COMBAT PvE',
+    '>   4. Explorez la MINE pour extraire des ressources',
+    '>   5. Tentez votre chance au CASINO',
+    '',
+    '> Chaque menu vous guidera lors de votre premiere visite.',
+    '> Restez attentif aux instructions.',
+    '',
+    '> Bonne chance, Invocateur. L\'Arcanae compte sur vous.'
   ];
 
   for (const line of endLines) {
@@ -669,7 +863,13 @@ async function runTutorial() {
   await step7_victory();
   if (aborted) return;
 
-  await step8_end();
+  await step8_features();
+  if (aborted) return;
+
+  await step9_progression();
+  if (aborted) return;
+
+  await stepFinal_end();
 }
 
 runTutorial();

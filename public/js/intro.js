@@ -7,33 +7,66 @@ typingSound.volume = 0.6;
 const lines = [
   { text: '> CONNEXION AU SERVEUR CENTRAL...', delay: 30 },
   { text: '> AUTHENTIFICATION REUSSIE.', delay: 30 },
-  { text: '', pause: 400 },
+  { text: '> DECHIFFREMENT DES ARCHIVES EN COURS...', delay: 30 },
+  { text: '', pause: 500 },
   { text: '=== DOSSIER CONFIDENTIEL : PROJET GACHA ===', delay: 25 },
-  { text: '', pause: 300 },
-  { text: 'Il y a longtemps, dans un monde oublie des hommes,', delay: 35 },
-  { text: 'existaient des creatures aux pouvoirs inimaginables.', delay: 35 },
-  { text: '', pause: 300 },
-  { text: 'Guerriers, mages, betes ancestrales et divinites', delay: 35 },
-  { text: 'se livraient une guerre eternelle pour le controle', delay: 35 },
-  { text: 'des cristaux dimensionnels.', delay: 35 },
+  { text: '=== NIVEAU D\'HABILITATION : MAXIMUM ===', delay: 25 },
   { text: '', pause: 400 },
-  { text: 'Un jour, une faille s\'ouvrit entre les dimensions.', delay: 35 },
-  { text: 'Les creatures furent aspirees et emprisonnees', delay: 35 },
+  { text: 'Avant les civilisations, avant les royaumes,', delay: 35 },
+  { text: 'il existait un monde primitif nomme l\'ARCANAE.', delay: 35 },
+  { text: '', pause: 300 },
+  { text: 'Des creatures aux pouvoirs inimaginables y regnaient :', delay: 35 },
+  { text: 'Guerriers de flammes, Mages d\'ombre,', delay: 35 },
+  { text: 'Betes ancestrales et Divinites oubliees.', delay: 35 },
+  { text: '', pause: 300 },
+  { text: 'Pendant des millenaires, elles se livraient', delay: 35 },
+  { text: 'une guerre eternelle pour le controle', delay: 35 },
+  { text: 'des CRISTAUX DIMENSIONNELS — la source', delay: 35 },
+  { text: 'de toute magie connue.', delay: 35 },
+  { text: '', pause: 500 },
+  { text: '> ARCHIVES CHRONOLOGIQUES :', delay: 25 },
+  { text: '', pause: 200 },
+  { text: 'An 0 — L\'EVENEMENT.', delay: 40 },
+  { text: 'Une faille colossale s\'ouvrit entre les dimensions.', delay: 35 },
+  { text: 'L\'Arcanae entier fut aspire dans le vide.', delay: 35 },
+  { text: 'Les creatures furent emprisonnees', delay: 35 },
   { text: 'dans des cartes mystiques, scellees a jamais.', delay: 35 },
   { text: '', pause: 400 },
-  { text: 'Aujourd\'hui, ces cartes refont surface.', delay: 40 },
-  { text: 'Vous etes un Invocateur.', delay: 40 },
-  { text: '', pause: 300 },
-  { text: 'Votre mission : collecter ces cartes,', delay: 35 },
-  { text: 'assembler un deck redoutable,', delay: 35 },
-  { text: 'et affronter d\'autres Invocateurs', delay: 35 },
-  { text: 'pour prouver votre suprematie.', delay: 35 },
-  { text: '', pause: 500 },
-  { text: '> INITIALISATION DU SYSTEME...', delay: 30 },
-  { text: '> BOOSTERS DISPONIBLES DETECTES.', delay: 30 },
-  { text: '> VOTRE AVENTURE COMMENCE MAINTENANT.', delay: 30 },
+  { text: 'An 1024 — LA REDECOUVERTE.', delay: 40 },
+  { text: 'Un groupe d\'archeologues decouvre les premieres', delay: 35 },
+  { text: 'cartes dans les ruines d\'un temple sous-marin.', delay: 35 },
+  { text: 'Les creatures a l\'interieur sont... vivantes.', delay: 40 },
   { text: '', pause: 400 },
-  { text: '[ Ouvrez vos premiers boosters dans la BOUTIQUE ]', delay: 25 },
+  { text: 'An 1031 — LE PROGRAMME INVOCATEUR.', delay: 40 },
+  { text: 'Les gouvernements creent un protocole secret.', delay: 35 },
+  { text: 'Des agents specieux, les INVOCATEURS, sont recrutes', delay: 35 },
+  { text: 'pour collecter, maitriser et deployer ces cartes.', delay: 35 },
+  { text: '', pause: 500 },
+  { text: 'An 1031, Jour 1 — AUJOURD\'HUI.', delay: 40 },
+  { text: '', pause: 300 },
+  { text: 'Vous avez ete selectionne.', delay: 45 },
+  { text: 'Vous etes un Invocateur.', delay: 45 },
+  { text: '', pause: 400 },
+  { text: 'Votre mission :', delay: 40 },
+  { text: '  > Collecter les cartes les plus puissantes', delay: 30 },
+  { text: '  > Forger un deck redoutable a la FORGE', delay: 30 },
+  { text: '  > Explorer les MINES pour extraire des ressources', delay: 30 },
+  { text: '  > Affronter d\'autres Invocateurs en DUEL', delay: 30 },
+  { text: '  > Rejoindre une GUILDE pour dominer ensemble', delay: 30 },
+  { text: '  > Prouver votre suprematie au CLASSEMENT', delay: 30 },
+  { text: '', pause: 500 },
+  { text: '> SYSTEME D\'INVOCATION INITIALISE.', delay: 30 },
+  { text: '> BOOSTERS DISPONIBLES DETECTES.', delay: 30 },
+  { text: '> CASINO OPERATIONNEL.', delay: 30 },
+  { text: '> MINE D\'EXTRACTION EN LIGNE.', delay: 30 },
+  { text: '> MARCHE NOIR ACCESSIBLE.', delay: 30 },
+  { text: '', pause: 400 },
+  { text: '> ATTENTION : D\'autres Invocateurs sont deja actifs.', delay: 30 },
+  { text: '> La competition sera rude.', delay: 30 },
+  { text: '', pause: 300 },
+  { text: '> VOTRE AVENTURE COMMENCE MAINTENANT.', delay: 30 },
+  { text: '', pause: 300 },
+  { text: '[ Passez a l\'entrainement pour maitriser les bases ]', delay: 25 },
 ];
 
 const textEl = document.getElementById('intro-text');
@@ -114,14 +147,14 @@ async function runIntro() {
 
 function enterGame() {
   localStorage.setItem('introSeen', 'true');
-  window.location.href = '/shop';
+  window.location.href = '/tutorial';
 }
 
 function skipIntro() {
   aborted = true;
   stopSound();
   localStorage.setItem('introSeen', 'true');
-  window.location.href = '/menu';
+  window.location.href = '/tutorial';
 }
 
 // Demarre l'intro

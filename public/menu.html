@@ -8,6 +8,7 @@
   <script src="/js/auth-guard.js"></script>
   <script src="/js/reward-fx.js"></script>
   <script src="/js/profile-modal.js"></script>
+  <script src="/js/page-guide.js"></script>
   <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body class="dashboard-page">
@@ -43,6 +44,7 @@
       <!-- Profile card -->
       <div class="dash-profile-card">
         <button class="settings-gear" id="settings-trigger" title="Parametres">&#9881;</button>
+        <button class="dash-nav-help" onclick="if(typeof showPageGuide==='function')showPageGuide()" title="Guide" style="position:absolute;top:12px;left:12px">?</button>
         <div class="dash-avatar">
           <span class="dash-avatar-icon" id="profile-avatar">⚔</span>
         </div>

@@ -6,6 +6,7 @@
   <title>GACHA CARDS - Fusion</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/auth-guard.js"></script>
+  <script src="/js/page-guide.js"></script>
   <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body class="fusion-page">
@@ -33,6 +34,7 @@
       <div class="dash-nav-user">
         <span class="dash-nav-stat" title="Credits">&#128176; <span id="nav-credits">0</span></span>
         <span class="dash-nav-stat energy-stat">&#9889; <span id="nav-energy">--</span></span>
+        <button class="dash-nav-help" onclick="if(typeof showPageGuide==='function')showPageGuide()" title="Guide">?</button>
         <span class="dash-nav-username" id="nav-username">???</span>
       </div>
     </div>

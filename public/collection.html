@@ -8,6 +8,7 @@
   <script src="/js/auth-guard.js"></script>
   <script src="/js/reward-fx.js"></script>
   <script src="/js/profile-modal.js"></script>
+  <script src="/js/page-guide.js"></script>
   <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body class="collection-page">
@@ -36,6 +37,7 @@
         <span class="dash-nav-stat" title="Credits">&#128176; <span id="nav-credits">0</span></span>
         <span class="dash-nav-stat energy-stat">&#9889; <span id="nav-energy">--</span></span>
         <span class="dash-nav-stat" title="Cartes">&#128230; <span id="nav-cards">0</span></span>
+        <button class="dash-nav-help" onclick="if(typeof showPageGuide==='function')showPageGuide()" title="Guide">?</button>
         <span class="dash-nav-username" id="nav-username">???</span>
       </div>
     </div>
