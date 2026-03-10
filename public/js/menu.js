@@ -443,7 +443,6 @@ async function saveSettings() {
 
 // Logout
 document.getElementById('logout-btn').addEventListener('click', async () => {
-  localStorage.removeItem('authToken');
   await fetch('/api/logout', { method: 'POST' });
   window.location.href = '/';
 });
