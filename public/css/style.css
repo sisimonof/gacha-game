@@ -8727,6 +8727,67 @@ body.casino-page {
 .casino-controls {
   text-align: center;
 }
+/* Jackpot progressif banner */
+.casino-jackpot-banner {
+  background: linear-gradient(135deg, rgba(255,215,0,0.12), rgba(255,100,0,0.08));
+  border: 1px solid rgba(255,215,0,0.3);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  animation: jackpotGlow 3s ease-in-out infinite;
+}
+.casino-jackpot-banner::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,215,0,0.1), transparent);
+  animation: jackpotShine 4s linear infinite;
+}
+@keyframes jackpotShine {
+  0% { left: -50%; }
+  100% { left: 150%; }
+}
+@keyframes jackpotGlow {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,215,0,0.1); }
+  50% { box-shadow: 0 0 25px rgba(255,215,0,0.25); }
+}
+.casino-jackpot-icon { font-size: 20px; margin-right: 6px; }
+.casino-jackpot-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px; color: #ffaa00; letter-spacing: 2px;
+  margin-right: 8px;
+}
+.casino-jackpot-amount {
+  font-family: 'VT323', monospace;
+  font-size: 28px; color: #ffd700;
+  text-shadow: 0 0 12px rgba(255,215,0,0.5);
+  letter-spacing: 2px;
+}
+.casino-jackpot-cr {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px; color: #cc9900; margin-left: 4px;
+}
+/* Jackpot result style */
+.casino-result--jackpot .casino-result-label {
+  color: #ffd700 !important;
+  text-shadow: 0 0 20px rgba(255,215,0,0.6);
+  font-size: 18px;
+  animation: jackpotPulse 0.5s ease-in-out 3;
+}
+.casino-result--jackpot .casino-result-detail {
+  color: #ffee88 !important;
+  font-size: 14px;
+}
+@keyframes jackpotPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+.hist-jackpot { color: #ffd700 !important; text-shadow: 0 0 6px rgba(255,215,0,0.4); }
+
 .casino-cost {
   font-family: 'Press Start 2P', monospace;
   font-size: 10px;
@@ -8864,6 +8925,311 @@ body.casino-page {
     width: 300px;
     height: 300px;
   }
+}
+
+/* =======================================
+   PROFILE MODAL
+   ======================================= */
+.profile-modal-overlay {
+  position: fixed; inset: 0; z-index: 5000;
+  background: rgba(0,0,0,0.85);
+  display: flex; align-items: center; justify-content: center;
+  animation: fadeIn 0.2s;
+}
+.profile-modal-overlay.hidden { display: none; }
+.profile-modal {
+  background: #0a0f0a;
+  border: 1px solid rgba(var(--primary-rgb), 0.25);
+  border-radius: 16px;
+  padding: 28px;
+  width: 480px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 0 40px rgba(0,0,0,0.8), 0 0 20px rgba(var(--primary-rgb), 0.08);
+}
+.profile-modal-close {
+  position: absolute; top: 12px; right: 14px;
+  background: none; border: none; color: #666;
+  font-size: 24px; cursor: pointer; transition: color 0.2s;
+}
+.profile-modal-close:hover { color: #fff; }
+
+/* Header */
+.profile-modal-header {
+  display: flex; gap: 16px; align-items: center; margin-bottom: 20px;
+}
+.profile-modal-avatar-wrap {
+  width: 64px; height: 64px; border-radius: 50%;
+  background: rgba(var(--primary-rgb), 0.1);
+  border: 2px solid rgba(var(--primary-rgb), 0.3);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.profile-modal-avatar { font-size: 32px; }
+.profile-modal-info { flex: 1; min-width: 0; }
+.profile-modal-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px; color: var(--primary);
+  text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.3);
+  margin-bottom: 6px;
+}
+.profile-modal-bio {
+  font-family: 'VT323', monospace;
+  font-size: 16px; color: #889988;
+  margin-bottom: 8px; line-height: 1.2;
+}
+.profile-modal-badges { display: flex; gap: 8px; flex-wrap: wrap; }
+.pm-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px; padding: 4px 8px;
+  border-radius: 4px; letter-spacing: 0.5px;
+}
+.pm-badge-rating { background: rgba(255,170,0,0.15); color: #ffaa00; border: 1px solid rgba(255,170,0,0.3); }
+.pm-badge-cards { background: rgba(var(--primary-rgb),0.1); color: var(--primary); border: 1px solid rgba(var(--primary-rgb),0.2); }
+.pm-badge-online { background: rgba(100,100,100,0.15); color: #666; border: 1px solid rgba(100,100,100,0.2); }
+.pm-badge-online.pm-online { background: rgba(0,255,0,0.12); color: #00ff41; border-color: rgba(0,255,0,0.3); }
+
+/* Showcase */
+.pm-showcase-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px; color: #ffaa00; letter-spacing: 2px;
+  margin-bottom: 12px; text-align: center;
+  text-shadow: 0 0 8px rgba(255,170,0,0.3);
+}
+.pm-showcase-cards {
+  display: flex; gap: 10px; justify-content: center;
+  margin-bottom: 20px;
+}
+.pm-showcase-card {
+  background: rgba(0,0,0,0.6);
+  border: 2px solid #444;
+  border-radius: 10px;
+  padding: 12px 10px;
+  text-align: center;
+  width: 120px;
+  transition: all 0.3s;
+}
+.pm-showcase-card:hover { transform: translateY(-4px); }
+.pm-sc-rarity {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px; color: #000;
+  padding: 2px 6px; border-radius: 3px;
+  display: inline-block; margin-bottom: 6px;
+}
+.pm-sc-emoji { font-size: 32px; display: block; margin-bottom: 4px; }
+.pm-sc-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px; color: #ccc; margin-bottom: 4px;
+}
+.pm-sc-element { font-size: 14px; margin-bottom: 4px; }
+.pm-sc-stats {
+  font-family: 'VT323', monospace;
+  font-size: 14px; color: #aaa;
+}
+.pm-sc-shiny {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px; color: #ffee00; margin-top: 4px;
+}
+.pm-sc-fused {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px; color: #ff8800; margin-top: 2px;
+}
+.pm-showcase-empty {
+  font-family: 'VT323', monospace;
+  font-size: 16px; color: #444;
+  text-align: center; padding: 16px; width: 100%;
+}
+
+/* Stats */
+.profile-modal-stats {
+  display: flex; gap: 12px; justify-content: center;
+  margin-bottom: 20px; padding: 12px 0;
+  border-top: 1px solid rgba(var(--primary-rgb),0.1);
+  border-bottom: 1px solid rgba(var(--primary-rgb),0.1);
+}
+.pm-stat { text-align: center; flex: 1; }
+.pm-stat-val {
+  font-family: 'VT323', monospace;
+  font-size: 24px; color: var(--primary);
+  display: block;
+}
+.pm-stat-lbl {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px; color: #556655; letter-spacing: 1px;
+}
+
+/* Actions */
+.profile-modal-actions {
+  display: flex; gap: 8px; justify-content: center;
+  flex-wrap: wrap; margin-bottom: 12px;
+}
+.pm-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px; padding: 10px 16px;
+  border: 1px solid; border-radius: 6px;
+  cursor: pointer; transition: all 0.2s;
+  background: transparent;
+}
+.pm-btn-duel { color: #ff4444; border-color: #ff4444; }
+.pm-btn-duel:hover { background: rgba(255,68,68,0.15); box-shadow: 0 0 12px rgba(255,68,68,0.3); }
+.pm-btn-add { color: var(--primary); border-color: var(--primary); }
+.pm-btn-add:hover { background: rgba(var(--primary-rgb),0.15); }
+.pm-btn-accept { color: #00ff41; border-color: #00ff41; }
+.pm-btn-accept:hover { background: rgba(0,255,65,0.15); }
+.pm-btn-remove { color: #666; border-color: #444; }
+.pm-btn-remove:hover { color: #ff4444; border-color: #ff4444; }
+.pm-btn-pending { color: #666; border-color: #333; cursor: default; }
+.pm-btn-edit { color: #ffaa00; border-color: #ffaa00; }
+.pm-btn-edit:hover { background: rgba(255,170,0,0.12); }
+.pm-btn-save { color: #000; background: var(--primary); border-color: var(--primary); }
+.pm-btn-save:hover { box-shadow: 0 0 12px rgba(var(--primary-rgb),0.4); }
+.pm-btn-cancel { color: #888; border-color: #444; }
+
+/* Member since */
+.profile-modal-member {
+  font-family: 'VT323', monospace;
+  font-size: 14px; color: #444; text-align: center;
+}
+
+/* Showcase editor */
+.pm-editor-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px; color: #ffaa00; text-align: center;
+  margin-bottom: 12px; letter-spacing: 2px;
+}
+.pm-bio-section { margin-bottom: 12px; }
+.pm-bio-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px; color: #556655; margin-bottom: 4px; display: block;
+}
+.pm-bio-input {
+  width: 100%; padding: 8px 10px;
+  background: rgba(0,0,0,0.4); border: 1px solid #333;
+  border-radius: 6px; color: #ccc;
+  font-family: 'VT323', monospace; font-size: 16px;
+}
+.pm-bio-input:focus { border-color: var(--primary); outline: none; }
+.pm-editor-hint {
+  font-family: 'VT323', monospace;
+  font-size: 15px; color: #556655; text-align: center;
+  margin-bottom: 10px;
+}
+.pm-editor-selected {
+  display: flex; gap: 8px; justify-content: center;
+  margin-bottom: 12px; min-height: 32px; flex-wrap: wrap;
+}
+.pm-editor-sel-card {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px; padding: 6px 10px;
+  border: 1px solid; border-radius: 6px;
+  color: #ccc; background: rgba(0,0,0,0.4);
+}
+.pm-editor-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px; max-height: 250px; overflow-y: auto;
+  margin-bottom: 16px; padding: 4px;
+}
+.pm-editor-card {
+  padding: 8px 4px; text-align: center;
+  background: rgba(0,0,0,0.3); border: 1px solid #333;
+  border-radius: 8px; cursor: pointer;
+  transition: all 0.2s;
+}
+.pm-editor-card:hover { background: rgba(var(--primary-rgb),0.06); }
+.pm-editor-card--selected {
+  background: rgba(var(--primary-rgb),0.12) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 8px rgba(var(--primary-rgb),0.2);
+}
+.pm-ec-emoji { font-size: 20px; display: block; }
+.pm-ec-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 5px; color: #aaa; margin-top: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pm-editor-actions {
+  display: flex; gap: 10px; justify-content: center;
+}
+
+/* Duel notification overlay */
+.duel-notif-overlay {
+  position: fixed; top: 20px; right: 20px; z-index: 9500;
+  animation: duelSlideIn 0.4s ease-out;
+}
+@keyframes duelSlideIn {
+  from { transform: translateX(120%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.duel-notif {
+  background: #0a0f0a;
+  border: 2px solid #ff4444;
+  border-radius: 12px;
+  padding: 20px;
+  min-width: 280px;
+  max-width: 340px;
+  box-shadow: 0 0 30px rgba(255,68,68,0.3), 0 8px 30px rgba(0,0,0,0.6);
+  animation: duelPulse 2s ease-in-out infinite;
+}
+@keyframes duelPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,68,68,0.2), 0 8px 30px rgba(0,0,0,0.6); }
+  50% { box-shadow: 0 0 35px rgba(255,68,68,0.4), 0 8px 30px rgba(0,0,0,0.6); }
+}
+.duel-notif-icon { font-size: 32px; text-align: center; margin-bottom: 8px; }
+.duel-notif-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px; color: #ff4444; text-align: center;
+  margin-bottom: 8px; letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(255,68,68,0.4);
+}
+.duel-notif-from {
+  font-family: 'VT323', monospace;
+  font-size: 20px; color: #ffaa00; text-align: center;
+  margin-bottom: 10px;
+}
+.duel-notif-timer {
+  font-family: 'VT323', monospace;
+  font-size: 28px; color: #ff6666; text-align: center;
+  margin-bottom: 10px;
+}
+.duel-notif-actions {
+  display: flex; gap: 8px; justify-content: center;
+}
+
+/* Deck selector in duel/profile modal */
+.pm-duel-decks {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 300px; overflow-y: auto; padding: 4px;
+}
+.pm-duel-deck {
+  padding: 12px 16px;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid rgba(var(--primary-rgb),0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pm-duel-deck:hover {
+  border-color: var(--primary);
+  background: rgba(var(--primary-rgb),0.08);
+  box-shadow: 0 0 10px rgba(var(--primary-rgb),0.15);
+}
+.pm-duel-deck--invalid {
+  opacity: 0.4; cursor: not-allowed;
+}
+.pm-dd-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px; color: var(--primary); letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.pm-dd-count {
+  font-family: 'VT323', monospace;
+  font-size: 14px; color: #667766;
+}
+.pm-dd-warn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 6px; color: #ff4444; margin-top: 2px;
 }
 
 /* =======================================

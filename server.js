@@ -213,6 +213,19 @@ db.exec(`
   }
 }
 
+// Migration: showcase_cards + profile_bio
+{
+  const userColsShowcase = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!userColsShowcase.includes('showcase_cards')) {
+    db.exec("ALTER TABLE users ADD COLUMN showcase_cards TEXT DEFAULT '[]'");
+    console.log('Migration: showcase_cards ajouté');
+  }
+  if (!userColsShowcase.includes('profile_bio')) {
+    db.exec("ALTER TABLE users ADD COLUMN profile_bio TEXT DEFAULT ''");
+    console.log('Migration: profile_bio ajouté');
+  }
+}
+
 // === QUETES & SUCCES ===
 db.exec(`
   CREATE TABLE IF NOT EXISTS user_quests (
@@ -1250,6 +1263,11 @@ function seededRandom(seed) {
 
 // --- ONLINE USERS ---
 const onlineUsers = new Set();
+
+// --- JACKPOT PROGRESSIF ---
+let casinoJackpot = 5000; // Starting jackpot pool
+const JACKPOT_CONTRIBUTION = 0.10; // 10% of spin cost feeds jackpot
+
 const CASINO_SEGMENTS = [
   { label: 'PERDU',            color: '#333333', weight: 30,  reward: { type: 'nothing' } },
   { label: '50 CR',            color: '#2a5a2a', weight: 20,  reward: { type: 'credits', amount: 50 } },
@@ -1261,7 +1279,7 @@ const CASINO_SEGMENTS = [
   { label: '50 XP',            color: '#3a5a8a', weight: 4,   reward: { type: 'xp', amount: 50 } },
   { label: 'CARTE RARE',       color: '#0066ff', weight: 2,   reward: { type: 'card', rarity: 'rare' } },
   { label: 'CARTE EPIQUE',     color: '#aa00ff', weight: 1,   reward: { type: 'card', rarity: 'epique' } },
-  { label: 'JACKPOT SECRET',   color: '#ff0000', weight: 0.5, reward: { type: 'card', rarity: 'secret' } },
+  { label: '🏆 JACKPOT',       color: '#ff0000', weight: 0.5, reward: { type: 'jackpot' } },
 ];
 
 function getBattlePass(userId) {
@@ -4465,7 +4483,7 @@ app.post('/api/logout', (req, res) => {
 
 // --- Routes USER ---
 app.get('/api/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date, profile_frame, unlocked_frames, tutorial_completed, guild_id FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date, profile_frame, unlocked_frames, tutorial_completed, guild_id, showcase_cards, profile_bio FROM users WHERE id = ?').get(req.session.userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(req.session.userId).c;
 
   const today = new Date().toISOString().split('T')[0];
@@ -4500,6 +4518,7 @@ app.get('/api/me', requireAuth, (req, res) => {
   }
 
   res.json({
+    userId: req.session.userId,
     username: user.username,
     displayName: user.display_name || user.username,
     avatar: user.avatar || '⚔',
@@ -4523,7 +4542,78 @@ app.get('/api/me', requireAuth, (req, res) => {
     // Guild info
     guildId: user.guild_id || null,
     guildName: user.guild_id ? (db.prepare('SELECT name FROM guilds WHERE id = ?').get(user.guild_id)?.name || null) : null,
+    showcaseCards: JSON.parse(user.showcase_cards || '[]'),
+    profileBio: user.profile_bio || '',
   });
+});
+
+// --- Public profile API ---
+app.get('/api/profile/:userId', requireAuth, (req, res) => {
+  const targetId = parseInt(req.params.userId);
+  const user = db.prepare('SELECT id, username, display_name, avatar, profile_frame, username_effect, pvp_rating, showcase_cards, profile_bio, stat_pvp_wins, stat_pvp_losses, stat_fusions, stat_boosters_opened, created_at FROM users WHERE id = ?').get(targetId);
+  if (!user) return res.status(404).json({ error: 'Joueur introuvable' });
+
+  const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(targetId).c;
+  const showcaseIds = JSON.parse(user.showcase_cards || '[]');
+  let showcaseCards = [];
+  if (showcaseIds.length > 0) {
+    showcaseCards = db.prepare(`
+      SELECT uc.id as user_card_id, c.name, c.rarity, c.element, c.emoji, c.attack, c.defense, c.hp, uc.is_shiny, uc.is_fused, uc.awakening_level
+      FROM user_cards uc JOIN cards c ON uc.card_id = c.id
+      WHERE uc.id IN (${showcaseIds.map(() => '?').join(',')}) AND uc.user_id = ?
+    `).all(...showcaseIds, targetId);
+  }
+
+  const totalCombat = (user.stat_pvp_wins || 0) + (user.stat_pvp_losses || 0);
+  const isFriend = db.prepare("SELECT id FROM friendships WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) AND status = 'accepted'").get(req.session.userId, targetId, targetId, req.session.userId);
+  const pendingRequest = db.prepare("SELECT id, user_id FROM friendships WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) AND status = 'pending'").get(req.session.userId, targetId, targetId, req.session.userId);
+
+  res.json({
+    id: user.id,
+    username: user.username,
+    displayName: user.display_name || user.username,
+    avatar: user.avatar || '⚔',
+    profileFrame: user.profile_frame || 'none',
+    usernameEffect: user.username_effect || '',
+    bio: user.profile_bio || '',
+    pvpRating: user.pvp_rating || 1000,
+    cardCount,
+    stats: {
+      wins: user.stat_pvp_wins || 0,
+      losses: user.stat_pvp_losses || 0,
+      winRate: totalCombat > 0 ? Math.round((user.stat_pvp_wins / totalCombat) * 100) : 0,
+      fusions: user.stat_fusions || 0,
+      boosters: user.stat_boosters_opened || 0,
+    },
+    showcaseCards,
+    memberSince: user.created_at,
+    isSelf: req.session.userId === targetId,
+    isFriend: !!isFriend,
+    pendingRequest: pendingRequest ? { id: pendingRequest.id, sentByMe: pendingRequest.user_id === req.session.userId } : null,
+    online: onlineUsers.has(targetId),
+  });
+});
+
+// --- Update showcase & bio ---
+app.post('/api/profile/showcase', requireAuth, (req, res) => {
+  const { cardIds, bio } = req.body;
+
+  if (bio !== undefined) {
+    if (typeof bio !== 'string' || bio.length > 100) return res.status(400).json({ error: 'Bio trop longue (100 max)' });
+    db.prepare('UPDATE users SET profile_bio = ? WHERE id = ?').run(bio, req.session.userId);
+  }
+
+  if (cardIds !== undefined) {
+    if (!Array.isArray(cardIds) || cardIds.length > 3) return res.status(400).json({ error: 'Max 3 cartes en vitrine' });
+    // Verify all cards belong to user
+    for (const id of cardIds) {
+      const owns = db.prepare('SELECT id FROM user_cards WHERE id = ? AND user_id = ?').get(id, req.session.userId);
+      if (!owns) return res.status(400).json({ error: 'Carte non possédée' });
+    }
+    db.prepare('UPDATE users SET showcase_cards = ? WHERE id = ?').run(JSON.stringify(cardIds), req.session.userId);
+  }
+
+  res.json({ success: true });
 });
 
 // --- Tutorial API ---
@@ -7236,9 +7326,10 @@ app.post('/api/achievements/claim', requireAuth, (req, res) => {
 app.get('/api/casino/info', requireAuth, (req, res) => {
   const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId);
   res.json({
-    segments: CASINO_SEGMENTS.map(s => ({ label: s.label, color: s.color })),
+    segments: CASINO_SEGMENTS.map(s => ({ label: s.reward.type === 'jackpot' ? '🏆 JACKPOT' : s.label, color: s.color })),
     cost: CASINO_COST,
-    credits: user.credits
+    credits: user.credits,
+    jackpot: Math.floor(casinoJackpot)
   });
 });
 
@@ -7247,9 +7338,10 @@ app.post('/api/casino/spin', requireAuth, (req, res) => {
   const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId);
   if (user.credits < CASINO_COST) return res.status(400).json({ error: 'Pas assez de credits (200 CR)' });
 
-  // Deduct cost
+  // Deduct cost + feed jackpot
   db.prepare('UPDATE users SET credits = credits - ?, stat_credits_spent = stat_credits_spent + ?, stat_casino_spins = stat_casino_spins + 1 WHERE id = ?')
     .run(CASINO_COST, CASINO_COST, userId);
+  casinoJackpot += Math.floor(CASINO_COST * JACKPOT_CONTRIBUTION);
 
   // Weighted random selection
   const totalWeight = CASINO_SEGMENTS.reduce((a, s) => a + s.weight, 0);
@@ -7263,8 +7355,19 @@ app.post('/api/casino/spin', requireAuth, (req, res) => {
   const segment = CASINO_SEGMENTS[selectedIdx];
   let rewardInfo = { label: segment.label, type: segment.reward.type };
   let cardGiven = null;
+  let jackpotWon = 0;
 
-  if (segment.reward.type === 'credits' && segment.reward.amount > 0) {
+  if (segment.reward.type === 'jackpot') {
+    // JACKPOT PROGRESSIF GAGNE !
+    jackpotWon = Math.floor(casinoJackpot);
+    db.prepare('UPDATE users SET credits = credits + ?, stat_casino_won = stat_casino_won + ?, stat_total_earned = stat_total_earned + ? WHERE id = ?').run(jackpotWon, jackpotWon, jackpotWon, userId);
+    rewardInfo.amount = jackpotWon;
+    rewardInfo.label = '🏆 JACKPOT ' + jackpotWon + ' CR !';
+    // Broadcast jackpot win to all connected players
+    const winnerName = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(userId);
+    io.emit('casino:jackpot', { winner: winnerName.display_name || winnerName.username, amount: jackpotWon });
+    casinoJackpot = 5000; // Reset jackpot
+  } else if (segment.reward.type === 'credits' && segment.reward.amount > 0) {
     db.prepare('UPDATE users SET credits = credits + ?, stat_casino_won = stat_casino_won + ?, stat_total_earned = stat_total_earned + ? WHERE id = ?').run(segment.reward.amount, segment.reward.amount, segment.reward.amount, userId);
     rewardInfo.amount = segment.reward.amount;
   } else if (segment.reward.type === 'xp') {
@@ -7295,7 +7398,9 @@ app.post('/api/casino/spin', requireAuth, (req, res) => {
     segmentIndex: selectedIdx,
     reward: rewardInfo,
     cardGiven,
-    credits: newCredits
+    credits: newCredits,
+    jackpot: Math.floor(casinoJackpot),
+    jackpotWon
   });
 });
 
@@ -8281,6 +8386,9 @@ app.post('/api/admin/restore', requireAdmin, (req, res) => {
 // ============================================
 
 const io = new Server(server);
+
+// --- DUEL CHALLENGES ---
+const pendingDuels = new Map(); // challengeId → { challengerId, targetId, deckId, cards, createdAt }
 io.engine.use(sessionMiddleware);
 
 const userSocketMap = new Map();
@@ -8527,6 +8635,139 @@ io.on('connection', (socket) => {
     const idx = pvpQueue.findIndex(q => q.userId === userId);
     if (idx >= 0) pvpQueue.splice(idx, 1);
     socket.emit('pvp:cancelled');
+  });
+
+  // ====== DUEL CHALLENGE SYSTEM ======
+  socket.on('duel:challenge', (data) => {
+    const targetId = data?.targetId;
+    const deckId = data?.deckId;
+    if (!targetId || !deckId) { socket.emit('duel:error', { error: 'Donnees manquantes' }); return; }
+
+    // Verify friendship
+    const friendship = db.prepare("SELECT id FROM friendships WHERE ((user_id = ? AND friend_id = ?) OR (user_id = ? AND friend_id = ?)) AND status = 'accepted'")
+      .get(userId, targetId, targetId, userId);
+    if (!friendship) { socket.emit('duel:error', { error: 'Vous devez etre amis' }); return; }
+
+    // Check target online
+    const targetSock = userSocketMap.get(targetId);
+    if (!targetSock || !targetSock.connected) { socket.emit('duel:error', { error: 'Joueur hors ligne' }); return; }
+
+    // Check not already in combat
+    if (getPvpBattleForUser(userId)) { socket.emit('duel:error', { error: 'Vous etes deja en combat' }); return; }
+    if (getPvpBattleForUser(targetId)) { socket.emit('duel:error', { error: 'Ce joueur est en combat' }); return; }
+
+    // Load challenger deck
+    let playerCards;
+    if (deckId === 'starter') {
+      playerCards = STARTER_DECK.map(c => ({ ...c }));
+    } else {
+      const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(deckId, userId);
+      if (!deck) { socket.emit('duel:error', { error: 'Deck introuvable' }); return; }
+      const cards = db.prepare(`
+        SELECT dc.position, uc.is_fused, uc.is_shiny, uc.is_temp, uc.awakening_level, c.* FROM deck_cards dc
+        JOIN user_cards uc ON dc.user_card_id = uc.id
+        JOIN cards c ON uc.card_id = c.id
+        WHERE dc.deck_id = ? ORDER BY dc.position
+      `).all(deck.id);
+      if (cards.length !== 20) { socket.emit('duel:error', { error: 'Deck incomplet (20 cartes requises)' }); return; }
+      playerCards = cards;
+    }
+
+    const challengeId = 'duel_' + Date.now() + '_' + userId;
+    pendingDuels.set(challengeId, { challengerId: userId, targetId, deckId, cards: playerCards, createdAt: Date.now() });
+
+    const challengerName = db.prepare('SELECT display_name, username FROM users WHERE id = ?').get(userId);
+    targetSock.emit('duel:challenge', {
+      challengeId,
+      challengerId: userId,
+      challengerName: challengerName.display_name || challengerName.username,
+      challengerAvatar: db.prepare('SELECT avatar FROM users WHERE id = ?').get(userId)?.avatar || '⚔'
+    });
+    socket.emit('duel:sent', { challengeId, targetId });
+
+    // Auto-expire after 30s
+    setTimeout(() => {
+      if (pendingDuels.has(challengeId)) {
+        pendingDuels.delete(challengeId);
+        socket.emit('duel:expired', { challengeId });
+        if (targetSock.connected) targetSock.emit('duel:expired', { challengeId });
+      }
+    }, 30000);
+  });
+
+  socket.on('duel:accept', (data) => {
+    const challengeId = data?.challengeId;
+    const deckId = data?.deckId;
+    const duel = pendingDuels.get(challengeId);
+    if (!duel || duel.targetId !== userId) { socket.emit('duel:error', { error: 'Defi invalide ou expire' }); return; }
+    if (!deckId) { socket.emit('duel:error', { error: 'Selectionnez un deck' }); return; }
+
+    pendingDuels.delete(challengeId);
+
+    // Load accepter deck
+    let accepterCards;
+    if (deckId === 'starter') {
+      accepterCards = STARTER_DECK.map(c => ({ ...c }));
+    } else {
+      const deck = db.prepare('SELECT * FROM decks WHERE id = ? AND user_id = ?').get(deckId, userId);
+      if (!deck) { socket.emit('duel:error', { error: 'Deck introuvable' }); return; }
+      const cards = db.prepare(`
+        SELECT dc.position, uc.is_fused, uc.is_shiny, uc.is_temp, uc.awakening_level, c.* FROM deck_cards dc
+        JOIN user_cards uc ON dc.user_card_id = uc.id
+        JOIN cards c ON uc.card_id = c.id
+        WHERE dc.deck_id = ? ORDER BY dc.position
+      `).all(deck.id);
+      if (cards.length !== 20) { socket.emit('duel:error', { error: 'Deck incomplet' }); return; }
+      accepterCards = cards;
+    }
+
+    // Energy check for both
+    const e1 = consumeEnergy(duel.challengerId, ENERGY_CONFIG.costs.pvp_battle);
+    if (!e1.success) {
+      const cSock = userSocketMap.get(duel.challengerId);
+      if (cSock && cSock.connected) cSock.emit('duel:error', { error: "Pas assez d'energie" });
+      socket.emit('duel:error', { error: "L'adversaire n'a pas assez d'energie" });
+      return;
+    }
+    const e2 = consumeEnergy(userId, ENERGY_CONFIG.costs.pvp_battle);
+    if (!e2.success) { socket.emit('duel:error', { error: "Pas assez d'energie" }); return; }
+
+    // Create battle (challenger = player1, accepter = player2)
+    const battle = createDeckBattleState(duel.cards, accepterCards, 'pvp');
+    battle.currentTurnPlayer = duel.challengerId;
+    const battleId = battle.battleId;
+
+    const p1Name = db.prepare('SELECT username FROM users WHERE id = ?').get(duel.challengerId)?.username || 'Joueur 1';
+    const p2Name = db.prepare('SELECT username FROM users WHERE id = ?').get(userId)?.username || 'Joueur 2';
+
+    const pvp = {
+      battle,
+      player1Id: duel.challengerId,
+      player2Id: userId,
+      player1Name: p1Name,
+      player2Name: p2Name,
+      turnTimer: null
+    };
+    pvpBattles.set(battleId, pvp);
+
+    const challengerSock = userSocketMap.get(duel.challengerId);
+    if (challengerSock && challengerSock.connected) {
+      challengerSock.emit('pvp:matched', { battleId, opponentName: p2Name, ...getPvpSnapshot(pvp, duel.challengerId) });
+    }
+    socket.emit('pvp:matched', { battleId, opponentName: p1Name, ...getPvpSnapshot(pvp, userId) });
+
+    pvpStartTurnTimer(pvp, battleId);
+  });
+
+  socket.on('duel:decline', (data) => {
+    const challengeId = data?.challengeId;
+    const duel = pendingDuels.get(challengeId);
+    if (!duel || duel.targetId !== userId) return;
+    pendingDuels.delete(challengeId);
+    const challengerSock = userSocketMap.get(duel.challengerId);
+    if (challengerSock && challengerSock.connected) {
+      challengerSock.emit('duel:declined', { challengeId });
+    }
   });
 
   socket.on('pvp:deploy', (data) => {
