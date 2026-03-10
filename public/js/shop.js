@@ -39,7 +39,7 @@ function markFreeClaimed() {
   const booster = document.getElementById('free-booster');
   if (btn) { btn.textContent = 'RECUPERE'; btn.disabled = true; btn.classList.add('shop-v2-free-btn--claimed'); }
   if (booster) booster.classList.add('shop-v2-free--claimed');
-  const badge = document.querySelector('.shop-v2-free-badge');
+  const badge = booster && booster.querySelector('.badge-free');
   if (badge) { badge.textContent = 'FAIT'; badge.style.background = '#444'; }
 }
 

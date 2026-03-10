@@ -41,17 +41,19 @@
   <div class="shop-scroll-wrapper" id="shop-view">
     <div class="shop-scroll-track">
 
-      <!-- Booster gratuit -->
-      <div class="shop-item shop-item--free" id="free-booster" onclick="claimFreeBooster()">
-        <div class="shop-item-badge shop-item-badge--free">GRATUIT</div>
-        <div class="shop-item-visual">🎁</div>
-        <div class="shop-item-name">DAILY</div>
-        <div class="shop-item-sub">3 cartes</div>
-        <button class="shop-item-btn shop-item-btn--free" id="free-btn">OUVRIR</button>
-      </div>
-
-      <!-- Boosters (filled by JS) -->
+      <!-- Boosters payants (filled by JS) -->
       <div class="shop-boosters-inline" id="boosters-shelf"></div>
+
+      <!-- Booster gratuit quotidien -->
+      <div class="shop-v2-booster shop-v2-booster--free" id="free-booster" onclick="claimFreeBooster()">
+        <div class="booster-badge badge-free">GRATUIT</div>
+        <div class="shop-v2-booster-img">
+          <img src="/img/booster-free.png" alt="Free Booster" draggable="false">
+        </div>
+        <div class="shop-v2-booster-name">BOOSTER GRATUIT</div>
+        <div class="shop-v2-booster-count">3 cartes</div>
+        <button class="shop-v2-booster-price shop-free-price" id="free-btn">OUVRIR</button>
+      </div>
 
       <!-- Séparateur visuel -->
       <div class="shop-separator">
