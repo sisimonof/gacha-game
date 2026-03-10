@@ -4782,7 +4782,7 @@ app.post('/api/fusion', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Il faut 5 copies non-fusionnees' });
   }
 
-  const success = Math.random() < 0.35;
+  const success = Math.random() < 0.45;
 
   const fusionTransaction = db.transaction(() => {
     for (const copy of copies) {
