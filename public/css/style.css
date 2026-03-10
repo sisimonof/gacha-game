@@ -421,6 +421,68 @@ body::after {
 .settings-msg.success { color: var(--primary); text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.4); }
 .settings-msg.info { color: #ffcc00; text-shadow: 0 0 8px rgba(255, 204, 0, 0.3); }
 
+/* Discord link section */
+.discord-link-status {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #888;
+  line-height: 1.5;
+}
+.discord-link-info {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--primary-dim);
+  margin-bottom: 10px;
+}
+.discord-code-input {
+  text-align: center !important;
+  font-size: 24px !important;
+  letter-spacing: 8px !important;
+  font-family: 'Press Start 2P', monospace !important;
+  max-width: 200px;
+  margin: 0 auto;
+  display: block;
+}
+.discord-verify-btn {
+  margin-top: 10px;
+  background: rgba(88, 101, 242, 0.2) !important;
+  border-color: #5865f2 !important;
+  color: #5865f2 !important;
+}
+.discord-verify-btn:hover {
+  background: rgba(88, 101, 242, 0.3) !important;
+}
+.discord-link-msg {
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  text-align: center;
+  margin-top: 8px;
+  min-height: 18px;
+}
+.discord-linked-tag {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  color: var(--primary);
+  text-align: center;
+  margin-bottom: 10px;
+}
+.discord-unlink-btn {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #ff4444;
+  background: none;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  padding: 6px 14px;
+  cursor: pointer;
+  display: block;
+  margin: 0 auto;
+  transition: all 0.2s;
+}
+.discord-unlink-btn:hover {
+  background: rgba(255, 68, 68, 0.1);
+  border-color: #ff4444;
+}
+
 /* ==============================
    PAGE AUTH
    ============================== */

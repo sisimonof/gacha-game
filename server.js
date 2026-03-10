@@ -475,6 +475,20 @@ db.exec(`
 
 // --- Nouvelles tables ---
 db.exec(`
+  CREATE TABLE IF NOT EXISTS discord_links (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER UNIQUE,
+    discord_id TEXT UNIQUE,
+    discord_tag TEXT DEFAULT '',
+    code TEXT DEFAULT '',
+    code_expires TEXT DEFAULT '',
+    linked INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS battle_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
@@ -9400,6 +9414,114 @@ io.on('connection', (socket) => {
     userSocketMap.delete(userId);
   });
 
+});
+
+// ============================================
+// DISCORD BOT API
+// ============================================
+
+const BOT_SECRET = process.env.BOT_SECRET || 'changeme';
+
+function requireBotAuth(req, res, next) {
+  if (req.headers['x-bot-secret'] !== BOT_SECRET) {
+    return res.status(403).json({ error: 'Non autorise' });
+  }
+  next();
+}
+
+// Bot requests a link code for a username + discordId
+app.post('/api/discord/request-link', requireBotAuth, (req, res) => {
+  const { username, discordId, discordTag } = req.body;
+  if (!username || !discordId) return res.status(400).json({ error: 'Champs manquants' });
+
+  // Find user
+  const user = db.prepare('SELECT id, username FROM users WHERE LOWER(username) = LOWER(?)').get(username);
+  if (!user) return res.json({ error: 'Aucun compte trouvé avec ce nom d\'utilisateur.' });
+
+  // Check if this discord account is already linked to another user
+  const existingDiscord = db.prepare('SELECT user_id FROM discord_links WHERE discord_id = ? AND linked = 1').get(discordId);
+  if (existingDiscord && existingDiscord.user_id !== user.id) {
+    return res.json({ error: 'Ce compte Discord est déjà lié à un autre joueur.' });
+  }
+
+  // Check if this game account is already linked to another discord
+  const existingUser = db.prepare('SELECT discord_id FROM discord_links WHERE user_id = ? AND linked = 1').get(user.id);
+  if (existingUser && existingUser.discord_id !== discordId) {
+    return res.json({ error: 'Ce compte de jeu est déjà lié à un autre Discord.' });
+  }
+
+  // Already fully linked
+  if (existingDiscord && existingDiscord.user_id === user.id) {
+    return res.json({ error: 'Ton compte est déjà lié !' });
+  }
+
+  // Generate 6-digit code
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const expires = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
+  // Upsert
+  const existing = db.prepare('SELECT id FROM discord_links WHERE user_id = ?').get(user.id);
+  if (existing) {
+    db.prepare('UPDATE discord_links SET discord_id = ?, discord_tag = ?, code = ?, code_expires = ?, linked = 0 WHERE user_id = ?')
+      .run(discordId, discordTag || '', code, expires, user.id);
+  } else {
+    db.prepare('INSERT INTO discord_links (user_id, discord_id, discord_tag, code, code_expires) VALUES (?, ?, ?, ?, ?)')
+      .run(user.id, discordId, discordTag || '', code, expires);
+  }
+
+  res.json({ ok: true, code });
+});
+
+// Bot checks if a discord account has been verified in-game
+app.post('/api/discord/check-link', requireBotAuth, (req, res) => {
+  const { discordId } = req.body;
+  if (!discordId) return res.status(400).json({ error: 'discordId manquant' });
+
+  const link = db.prepare('SELECT user_id, linked FROM discord_links WHERE discord_id = ?').get(discordId);
+  if (!link) return res.json({ error: 'Aucune demande de liaison trouvée. Clique d\'abord sur "Lier mon compte".' });
+  if (!link.linked) return res.json({ linked: false });
+
+  const user = db.prepare('SELECT username, display_name FROM users WHERE id = ?').get(link.user_id);
+  res.json({ linked: true, username: user.display_name || user.username });
+});
+
+// In-game: player verifies the code (called from the game settings page)
+app.post('/api/discord/verify-code', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const { code } = req.body;
+  if (!code) return res.status(400).json({ error: 'Code manquant' });
+
+  const link = db.prepare('SELECT * FROM discord_links WHERE user_id = ? AND linked = 0').get(userId);
+  if (!link) return res.status(404).json({ error: 'Aucune demande de liaison en cours. Clique sur "Lier mon compte" dans Discord.' });
+
+  // Check expiry
+  if (new Date(link.code_expires) < new Date()) {
+    return res.status(410).json({ error: 'Code expiré. Redemande un code sur Discord.' });
+  }
+
+  // Check code
+  if (link.code !== code.trim()) {
+    return res.status(400).json({ error: 'Code incorrect.' });
+  }
+
+  // Mark as linked
+  db.prepare('UPDATE discord_links SET linked = 1, code = "" WHERE user_id = ?').run(userId);
+  res.json({ ok: true, discordTag: link.discord_tag });
+});
+
+// In-game: get discord link status
+app.get('/api/discord/status', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const link = db.prepare('SELECT discord_id, discord_tag, linked FROM discord_links WHERE user_id = ?').get(userId);
+  if (!link) return res.json({ linked: false });
+  res.json({ linked: !!link.linked, discordTag: link.discord_tag || '' });
+});
+
+// In-game: unlink discord
+app.post('/api/discord/unlink', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  db.prepare('DELETE FROM discord_links WHERE user_id = ?').run(userId);
+  res.json({ ok: true });
 });
 
 server.listen(PORT, '0.0.0.0', () => {

@@ -405,6 +405,26 @@
             </button>
           </div>
         </div>
+        <div class="settings-divider"></div>
+        <div class="settings-section">
+          <h3 class="settings-section-title">🔗 LIER DISCORD</h3>
+          <div id="discord-link-zone">
+            <p class="discord-link-status" id="discord-link-status">Chargement...</p>
+          </div>
+          <div id="discord-link-form" style="display:none">
+            <p class="discord-link-info">Entre le code à 6 chiffres reçu sur Discord :</p>
+            <div class="settings-input-group">
+              <input type="text" id="discord-link-code" class="settings-input discord-code-input" placeholder="000000" maxlength="6" autocomplete="off" inputmode="numeric" pattern="[0-9]*">
+            </div>
+            <button class="settings-save-btn discord-verify-btn" id="discord-verify-btn">> VERIFIER LE CODE</button>
+            <p class="discord-link-msg" id="discord-link-msg"></p>
+          </div>
+          <div id="discord-linked-info" style="display:none">
+            <p class="discord-linked-tag">✅ Lié à <strong id="discord-tag-display"></strong></p>
+            <button class="discord-unlink-btn" id="discord-unlink-btn">Délier le compte</button>
+          </div>
+        </div>
+
         <button class="settings-save-btn" id="settings-save">> SAUVEGARDER</button>
         <p class="settings-msg" id="settings-msg"></p>
       </div>
