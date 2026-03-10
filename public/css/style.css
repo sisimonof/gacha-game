@@ -13161,3 +13161,358 @@ html.page-leaving body {
   from { opacity: 1; transform: translateY(0); }
   to   { opacity: 0; transform: translateY(-6px); }
 }
+
+/* ============================================
+   ADMIN BALANCE TOOL PAGE
+   ============================================ */
+body.balance-page {
+  display: block;
+  overflow: auto;
+  padding: 0;
+}
+.balance-topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 14px 24px;
+  background: rgba(0,10,0,0.9);
+  border-bottom: 1px solid var(--primary-border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  flex-wrap: wrap;
+}
+.balance-back {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--primary-dim);
+  text-decoration: none;
+  padding: 6px 12px;
+  border: 1px solid var(--primary-border);
+  transition: all 0.2s;
+}
+.balance-back:hover {
+  color: var(--primary);
+  border-color: var(--primary);
+  text-shadow: 0 0 5px var(--primary);
+}
+.balance-logo {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  color: var(--primary);
+  text-shadow: 0 0 10px var(--primary);
+  flex-shrink: 0;
+}
+.balance-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  flex-wrap: wrap;
+}
+.balance-label {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #888;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.balance-select {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  background: #0a0a0a;
+  color: var(--primary);
+  border: 1px solid var(--primary-border);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.balance-refresh-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.balance-refresh-btn:hover {
+  background: var(--primary);
+  color: #0a0a0a;
+}
+.balance-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.balance-overview {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.balance-stat-card {
+  background: rgba(0,15,0,0.6);
+  border: 1px solid var(--primary-border);
+  padding: 20px;
+  text-align: center;
+}
+.balance-stat-value {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 20px;
+  color: var(--primary);
+  text-shadow: 0 0 10px rgba(var(--primary-rgb), 0.5);
+  margin-bottom: 8px;
+}
+.balance-stat-label {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #555;
+  letter-spacing: 2px;
+}
+.balance-section {
+  margin-bottom: 32px;
+}
+.balance-section-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: var(--primary);
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--primary-border);
+}
+.balance-loading, .balance-empty {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: #555;
+  text-align: center;
+  padding: 40px;
+}
+/* Suggestions */
+.balance-suggestions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.balance-suggestion {
+  background: rgba(0,15,0,0.5);
+  border: 1px solid var(--primary-border);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.balance-sug--critical {
+  border-color: #ff4444;
+  background: rgba(40,0,0,0.4);
+}
+.balance-sug--moderate {
+  border-color: #ffaa00;
+  background: rgba(30,20,0,0.3);
+}
+.balance-sug-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.balance-sug-icon { font-size: 18px; }
+.balance-sug-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+}
+.balance-sug-badge {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  padding: 3px 8px;
+  border-radius: 2px;
+}
+.balance-sug-badge--nerf { background: #441111; color: #ff4444; }
+.balance-sug-badge--buff { background: #113311; color: #44ff44; }
+.balance-sug-badge--critical { background: #440000; color: #ff6666; }
+.balance-sug-badge--moderate { background: #332200; color: #ffaa00; }
+.balance-sug-reasons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.balance-sug-reason {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #aaa;
+  background: rgba(255,255,255,0.05);
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+.balance-sug-changes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.balance-sug-changes-label {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #666;
+}
+.balance-sug-change {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: var(--primary);
+  background: rgba(var(--primary-rgb), 0.1);
+  padding: 2px 10px;
+  border: 1px solid var(--primary-border);
+  border-radius: 2px;
+}
+.balance-sug-stats {
+  display: flex;
+  gap: 16px;
+  font-family: 'VT323', monospace;
+  font-size: 15px;
+  color: #666;
+}
+.balance-apply-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  background: transparent;
+  color: var(--primary);
+  border: 1px solid var(--primary-dim);
+  padding: 6px 14px;
+  cursor: pointer;
+  align-self: flex-end;
+  transition: all 0.2s;
+}
+.balance-apply-btn:hover {
+  background: var(--primary);
+  color: #0a0a0a;
+}
+/* Breakdowns */
+.balance-breakdowns {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 32px;
+}
+.balance-breakdown {
+  background: rgba(0,15,0,0.4);
+  border: 1px solid var(--primary-border);
+  padding: 16px;
+}
+.balance-breakdown-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--primary-dim);
+  margin-bottom: 14px;
+}
+.balance-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.balance-bar-label {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  width: 100px;
+  text-align: right;
+  flex-shrink: 0;
+}
+.balance-bar-track {
+  flex: 1;
+  height: 16px;
+  background: rgba(255,255,255,0.05);
+  position: relative;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.balance-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.5s;
+}
+.balance-bar--ok { background: var(--primary-dim); }
+.balance-bar--high { background: #ff4444; }
+.balance-bar--low { background: #4488ff; }
+.balance-bar-value {
+  position: absolute;
+  right: 6px;
+  top: 0;
+  line-height: 16px;
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #fff;
+  text-shadow: 0 0 3px #000;
+}
+.balance-bar-games {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #555;
+  width: 40px;
+  text-align: right;
+}
+/* Card table */
+.balance-table-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.balance-search {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  background: #0a0a0a;
+  color: var(--primary);
+  border: 1px solid var(--primary-border);
+  padding: 6px 12px;
+  flex: 1;
+  min-width: 200px;
+}
+.balance-search::placeholder { color: #333; }
+.balance-table-wrap {
+  overflow-x: auto;
+}
+.balance-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+}
+.balance-table th {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: var(--primary-dim);
+  padding: 10px 8px;
+  text-align: left;
+  border-bottom: 1px solid var(--primary-border);
+  white-space: nowrap;
+}
+.balance-table td {
+  padding: 8px;
+  border-bottom: 1px solid rgba(var(--primary-rgb), 0.05);
+  white-space: nowrap;
+}
+.balance-table tr:hover td {
+  background: rgba(var(--primary-rgb), 0.05);
+}
+.balance-td-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+}
+.balance-rarity-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+.balance-wr--op { color: #ff4444; font-weight: bold; }
+.balance-wr--weak { color: #4488ff; }
+.balance-wr--ok { color: var(--primary); }
+
+@media (max-width: 900px) {
+  .balance-overview { grid-template-columns: repeat(2, 1fr); }
+  .balance-breakdowns { grid-template-columns: 1fr; }
+  .balance-topbar { padding: 10px 12px; gap: 10px; }
+  .balance-logo { font-size: 9px; }
+  .balance-content { padding: 12px; }
+}
