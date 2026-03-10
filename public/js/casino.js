@@ -26,8 +26,14 @@ async function loadCasino() {
     const data = await res.json();
     segments = data.segments;
     document.getElementById('casino-credits').textContent = data.credits;
+    updateJackpotDisplay(data.jackpot || 5000);
     drawWheel();
   } catch { window.location.href = '/'; }
+}
+
+function updateJackpotDisplay(amount) {
+  var el = document.getElementById('jackpot-amount');
+  if (el) el.textContent = amount.toLocaleString('fr-FR');
 }
 
 function drawWheel() {
@@ -124,9 +130,14 @@ async function spin() {
     // Show result
     showResult(data);
 
-    // Update credits
+    // Update credits + jackpot
     document.getElementById('casino-credits').textContent = data.credits;
     document.getElementById('nav-credits').textContent = data.credits;
+    if (data.jackpot != null) updateJackpotDisplay(data.jackpot);
+
+    // Floating reward for wins
+    if (data.jackpotWon > 0 && typeof showCreditsReward === 'function') showCreditsReward(data.jackpotWon);
+    else if (data.reward.type === 'credits' && data.reward.amount > 0 && typeof showCreditsReward === 'function') showCreditsReward(data.reward.amount);
 
     // Add to history
     addToHistory(data);
@@ -196,6 +207,12 @@ function showResult(data) {
     labelEl.textContent = `+${data.reward.amount} XP`;
     detailEl.textContent = 'Experience Passe de Combat';
     resultEl.classList.add('casino-result--xp');
+  } else if (data.reward.type === 'jackpot') {
+    labelEl.textContent = `🏆 JACKPOT !`;
+    detailEl.textContent = `+${data.jackpotWon.toLocaleString('fr-FR')} CR !!!`;
+    resultEl.classList.add('casino-result--jackpot');
+    screenFlash();
+    screenShake();
   } else if (data.reward.type === 'card') {
     labelEl.textContent = `CARTE ${data.cardGiven.rarity.toUpperCase()} !`;
     detailEl.textContent = `${data.cardGiven.emoji || ''} ${data.cardGiven.name}`;
@@ -223,6 +240,9 @@ function addToHistory(data) {
     } else if (h.reward.type === 'xp') {
       cls += ' hist-xp';
       text = `+${h.reward.amount} XP`;
+    } else if (h.reward.type === 'jackpot') {
+      cls += ' hist-jackpot';
+      text = `🏆 JACKPOT +${(h.jackpotWon || 0).toLocaleString('fr-FR')} CR`;
     } else if (h.reward.type === 'card') {
       cls += ' hist-card';
       text = `${h.cardGiven.emoji} ${h.cardGiven.name} (${h.cardGiven.rarity})`;
@@ -241,6 +261,18 @@ function screenFlash() {
 function screenShake() {
   document.body.classList.add('shake');
   setTimeout(() => document.body.classList.remove('shake'), 500);
+}
+
+// Listen for jackpot wins from other players
+if (typeof io !== 'undefined') {
+  setTimeout(function() {
+    var sock = window._toastSocket || io();
+    sock.on('casino:jackpot', function(data) {
+      showToast('🏆 ' + data.winner + ' a remporte le JACKPOT de ' + data.amount.toLocaleString('fr-FR') + ' CR !', 'achievement', 8000);
+      // Refresh jackpot display
+      loadCasino();
+    });
+  }, 600);
 }
 
 loadNav();

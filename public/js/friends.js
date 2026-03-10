@@ -87,7 +87,7 @@
         return '<div class="friend-item ' + (f.online ? 'online' : '') + '">' +
           '<div class="friend-item-main" onclick="openChat(' + f.friendUserId + ', \'' + escapeAttr(name) + '\')">' +
             '<span class="friend-status-dot ' + (f.online ? 'dot-online' : 'dot-offline') + '"></span>' +
-            '<span class="friend-avatar' + frameClass + '">' + (f.avatar || '⚔') + '</span>' +
+            '<span class="friend-avatar' + frameClass + '" onclick="event.stopPropagation();openProfileModal(' + f.friendUserId + ')" style="cursor:pointer">' + (f.avatar || '⚔') + '</span>' +
             '<span class="friend-name">' + escapeHtml(name) + '</span>' +
             (f.unreadCount > 0 ? '<span class="friend-unread">' + f.unreadCount + '</span>' : '') +
           '</div>' +

@@ -37,12 +37,15 @@ async function loadUser() {
       if (frameClass) avatarEl.classList.add(frameClass);
     }
 
-    // Store for settings modal
+    // Store for settings modal & profile
+    window._myUserId = data.userId;
     window._currentAvatar = data.avatar || '⚔';
     window._currentDisplayName = displayName;
     window._unlockedAvatars = data.unlockedAvatars || ['⚔'];
     window._currentFrame = data.profileFrame || 'none';
     window._unlockedFrames = data.unlockedFrames || ['none'];
+    window._showcaseCards = data.showcaseCards || [];
+    window._profileBio = data.profileBio || '';
 
     // Apply username effect
     if (data.usernameEffect) {

@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/auth-guard.js"></script>
   <script src="/js/reward-fx.js"></script>
+  <script src="/js/profile-modal.js"></script>
   <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body class="casino-page">
@@ -54,6 +55,12 @@
 
       <!-- Controls -->
       <div class="casino-controls">
+        <div class="casino-jackpot-banner" id="jackpot-banner">
+          <span class="casino-jackpot-icon">🏆</span>
+          <span class="casino-jackpot-label">JACKPOT</span>
+          <span class="casino-jackpot-amount" id="jackpot-amount">5 000</span>
+          <span class="casino-jackpot-cr">CR</span>
+        </div>
         <div class="casino-cost">COUT: <span class="casino-cost-amount">200 CR</span></div>
         <button class="casino-spin-btn" id="spin-btn" onclick="spin()">
           <span class="casino-spin-icon">&#127922;</span> TOURNER
