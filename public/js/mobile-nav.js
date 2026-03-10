@@ -1,8 +1,11 @@
 // mobile-nav.js — Enhanced bottom navigation bar for mobile
 (function() {
-  // Only show on screens <= 900px
-  if (window.innerWidth > 900 && !window.matchMedia('(max-width: 900px)').matches) return;
+  // Check screen size (support orientation changes)
+  function isMobile() {
+    return window.innerWidth <= 900 || window.matchMedia('(max-width: 900px)').matches;
+  }
 
+  // Always create the nav, CSS controls visibility via media query
   const currentPath = window.location.pathname;
 
   const mainLinks = [
@@ -33,7 +36,7 @@
     const activeClass = isActive ? 'mobile-nav-item--active' : '';
     const moreClass = link.href === '#more' ? 'mobile-nav-more-btn' : '';
     const colorStyle = isActive && link.color ? `style="color:${link.color}; text-shadow: 0 0 10px ${link.color}50"` : '';
-    return `<a href="${link.href}" class="mobile-nav-item ${activeClass} ${moreClass}" ${link.href === '#more' ? 'onclick="toggleMobileMore(event)"' : ''}>
+    return `<a href="${link.href}" class="mobile-nav-item ${activeClass} ${moreClass}" ${link.href === '#more' ? 'data-more="1"' : ''}>
       <span class="mobile-nav-icon" ${colorStyle}>${link.icon}</span>
       <span class="mobile-nav-label" ${colorStyle}>${link.label}</span>
       ${isActive && link.href !== '#more' ? '<span class="mobile-nav-dot"></span>' : ''}
@@ -45,7 +48,7 @@
   panel.className = 'mobile-more-panel';
   panel.id = 'mobile-more-panel';
   panel.innerHTML = `
-    <div class="mobile-more-overlay" onclick="toggleMobileMore(event)"></div>
+    <div class="mobile-more-overlay" id="mobile-more-overlay"></div>
     <div class="mobile-more-content">
       <div class="mobile-more-handle"></div>
       <div class="mobile-more-grid">
@@ -70,12 +73,15 @@
   if (backBtn) backBtn.classList.add('mobile-hidden');
 
   // Toggle more panel
-  window.toggleMobileMore = function(e) {
+  function toggleMore(e) {
     e.preventDefault();
     e.stopPropagation();
-    const p = document.getElementById('mobile-more-panel');
-    p.classList.toggle('mobile-more--open');
-  };
+    panel.classList.toggle('mobile-more--open');
+  }
+
+  // Use event delegation instead of inline onclick
+  nav.querySelector('[data-more="1"]').addEventListener('click', toggleMore);
+  document.getElementById('mobile-more-overlay').addEventListener('click', toggleMore);
 
   // Swipe down to close more panel
   let touchStartY = 0;
@@ -90,9 +96,9 @@
     }
   }, { passive: true });
 
-  // Handle resize
-  window.addEventListener('resize', function() {
-    if (window.innerWidth <= 900) {
+  // Handle resize / orientation change
+  function onResize() {
+    if (isMobile()) {
       nav.style.display = '';
       document.body.classList.add('has-mobile-nav');
     } else {
@@ -100,5 +106,7 @@
       document.body.classList.remove('has-mobile-nav');
       panel.classList.remove('mobile-more--open');
     }
-  });
+  }
+  window.addEventListener('resize', onResize);
+  window.addEventListener('orientationchange', onResize);
 })();
