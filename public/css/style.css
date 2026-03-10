@@ -9219,6 +9219,28 @@ body.casino-page {
   transition: background 0.2s;
 }
 .friend-item:hover { background: rgba(var(--primary-rgb), 0.08); }
+.friend-item-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+.friend-remove-btn {
+  display: none;
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.friend-item:hover .friend-remove-btn { display: block; }
+.friend-remove-btn:hover { color: #ff4444; background: rgba(255, 68, 68, 0.15); }
 .friend-status-dot {
   width: 8px;
   height: 8px;
