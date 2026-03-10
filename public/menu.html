@@ -6,6 +6,7 @@
   <title>GACHA CARDS - Menu</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/auth-guard.js"></script>
+  <script src="/js/reward-fx.js"></script>
   <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
 <body class="dashboard-page">
@@ -86,16 +87,6 @@
         &#127942; SUCCES
       </div>
 
-      <!-- Quick links -->
-      <div class="dash-quicklinks">
-        <a href="/shop" class="dash-quicklink">&#128176; BOUTIQUE</a>
-        <a href="/collection" class="dash-quicklink">&#128214; COLLECTION</a>
-        <a href="/mine" class="dash-quicklink">&#9935; MINE</a>
-        <a href="/battlepass" class="dash-quicklink">&#127942; PASSE</a>
-        <a href="/casino" class="dash-quicklink">&#127922; CASINO</a>
-        <a href="/fusion" class="dash-quicklink">&#128302; FORGE</a>
-      </div>
-
       <!-- Admin (cache par defaut) -->
       <div class="dash-admin-btn hidden" id="admin-btn" onclick="window.location.href='/admin'">
         &#128737; ADMIN PANEL
@@ -105,51 +96,81 @@
     <!-- CENTER + RIGHT: Main area -->
     <div class="dash-main">
 
-      <!-- Combat + Decks row -->
-      <section class="dash-combat-row">
-        <div class="dash-combat-zone">
-          <div class="dash-combat-bg"></div>
-          <div class="dash-combat-content">
-            <h2 class="dash-combat-title">PRET AU COMBAT ?</h2>
-            <button class="dash-hero-btn" onclick="window.location.href='/combat'">
-              <span class="dash-hero-btn-icon">&#9876;</span>
-              <span class="dash-hero-btn-text">JOUER</span>
-            </button>
-            <div class="dash-combat-stats">
-              <div class="dash-combat-stat">
-                <span class="dash-combat-stat-value" id="combat-wins">-</span>
-                <span class="dash-combat-stat-label">VICTOIRES</span>
-              </div>
-              <div class="dash-combat-stat">
-                <span class="dash-combat-stat-value" id="combat-losses">-</span>
-                <span class="dash-combat-stat-label">DEFAITES</span>
-              </div>
-              <div class="dash-combat-stat">
-                <span class="dash-combat-stat-value" id="combat-winrate">-%</span>
-                <span class="dash-combat-stat-label">WINRATE</span>
-              </div>
+      <!-- Hero combat banner -->
+      <section class="dash-combat-zone">
+        <div class="dash-combat-bg"></div>
+        <div class="dash-combat-content">
+          <h2 class="dash-combat-title">PRET AU COMBAT ?</h2>
+          <button class="dash-hero-btn" onclick="window.location.href='/combat'">
+            <span class="dash-hero-btn-icon">&#9876;</span>
+            <span class="dash-hero-btn-text">JOUER</span>
+          </button>
+          <div class="dash-combat-stats">
+            <div class="dash-combat-stat">
+              <span class="dash-combat-stat-value" id="combat-wins">-</span>
+              <span class="dash-combat-stat-label">VICTOIRES</span>
+            </div>
+            <div class="dash-combat-stat">
+              <span class="dash-combat-stat-value" id="combat-losses">-</span>
+              <span class="dash-combat-stat-label">DEFAITES</span>
+            </div>
+            <div class="dash-combat-stat">
+              <span class="dash-combat-stat-value" id="combat-winrate">-%</span>
+              <span class="dash-combat-stat-label">WINRATE</span>
             </div>
           </div>
         </div>
+      </section>
+
+      <!-- Quick access grid -->
+      <section class="dash-tiles">
+        <a href="/shop" class="dash-tile dash-tile--shop">
+          <span class="dash-tile-icon">&#128176;</span>
+          <span class="dash-tile-label">BOUTIQUE</span>
+        </a>
+        <a href="/collection" class="dash-tile dash-tile--collection">
+          <span class="dash-tile-icon">&#128214;</span>
+          <span class="dash-tile-label">COLLECTION</span>
+        </a>
+        <a href="/decks" class="dash-tile dash-tile--decks">
+          <span class="dash-tile-icon">&#127183;</span>
+          <span class="dash-tile-label">DECKS</span>
+          <span class="dash-tile-sub" id="decks-count-tile"></span>
+        </a>
+        <a href="/mine" class="dash-tile dash-tile--mine">
+          <span class="dash-tile-icon">&#9935;</span>
+          <span class="dash-tile-label">MINE</span>
+        </a>
+        <a href="/fusion" class="dash-tile dash-tile--fusion">
+          <span class="dash-tile-icon">&#128302;</span>
+          <span class="dash-tile-label">FORGE</span>
+        </a>
+        <a href="/casino" class="dash-tile dash-tile--casino">
+          <span class="dash-tile-icon">&#127922;</span>
+          <span class="dash-tile-label">CASINO</span>
+        </a>
+      </section>
+
+      <!-- Decks + Quests row -->
+      <div class="dash-bottom-row">
         <div class="dash-decks-preview">
           <h3 class="dash-decks-title">MES DECKS</h3>
           <div class="dash-decks-list" id="decks-preview-list">
             <div class="quest-loading">Chargement...</div>
           </div>
         </div>
-      </section>
 
-      <!-- Quests with tabs -->
-      <section class="quests-panel" id="quests-panel">
-        <div class="quests-tabs">
-          <button class="quests-tab quests-tab--active" id="tab-daily" onclick="switchQuestTab('daily')">JOUR</button>
-          <button class="quests-tab" id="tab-weekly" onclick="switchQuestTab('weekly')">SEMAINE</button>
-          <button class="quests-tab" id="tab-special" onclick="switchQuestTab('special')">DEFI</button>
-        </div>
-        <div class="quests-grid" id="quests-grid">
-          <div class="quest-loading">Chargement...</div>
-        </div>
-      </section>
+        <section class="quests-panel" id="quests-panel">
+          <div class="quests-tabs">
+            <button class="quests-tab quests-tab--active" id="tab-daily" onclick="switchQuestTab('daily')">JOUR</button>
+            <button class="quests-tab" id="tab-weekly" onclick="switchQuestTab('weekly')">SEMAINE</button>
+            <button class="quests-tab" id="tab-special" onclick="switchQuestTab('special')">DEFI</button>
+          </div>
+          <div class="quests-grid" id="quests-grid">
+            <div class="quest-loading">Chargement...</div>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
 

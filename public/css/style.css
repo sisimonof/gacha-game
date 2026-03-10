@@ -1430,7 +1430,14 @@ body.dashboard-page {
   .dash-navbar-inner {
     height: 48px;
   }
-  .dash-combat-row {
+  .dash-tiles {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .dash-tile { padding: 14px 8px; }
+  .dash-tile-icon { font-size: 24px; }
+  .dash-tile-label { font-size: 7px; }
+  .dash-bottom-row {
     flex-direction: column;
   }
   .dash-decks-preview {
@@ -1637,58 +1644,98 @@ body.collection-page {
 }
 
 .coll-sell-zone {
-  border: 2px dashed #440000;
-  border-radius: 8px;
-  padding: 16px;
+  border: 2px dashed #662222;
+  border-radius: 10px;
+  padding: 18px 16px;
   text-align: center;
   transition: all 0.3s;
-  background: rgba(40, 0, 0, 0.15);
+  background: linear-gradient(135deg, rgba(60, 0, 0, 0.2), rgba(40, 0, 0, 0.1));
   cursor: default;
+  position: relative;
+  overflow: hidden;
 }
 
 .coll-sell-zone .coll-sell-icon {
-  font-size: 24px;
-  margin-bottom: 4px;
-  opacity: 0.5;
-  transition: opacity 0.3s;
+  font-size: 28px;
+  margin-bottom: 6px;
+  opacity: 0.6;
+  transition: all 0.3s;
+  filter: drop-shadow(0 0 4px rgba(255, 50, 50, 0.3));
 }
 
 .coll-sell-zone .coll-sell-text {
   font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  color: #660000;
-  letter-spacing: 2px;
-  margin-bottom: 4px;
-  transition: color 0.3s;
+  font-size: 11px;
+  color: #883333;
+  letter-spacing: 3px;
+  margin-bottom: 6px;
+  transition: all 0.3s;
 }
 
 .coll-sell-zone .coll-sell-hint {
   font-family: 'VT323', monospace;
-  font-size: 14px;
-  color: #443333;
-  transition: color 0.3s;
+  font-size: 16px;
+  color: #554444;
+  transition: all 0.3s;
 }
 
+.coll-sell-zone .coll-sell-arrows {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+.coll-sell-zone .coll-sell-arrows span {
+  font-size: 14px;
+  color: #553333;
+  animation: sellArrowBounce 1.5s ease-in-out infinite;
+}
+.coll-sell-zone .coll-sell-arrows span:nth-child(2) { animation-delay: 0.15s; }
+.coll-sell-zone .coll-sell-arrows span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes sellArrowBounce {
+  0%, 100% { transform: translateY(0); opacity: 0.4; }
+  50% { transform: translateY(-4px); opacity: 0.8; }
+}
+
+/* Drag active: card is being dragged */
 .coll-sell-zone.drag-active {
   border-color: #ff4444;
-  background: rgba(80, 0, 0, 0.2);
-  animation: sellPulse 1s ease-in-out infinite;
+  border-style: solid;
+  background: linear-gradient(135deg, rgba(120, 0, 0, 0.25), rgba(80, 0, 0, 0.15));
+  animation: sellPulse 1.2s ease-in-out infinite;
+}
+.coll-sell-zone.drag-active .coll-sell-icon {
+  opacity: 1;
+  transform: scale(1.2);
+  filter: drop-shadow(0 0 8px rgba(255, 50, 50, 0.6));
+}
+.coll-sell-zone.drag-active .coll-sell-text { color: #ff4444; text-shadow: 0 0 10px rgba(255, 68, 68, 0.4); }
+.coll-sell-zone.drag-active .coll-sell-hint { color: #ff8888; }
+.coll-sell-zone.drag-active .coll-sell-arrows span {
+  color: #ff4444;
+  animation: sellArrowBounceActive 0.6s ease-in-out infinite;
+}
+.coll-sell-zone.drag-active .coll-sell-arrows span:nth-child(2) { animation-delay: 0.1s; }
+.coll-sell-zone.drag-active .coll-sell-arrows span:nth-child(3) { animation-delay: 0.2s; }
+
+@keyframes sellArrowBounceActive {
+  0%, 100% { transform: translateY(0); opacity: 0.6; }
+  50% { transform: translateY(-6px); opacity: 1; }
 }
 
-.coll-sell-zone.drag-active .coll-sell-icon { opacity: 1; }
-.coll-sell-zone.drag-active .coll-sell-text { color: #ff4444; }
-.coll-sell-zone.drag-active .coll-sell-hint { color: #ff6666; }
-
+/* Drag hover: card is over the zone */
 .coll-sell-zone.drag-hover {
   border-color: #ff6666;
-  background: rgba(120, 0, 0, 0.3);
-  box-shadow: 0 0 20px rgba(255, 0, 0, 0.2), inset 0 0 20px rgba(255, 0, 0, 0.05);
-  transform: scale(1.02);
+  background: rgba(150, 0, 0, 0.3);
+  box-shadow: 0 0 30px rgba(255, 0, 0, 0.3), inset 0 0 30px rgba(255, 0, 0, 0.08);
+  transform: scale(1.04);
 }
+.coll-sell-zone.drag-hover .coll-sell-icon { transform: scale(1.3); }
 
 @keyframes sellPulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(255, 0, 0, 0.1); }
-  50% { box-shadow: 0 0 15px rgba(255, 0, 0, 0.3); }
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 0, 0, 0.15); }
+  50% { box-shadow: 0 0 25px rgba(255, 0, 0, 0.35), inset 0 0 15px rgba(255, 0, 0, 0.05); }
 }
 
 /* === MAIN CONTENT === */
@@ -8048,7 +8095,8 @@ body.bp-page {
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-bottom: 0;
+  flex: 1;
+  min-width: 0;
   background: rgba(var(--primary-rgb), 0.03);
   border: 1px solid rgba(var(--primary-rgb), 0.15);
   border-radius: 12px;
@@ -8272,46 +8320,92 @@ body.bp-page {
   text-shadow: 0 0 8px rgba(var(--primary-rgb), 0.3);
 }
 
-/* === SIDEBAR QUICK LINKS === */
-.dash-quicklinks {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.dash-quicklink {
-  display: block;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  color: #335533;
-  text-decoration: none;
-  padding: 10px 12px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  transition: all 0.25s;
-  letter-spacing: 1px;
-}
-.dash-quicklink:hover {
-  color: var(--primary);
-  background: rgba(var(--primary-rgb), 0.06);
-  border-color: var(--primary-border);
-  text-shadow: 0 0 8px rgba(var(--primary-rgb), 0.3);
-}
-
-/* === COMBAT + DECKS ROW === */
-.dash-combat-row {
-  display: flex;
-  gap: 16px;
+/* === QUICK ACCESS TILES === */
+.dash-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   margin-bottom: 16px;
 }
+.dash-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 18px 12px;
+  background: rgba(0, 8, 0, 0.7);
+  border: 1px solid rgba(var(--primary-rgb), 0.12);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+.dash-tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.dash-tile:hover {
+  transform: translateY(-4px);
+  border-color: rgba(var(--primary-rgb), 0.35);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4), 0 0 20px rgba(var(--primary-rgb), 0.1);
+  background: rgba(var(--primary-rgb), 0.06);
+}
+.dash-tile:hover::before { opacity: 0.6; }
+.dash-tile-icon {
+  font-size: 28px;
+  filter: grayscale(0.3);
+  transition: all 0.3s;
+}
+.dash-tile:hover .dash-tile-icon { filter: grayscale(0); transform: scale(1.15); }
+.dash-tile-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #556655;
+  letter-spacing: 1px;
+  transition: color 0.3s;
+}
+.dash-tile:hover .dash-tile-label { color: var(--primary); text-shadow: 0 0 8px rgba(var(--primary-rgb), 0.3); }
+.dash-tile-sub {
+  font-family: 'VT323', monospace;
+  font-size: 14px;
+  color: #444;
+}
+
+/* Tile color accents */
+.dash-tile--shop:hover { border-color: rgba(255, 204, 0, 0.3); box-shadow: 0 8px 25px rgba(0,0,0,0.4), 0 0 15px rgba(255, 204, 0, 0.1); }
+.dash-tile--shop:hover .dash-tile-label { color: #ffcc00; text-shadow: 0 0 8px rgba(255,204,0,0.3); }
+.dash-tile--collection:hover { border-color: rgba(0, 200, 100, 0.3); box-shadow: 0 8px 25px rgba(0,0,0,0.4), 0 0 15px rgba(0,200,100,0.1); }
+.dash-tile--collection:hover .dash-tile-label { color: #00cc66; text-shadow: 0 0 8px rgba(0,200,100,0.3); }
+.dash-tile--mine:hover { border-color: rgba(180, 130, 255, 0.3); box-shadow: 0 8px 25px rgba(0,0,0,0.4), 0 0 15px rgba(180,130,255,0.1); }
+.dash-tile--mine:hover .dash-tile-label { color: #b482ff; text-shadow: 0 0 8px rgba(180,130,255,0.3); }
+.dash-tile--fusion:hover { border-color: rgba(255, 100, 50, 0.3); box-shadow: 0 8px 25px rgba(0,0,0,0.4), 0 0 15px rgba(255,100,50,0.1); }
+.dash-tile--fusion:hover .dash-tile-label { color: #ff6432; text-shadow: 0 0 8px rgba(255,100,50,0.3); }
+.dash-tile--casino:hover { border-color: rgba(255, 50, 100, 0.3); box-shadow: 0 8px 25px rgba(0,0,0,0.4), 0 0 15px rgba(255,50,100,0.1); }
+.dash-tile--casino:hover .dash-tile-label { color: #ff3264; text-shadow: 0 0 8px rgba(255,50,100,0.3); }
+
+/* === BOTTOM ROW (Decks + Quests) === */
+.dash-bottom-row {
+  display: flex;
+  gap: 16px;
+}
+
+/* === COMBAT ZONE === */
 .dash-combat-zone {
-  flex: 1;
   position: relative;
   background: rgba(0, 8, 0, 0.85);
   border: 1px solid rgba(255, 68, 68, 0.2);
   border-radius: 12px;
-  padding: 24px 20px;
+  padding: 28px 20px;
   text-align: center;
   overflow: hidden;
+  margin-bottom: 16px;
 }
 .dash-combat-zone::before {
   content: '';
@@ -8366,7 +8460,7 @@ body.bp-page {
 
 /* === DECK PREVIEW === */
 .dash-decks-preview {
-  width: 280px;
+  width: 260px;
   flex-shrink: 0;
   background: rgba(0, 8, 0, 0.85);
   border: 1px solid var(--primary-border);
@@ -8770,6 +8864,37 @@ body.casino-page {
     width: 300px;
     height: 300px;
   }
+}
+
+/* =======================================
+   FLOATING REWARD ANIMATIONS
+   ======================================= */
+.reward-fx-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  overflow: hidden;
+}
+.reward-fx {
+  position: absolute;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: none;
+  z-index: 9999;
+}
+.reward-fx-icon { font-size: 18px; }
+.reward-fx--animate {
+  animation: rewardFloat 1.8s ease-out forwards;
+}
+@keyframes rewardFloat {
+  0%   { opacity: 0; transform: translateY(0) scale(0.5); }
+  15%  { opacity: 1; transform: translateY(-10px) scale(1.15); }
+  30%  { transform: translateY(-20px) scale(1); }
+  100% { opacity: 0; transform: translateY(-80px) scale(0.9); }
 }
 
 /* =======================================
@@ -11916,7 +12041,10 @@ body.casino-page {
     margin: 0; width: 52px; height: 52px; font-size: 22px; flex-shrink: 0;
   }
   .settings-gear { top: 8px; right: 8px; font-size: 16px; }
-  .dash-quicklinks { display: none; }
+  .dash-tiles { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .dash-tile { padding: 12px 8px; }
+  .dash-tile-icon { font-size: 22px; }
+  .dash-tile-label { font-size: 6px; }
   .dash-resources {
     flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 6px;
   }
@@ -11928,7 +12056,7 @@ body.casino-page {
   .dash-achievements-btn { font-size: 8px; padding: 10px; min-height: 40px; }
   .dash-admin-btn { font-size: 8px; }
 
-  .dash-combat-row { flex-direction: column; gap: 10px; }
+  .dash-bottom-row { flex-direction: column; gap: 10px; }
   .dash-combat-zone { min-height: 150px; border-radius: 12px; }
   .dash-combat-title { font-size: 12px; }
   .dash-hero-btn {
