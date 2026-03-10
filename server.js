@@ -4356,7 +4356,12 @@ app.use(sessionMiddleware);
 
 function requireAuth(req, res, next) {
   if (!req.session.userId) {
-    return res.status(401).json({ error: 'Non connecte' });
+    // API calls get JSON error, page navigations get redirected to login
+    const isApi = req.path.startsWith('/api/');
+    if (isApi) {
+      return res.status(401).json({ error: 'Non connecte' });
+    }
+    return res.redirect('/');
   }
   next();
 }
