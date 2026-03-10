@@ -5,6 +5,7 @@ const session = require('express-session');
 const SqliteStore = require('better-sqlite3-session-store')(session);
 const bcrypt = require('bcryptjs');
 const Database = require('better-sqlite3');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
 
@@ -43,6 +44,16 @@ db.exec(`
     credits INTEGER DEFAULT 1000,
     last_daily TEXT DEFAULT '',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS auth_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token TEXT UNIQUE NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
   )
 `);
 
@@ -4354,9 +4365,20 @@ const sessionMiddleware = session({
 });
 app.use(sessionMiddleware);
 
+function generateAuthToken(userId) {
+  const token = crypto.randomBytes(48).toString('hex');
+  db.prepare('DELETE FROM auth_tokens WHERE user_id = ?').run(userId);
+  db.prepare('INSERT INTO auth_tokens (user_id, token) VALUES (?, ?)').run(userId, token);
+  return token;
+}
+
 function requireAuth(req, res, next) {
   if (!req.session.userId) {
-    return res.status(401).json({ error: 'Non connecte' });
+    const isApi = req.path.startsWith('/api/');
+    if (isApi) {
+      return res.status(401).json({ error: 'Non connecte' });
+    }
+    return res.redirect('/');
   }
   next();
 }
@@ -4383,7 +4405,8 @@ app.post('/api/register', (req, res) => {
   const result = db.prepare('INSERT INTO users (username, password, credits) VALUES (?, ?, 1000)').run(username, hash);
   req.session.userId = result.lastInsertRowid;
   req.session.username = username;
-  res.json({ success: true, username });
+  const authToken = generateAuthToken(result.lastInsertRowid);
+  res.json({ success: true, username, authToken });
 });
 
 app.post('/api/login', (req, res) => {
@@ -4396,10 +4419,28 @@ app.post('/api/login', (req, res) => {
   }
   req.session.userId = user.id;
   req.session.username = user.username;
-  res.json({ success: true, username: user.username });
+  const authToken = generateAuthToken(user.id);
+  res.json({ success: true, username: user.username, authToken });
+});
+
+app.post('/api/auto-reconnect', (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'Token manquant' });
+  const row = db.prepare('SELECT user_id FROM auth_tokens WHERE token = ?').get(token);
+  if (!row) return res.status(401).json({ error: 'Token invalide' });
+  const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(row.user_id);
+  if (!user) return res.status(401).json({ error: 'Utilisateur introuvable' });
+  req.session.userId = user.id;
+  req.session.username = user.username;
+  // Rotate token for security
+  const newToken = generateAuthToken(user.id);
+  res.json({ success: true, username: user.username, authToken: newToken });
 });
 
 app.post('/api/logout', (req, res) => {
+  if (req.session.userId) {
+    db.prepare('DELETE FROM auth_tokens WHERE user_id = ?').run(req.session.userId);
+  }
   req.session.destroy();
   res.json({ success: true });
 });

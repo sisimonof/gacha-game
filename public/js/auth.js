@@ -246,6 +246,7 @@ async function runAuthFlow() {
       const result = await doLogin(username, password);
 
       if (result.success) {
+        if (result.authToken) localStorage.setItem('authToken', result.authToken);
         loginOk = true;
         break;
       } else {
@@ -347,6 +348,7 @@ async function runAuthFlow() {
     const result = await doRegister(username, password);
 
     if (result.success) {
+      if (result.authToken) localStorage.setItem('authToken', result.authToken);
       await typeLine('> Profil cree avec succes.', 25);
       await typeLine('> Bienvenue, agent ' + username + '.', 30);
       await typeLine('> Initialisation du briefing...', 25);
