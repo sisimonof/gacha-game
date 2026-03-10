@@ -4949,6 +4949,60 @@ app.post('/api/collection/sell', requireAuth, (req, res) => {
   res.json({ success: true, credits: newCredits, soldPrice: sellPrice, collection });
 });
 
+app.post('/api/collection/sell-bulk', requireAuth, (req, res) => {
+  const { user_card_ids } = req.body;
+  if (!Array.isArray(user_card_ids) || user_card_ids.length === 0) {
+    return res.status(400).json({ error: 'Aucune carte selectionnee' });
+  }
+  if (user_card_ids.length > 100) {
+    return res.status(400).json({ error: 'Maximum 100 cartes a la fois' });
+  }
+
+  const placeholders = user_card_ids.map(() => '?').join(',');
+  const userCards = db.prepare(`
+    SELECT uc.id, uc.is_shiny, uc.is_fused, c.rarity
+    FROM user_cards uc JOIN cards c ON uc.card_id = c.id
+    WHERE uc.id IN (${placeholders}) AND uc.user_id = ?
+  `).all(...user_card_ids, req.session.userId);
+
+  if (userCards.length !== user_card_ids.length) {
+    return res.status(400).json({ error: 'Certaines cartes sont introuvables' });
+  }
+
+  let totalPrice = 0;
+  for (const uc of userCards) {
+    let price = SELL_PRICES[uc.rarity] || 0;
+    if (uc.is_shiny) price *= 3;
+    if (uc.is_fused) price *= 2;
+    totalPrice += price;
+  }
+
+  const bulkSellTransaction = db.transaction(() => {
+    db.prepare(`DELETE FROM user_cards WHERE id IN (${placeholders}) AND user_id = ?`).run(...user_card_ids, req.session.userId);
+    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(totalPrice, req.session.userId);
+  });
+
+  try {
+    bulkSellTransaction();
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+
+  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(req.session.userId).credits;
+  const collection = db.prepare(`
+    SELECT c.*, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level, COUNT(*) as count, MIN(uc.id) as user_card_id
+    FROM user_cards uc
+    JOIN cards c ON uc.card_id = c.id
+    WHERE uc.user_id = ?
+    GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level
+    ORDER BY
+      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
+  `).all(req.session.userId);
+
+  res.json({ success: true, credits: newCredits, totalPrice, totalSold: userCards.length, collection });
+});
+
 app.get('/api/sell-prices', requireAuth, (req, res) => {
   res.json(SELL_PRICES);
 });

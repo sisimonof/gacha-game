@@ -144,6 +144,7 @@
           <option value="price">Tri: Prix</option>
         </select>
         <button class="coll-reset-btn" id="coll-reset">RESET</button>
+        <button class="coll-select-btn" id="coll-select-toggle">&#9745; SELECTION</button>
       </div>
 
       <div class="coll-results-bar">
@@ -163,6 +164,19 @@
     <div class="sell-price-popup" id="sell-price-popup"></div>
   </div>
   <div class="screen-flash hidden" id="screen-flash"></div>
+
+  <!-- Barre de vente en lot -->
+  <div class="bulk-sell-bar hidden" id="bulk-sell-bar">
+    <div class="bulk-sell-info">
+      <span class="bulk-sell-count" id="bulk-sell-count">0 cartes</span>
+      <span class="bulk-sell-total" id="bulk-sell-total">0 CR</span>
+    </div>
+    <div class="bulk-sell-actions">
+      <button class="bulk-sell-action-btn bulk-sell-select-all" id="bulk-sell-select-all">TOUT</button>
+      <button class="bulk-sell-action-btn bulk-sell-deselect" id="bulk-sell-deselect">AUCUN</button>
+      <button class="bulk-sell-action-btn bulk-sell-confirm" id="bulk-sell-confirm">VENDRE</button>
+    </div>
+  </div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/toast.js"></script>

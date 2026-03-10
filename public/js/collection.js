@@ -5,6 +5,8 @@ let sellPrices = {};
 let cardsData = [];
 let filteredCards = [];
 let isSelling = false;
+let selectionMode = false;
+let selectedCards = new Map(); // user_card_id -> card data
 
 // Etat des filtres
 const filterState = {
@@ -272,16 +274,30 @@ function renderFilteredCards(cards) {
     `;
   }).join('');
 
-  // Click pour detail
+  // Click pour detail ou selection
   grid.querySelectorAll('.collection-card').forEach((el) => {
     const idx = parseInt(el.dataset.cardIdx);
     el.addEventListener('click', (e) => {
       if (e.defaultPrevented) return;
+      if (selectionMode) {
+        toggleCardSelection(el, cards[idx]);
+        return;
+      }
       showCardDetail(cards[idx]);
     });
   });
 
-  setupDragOnCards();
+  // Restaurer l'etat de selection visuel
+  if (selectionMode) {
+    grid.querySelectorAll('.collection-card').forEach(el => {
+      const ucId = parseInt(el.dataset.userCardId);
+      if (selectedCards.has(ucId)) {
+        el.classList.add('selected');
+      }
+    });
+  }
+
+  if (!selectionMode) setupDragOnCards();
   initTiltEffect(grid);
 }
 
@@ -571,8 +587,146 @@ async function loadCollection() {
   }
 }
 
+// ==========================================
+//  MODE SELECTION & VENTE EN LOT
+// ==========================================
+
+function toggleSelectionMode() {
+  selectionMode = !selectionMode;
+  const btn = document.getElementById('coll-select-toggle');
+  const bar = document.getElementById('bulk-sell-bar');
+  const grid = document.getElementById('collection-grid');
+  const sellZone = document.getElementById('sell-zone');
+
+  if (selectionMode) {
+    btn.classList.add('active');
+    bar.classList.remove('hidden');
+    sellZone.style.display = 'none';
+    grid.classList.add('selection-mode');
+  } else {
+    btn.classList.remove('active');
+    bar.classList.add('hidden');
+    sellZone.style.display = '';
+    grid.classList.remove('selection-mode');
+    selectedCards.clear();
+    grid.querySelectorAll('.collection-card.selected').forEach(el => el.classList.remove('selected'));
+  }
+  updateBulkSellBar();
+  // Re-render pour activer/desactiver le drag
+  applyFilters();
+}
+
+function toggleCardSelection(el, card) {
+  const ucId = card.user_card_id;
+  if (selectedCards.has(ucId)) {
+    selectedCards.delete(ucId);
+    el.classList.remove('selected');
+  } else {
+    selectedCards.set(ucId, card);
+    el.classList.add('selected');
+  }
+  updateBulkSellBar();
+}
+
+function updateBulkSellBar() {
+  const countEl = document.getElementById('bulk-sell-count');
+  const totalEl = document.getElementById('bulk-sell-total');
+  const confirmBtn = document.getElementById('bulk-sell-confirm');
+  const n = selectedCards.size;
+
+  let total = 0;
+  for (const card of selectedCards.values()) {
+    total += getCardPrice(card);
+  }
+
+  countEl.textContent = n + ' carte' + (n !== 1 ? 's' : '');
+  totalEl.textContent = total + ' CR';
+  confirmBtn.textContent = 'VENDRE' + (n > 0 ? ' (' + n + ')' : '');
+  confirmBtn.disabled = n === 0;
+}
+
+function selectAllFiltered() {
+  const grid = document.getElementById('collection-grid');
+  grid.querySelectorAll('.collection-card').forEach(el => {
+    const idx = parseInt(el.dataset.cardIdx);
+    const card = filteredCards[idx];
+    if (card && !selectedCards.has(card.user_card_id)) {
+      selectedCards.set(card.user_card_id, card);
+      el.classList.add('selected');
+    }
+  });
+  updateBulkSellBar();
+}
+
+function deselectAll() {
+  const grid = document.getElementById('collection-grid');
+  selectedCards.clear();
+  grid.querySelectorAll('.collection-card.selected').forEach(el => el.classList.remove('selected'));
+  updateBulkSellBar();
+}
+
+async function sellMultipleCards() {
+  const n = selectedCards.size;
+  if (n === 0) return;
+
+  let total = 0;
+  for (const card of selectedCards.values()) {
+    total += getCardPrice(card);
+  }
+
+  if (!confirm(`Vendre ${n} carte${n > 1 ? 's' : ''} pour ${total} CR ?`)) return;
+
+  isSelling = true;
+  const grid = document.getElementById('collection-grid');
+  grid.classList.add('selling-locked');
+
+  try {
+    const ids = Array.from(selectedCards.keys());
+    const res = await fetch('/api/collection/sell-bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_card_ids: ids })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      alert(data.error || 'Erreur lors de la vente');
+      grid.classList.remove('selling-locked');
+      isSelling = false;
+      return;
+    }
+
+    animateCredits(currentCredits, data.credits);
+    currentCredits = data.credits;
+
+    if (data.totalPrice > 0 && typeof showCreditsReward === 'function') {
+      showCreditsReward(data.totalPrice);
+    }
+    screenFlash();
+
+    // Reset selection et re-render
+    selectedCards.clear();
+    toggleSelectionMode();
+    renderCollection(data.collection);
+
+  } catch (err) {
+    alert('Erreur reseau');
+  }
+
+  grid.classList.remove('selling-locked');
+  isSelling = false;
+}
+
+function setupSelectionListeners() {
+  document.getElementById('coll-select-toggle').addEventListener('click', toggleSelectionMode);
+  document.getElementById('bulk-sell-select-all').addEventListener('click', selectAllFiltered);
+  document.getElementById('bulk-sell-deselect').addEventListener('click', deselectAll);
+  document.getElementById('bulk-sell-confirm').addEventListener('click', sellMultipleCards);
+}
+
 async function init() {
   setupFilterListeners();
+  setupSelectionListeners();
   await Promise.all([loadUserInfo(), loadSellPrices()]);
   await loadCollection();
 }

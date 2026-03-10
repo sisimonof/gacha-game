@@ -10,6 +10,8 @@ const BOOSTER_IMAGES = {
 };
 
 let currentCredits = 0;
+let lastBoosterId = null;
+let lastBoosterPrice = 0;
 
 // === INIT ===
 async function loadCredits() {
@@ -78,6 +80,8 @@ async function loadBoosters() {
 async function buyBooster(id, price) {
   if (currentCredits < price) { screenShake(); return; }
   document.querySelectorAll('.shop-v2-booster').forEach(b => b.style.pointerEvents = 'none');
+  lastBoosterId = id;
+  lastBoosterPrice = price;
 
   try {
     const res = await fetch(`/api/boosters/${id}/open`, { method: 'POST' });
@@ -107,6 +111,8 @@ async function claimFreeBooster() {
     if (data.success) {
       markFreeClaimed();
       screenFlash();
+      lastBoosterId = null;
+      lastBoosterPrice = 0;
       // Show cards via tear animation
       startTearAnimation('origines', data.cards);
       if (window.showToast) showToast('Booster gratuit ouvert !', 'success');
@@ -224,11 +230,13 @@ function showCardsReveal(cards) {
   const reveal = document.getElementById('cards-reveal');
   const doneBtn = document.getElementById('done-btn');
   const revealAllBtn = document.getElementById('reveal-all-btn');
+  const reopenBtn = document.getElementById('reopen-btn');
 
   scene.classList.remove('hidden');
   reveal.innerHTML = '';
   doneBtn.classList.add('hidden');
   revealAllBtn.classList.add('hidden');
+  reopenBtn.classList.add('hidden');
   title.textContent = 'OUVERTURE...';
   title.style.color = '#00ff41';
 
@@ -325,6 +333,18 @@ function showCardsReveal(cards) {
         revealAllBtn.classList.add('hidden');
         title.textContent = 'BOOSTER OUVERT !';
         title.style.color = '#00ff41';
+        // Bouton re-open (sauf booster gratuit)
+        if (lastBoosterId && lastBoosterPrice > 0) {
+          reopenBtn.textContent = `> OUVRIR UN AUTRE (${lastBoosterPrice} CR)`;
+          reopenBtn.classList.remove('hidden');
+          if (currentCredits < lastBoosterPrice) {
+            reopenBtn.disabled = true;
+            reopenBtn.classList.add('reopen-btn--disabled');
+          } else {
+            reopenBtn.disabled = false;
+            reopenBtn.classList.remove('reopen-btn--disabled');
+          }
+        }
       }, 800);
     }
   }
@@ -352,6 +372,15 @@ document.getElementById('done-btn').addEventListener('click', () => {
   document.getElementById('tear-container').classList.add('hidden');
   document.getElementById('shop-view').classList.remove('hidden');
   document.querySelectorAll('.shop-v2-booster').forEach(b => b.style.pointerEvents = '');
+});
+
+document.getElementById('reopen-btn').addEventListener('click', () => {
+  if (!lastBoosterId || lastBoosterPrice <= 0 || currentCredits < lastBoosterPrice) return;
+  // Reset la scene de reveal
+  document.getElementById('reveal-scene').classList.add('hidden');
+  document.getElementById('tear-container').classList.add('hidden');
+  // Relancer l'achat du meme booster
+  buyBooster(lastBoosterId, lastBoosterPrice);
 });
 
 // === GIFT CODE ===
