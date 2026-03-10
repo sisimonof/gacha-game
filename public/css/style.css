@@ -11705,6 +11705,10 @@ body.casino-page {
    MOBILE BOTTOM NAVIGATION
    ============================== */
 
+/* ==============================================
+   MOBILE — BOTTOM NAV
+   ============================================== */
+
 .mobile-bottom-nav {
   display: none;
   position: fixed;
@@ -11712,51 +11716,81 @@ body.casino-page {
   left: 0;
   right: 0;
   z-index: 9999;
-  background: rgba(8, 8, 8, 0.97);
-  border-top: 1px solid var(--primary-border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  padding: 4px 0 env(safe-area-inset-bottom, 4px);
+  background: rgba(6, 6, 6, 0.98);
+  border-top: 1px solid rgba(var(--primary-rgb), 0.15);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 2px 4px env(safe-area-inset-bottom, 6px);
   justify-content: space-around;
   align-items: center;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .mobile-nav-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   text-decoration: none;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 8px 6px 6px;
+  border-radius: 12px;
   transition: all 0.2s;
   flex: 1;
   min-width: 0;
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
 }
 .mobile-nav-icon {
-  font-size: 20px;
+  font-size: 22px;
   line-height: 1;
-  color: #555;
-  transition: color 0.2s;
+  transition: all 0.25s;
+  filter: grayscale(1) brightness(0.5);
 }
 .mobile-nav-label {
   font-family: 'Press Start 2P', monospace;
-  font-size: 6px;
-  color: #555;
+  font-size: 5px;
+  color: #444;
   letter-spacing: 0.5px;
-  transition: color 0.2s;
+  transition: all 0.25s;
   white-space: nowrap;
 }
-.mobile-nav-item--active .mobile-nav-icon,
+
+/* Active state */
+.mobile-nav-item--active .mobile-nav-icon {
+  filter: grayscale(0) brightness(1);
+  transform: scale(1.1);
+}
 .mobile-nav-item--active .mobile-nav-label {
   color: var(--primary);
-  text-shadow: 0 0 8px rgba(var(--primary-rgb), 0.5);
-}
-.mobile-nav-item:active {
-  background: rgba(var(--primary-rgb), 0.1);
 }
 
-/* More panel */
+/* Active dot indicator */
+.mobile-nav-dot {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 6px var(--primary);
+}
+
+/* Tap feedback */
+.mobile-nav-item:active {
+  transform: scale(0.9);
+  background: rgba(var(--primary-rgb), 0.08);
+}
+
+/* More button special */
+.mobile-nav-more-btn .mobile-nav-icon {
+  font-size: 26px;
+  filter: grayscale(0) brightness(0.7);
+  letter-spacing: 4px;
+}
+
+/* --- MORE PANEL --- */
 .mobile-more-panel {
   display: none;
   position: fixed;
@@ -11771,423 +11805,386 @@ body.casino-page {
   position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0);
-  transition: background 0.3s;
+  transition: background 0.35s;
 }
 .mobile-more--open .mobile-more-overlay {
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.65);
 }
 .mobile-more-content {
   position: absolute;
-  bottom: 60px;
+  bottom: 62px;
   left: 0;
   right: 0;
-  background: rgba(12, 12, 12, 0.98);
-  border-top: 1px solid var(--primary-border);
-  border-radius: 16px 16px 0 0;
-  padding: 16px;
-  transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.5);
-  max-height: 60vh;
+  background: rgba(10, 10, 10, 0.99);
+  border-top: 1px solid rgba(var(--primary-rgb), 0.2);
+  border-radius: 20px 20px 0 0;
+  padding: 8px 16px 20px;
+  transform: translateY(110%);
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6);
+  max-height: 50vh;
   overflow-y: auto;
 }
 .mobile-more--open .mobile-more-content {
   transform: translateY(0);
 }
-.mobile-more-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 14px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--primary-border);
+
+/* Drag handle */
+.mobile-more-handle {
+  width: 36px;
+  height: 4px;
+  background: #333;
+  border-radius: 2px;
+  margin: 0 auto 14px;
 }
-.mobile-more-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 9px;
-  color: var(--primary);
-  letter-spacing: 2px;
-}
-.mobile-more-close {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 24px;
-  cursor: pointer;
-  padding: 0 4px;
-  line-height: 1;
-}
+
 .mobile-more-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 .mobile-more-item {
+  --item-color: var(--primary);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   text-decoration: none;
-  padding: 12px 4px;
-  border-radius: 10px;
-  background: rgba(var(--primary-rgb), 0.04);
-  border: 1px solid transparent;
+  padding: 14px 4px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.04);
   transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
 }
 .mobile-more-item:active {
-  background: rgba(var(--primary-rgb), 0.12);
+  transform: scale(0.93);
+  background: rgba(var(--primary-rgb), 0.1);
 }
 .mobile-more-item--active {
-  border-color: var(--primary);
-  background: rgba(var(--primary-rgb), 0.08);
+  border-color: var(--item-color);
+  background: rgba(var(--primary-rgb), 0.06);
+  box-shadow: 0 0 12px rgba(var(--primary-rgb), 0.1);
 }
 .mobile-more-icon {
-  font-size: 24px;
+  font-size: 28px;
   line-height: 1;
 }
 .mobile-more-label {
   font-family: 'Press Start 2P', monospace;
-  font-size: 6px;
-  color: #888;
+  font-size: 5px;
+  color: #777;
   letter-spacing: 0.5px;
 }
 .mobile-more-item--active .mobile-more-label {
   color: var(--primary);
 }
 
+/* Mobile hidden utility */
+.mobile-hidden { display: none !important; }
+
 /* ==============================================
    MOBILE RESPONSIVE — TABLETTE (max 900px)
    ============================================== */
 @media (max-width: 900px) {
-  .mobile-bottom-nav {
-    display: flex;
-  }
-  .mobile-more-panel {
-    display: block;
+  /* Activate mobile nav */
+  .mobile-bottom-nav { display: flex; }
+  .mobile-more-panel { display: block; }
+
+  /* Smooth scrolling everywhere */
+  * { -webkit-overflow-scrolling: touch; }
+
+  /* Bottom padding for all pages */
+  body.has-mobile-nav { padding-bottom: 70px !important; }
+
+  /* Hide desktop back button (replaced by bottom nav) */
+  .back-btn { display: none !important; }
+
+  /* Adjust credits display */
+  .credits-display {
+    top: 50px !important;
+    right: 8px !important;
+    font-size: 8px !important;
+    padding: 4px 10px !important;
+    border-radius: 6px !important;
   }
 
-  /* Bottom padding for all pages with mobile nav */
-  body.has-mobile-nav {
-    padding-bottom: 64px !important;
-  }
-
-  /* --- NAVBAR mobile compact --- */
-  .dash-nav-links {
-    display: none !important;
-  }
+  /* --- NAVBAR mobile --- */
+  .dash-nav-links { display: none !important; }
   .dash-navbar-inner {
     height: 44px;
     padding: 0 12px;
     gap: 8px;
   }
-  .dash-nav-logo {
-    font-size: 10px;
-    letter-spacing: 1px;
-  }
-  .beta-badge {
-    font-size: 5px;
-    right: -24px;
-    top: -4px;
-  }
-  .dash-nav-user {
-    gap: 10px;
-  }
-  .dash-nav-stat {
-    font-size: 7px;
-  }
-  .dash-nav-username {
-    font-size: 16px;
-    padding-left: 10px;
-  }
+  .dash-nav-logo { font-size: 10px; letter-spacing: 1px; }
+  .beta-badge { font-size: 5px; right: -24px; top: -4px; }
+  .dash-nav-user { gap: 10px; }
+  .dash-nav-stat { font-size: 7px; }
+  .dash-nav-username { font-size: 16px; padding-left: 10px; }
 
   /* --- DASHBOARD mobile --- */
   .dash-content {
     flex-direction: column;
-    padding: 12px;
-    gap: 12px;
+    padding: 10px;
+    gap: 10px;
   }
-  .dash-profile {
-    width: 100%;
-    order: 0;
-  }
+  .dash-profile { width: 100%; order: 0; }
   .dash-profile-card {
     display: flex;
     align-items: center;
     gap: 14px;
     text-align: left;
-    padding: 14px;
+    padding: 12px;
   }
   .dash-avatar {
-    margin: 0;
-    width: 56px;
-    height: 56px;
-    font-size: 24px;
-    flex-shrink: 0;
+    margin: 0; width: 52px; height: 52px; font-size: 22px; flex-shrink: 0;
   }
-  .settings-gear {
-    top: 8px;
-    right: 8px;
-    font-size: 16px;
-  }
-  .dash-quicklinks {
-    display: none;
-  }
+  .settings-gear { top: 8px; right: 8px; font-size: 16px; }
+  .dash-quicklinks { display: none; }
   .dash-resources {
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
+    flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 6px;
   }
-  .dash-resource {
-    min-width: 80px;
-    padding: 8px;
-  }
-  .dash-resource-icon { font-size: 16px; }
+  .dash-resource { min-width: 90px; padding: 8px 10px; }
+  .dash-resource-icon { font-size: 18px; }
   .dash-resource-label { font-size: 6px; }
-  .dash-resource-value { font-size: 14px; }
+  .dash-resource-value { font-size: 15px; }
   .dash-xp-section { padding: 8px 12px; }
-  .dash-achievements-btn { font-size: 8px; padding: 8px; }
+  .dash-achievements-btn { font-size: 8px; padding: 10px; min-height: 40px; }
   .dash-admin-btn { font-size: 8px; }
 
-  .dash-combat-row {
-    flex-direction: column;
-  }
-  .dash-combat-zone {
-    min-height: 160px;
-  }
+  .dash-combat-row { flex-direction: column; gap: 10px; }
+  .dash-combat-zone { min-height: 150px; border-radius: 12px; }
   .dash-combat-title { font-size: 12px; }
-  .dash-hero-btn { font-size: 11px; padding: 10px 24px; }
-  .dash-combat-stat-value { font-size: 18px; }
-  .dash-combat-stat-label { font-size: 6px; }
-  .dash-decks-preview {
-    width: 100%;
+  .dash-hero-btn {
+    font-size: 11px; padding: 12px 28px;
+    min-height: 44px; /* touch target */
   }
+  .dash-combat-stat-value { font-size: 20px; }
+  .dash-combat-stat-label { font-size: 6px; }
+  .dash-decks-preview { width: 100%; }
   .dash-decks-title { font-size: 9px; }
 
-  .quests-panel { padding: 10px; }
+  .quests-panel { padding: 10px; border-radius: 10px; }
   .quests-tabs { gap: 4px; }
-  .quests-tab { font-size: 7px; padding: 6px 10px; }
-  .quests-grid {
-    grid-template-columns: 1fr;
-    gap: 6px;
+  .quests-tab {
+    font-size: 7px; padding: 8px 12px;
+    min-height: 36px; /* touch target */
   }
+  .quests-grid { grid-template-columns: 1fr; gap: 6px; }
 
   .dash-footer {
-    padding: 6px 12px;
-    font-size: 8px;
-    flex-wrap: wrap;
-    gap: 6px;
-    justify-content: center;
+    padding: 6px 12px; font-size: 8px;
+    flex-wrap: wrap; gap: 6px; justify-content: center;
   }
 
   /* --- SHOP V2 mobile --- */
   body.shop-page-v2 .credits-display {
-    top: 50px;
-    right: 8px;
-    font-size: 7px;
-    padding: 4px 8px;
+    top: 50px; right: 8px; font-size: 7px; padding: 4px 8px;
   }
-  .shop-v2-content {
-    padding: 12px 10px 40px;
-  }
-  .shop-v2-section-title {
-    font-size: 9px;
-    margin-bottom: 10px;
-  }
+  .shop-v2-content { padding: 14px 12px 40px; }
+  .shop-v2-section-title { font-size: 9px; margin-bottom: 10px; }
+
   .shop-v2-boosters {
     gap: 10px;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 4px 0 8px;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
   }
   .shop-v2-booster {
-    width: 140px;
+    width: 160px;
+    flex-shrink: 0;
+    scroll-snap-align: center;
   }
-  .shop-v2-booster-img {
-    height: 180px;
-    border-radius: 8px;
-  }
+  .shop-v2-booster-img { height: 200px; border-radius: 10px; }
   .shop-v2-booster-name { font-size: 6px; }
-  .shop-v2-booster-price { font-size: 10px; }
+  .shop-v2-booster-price { font-size: 11px; margin-top: 4px; }
   .shop-v2-booster-count { font-size: 14px; }
 
   .shop-v2-free-booster {
-    padding: 10px 14px;
-    gap: 12px;
+    padding: 12px 16px; gap: 12px;
+    border-radius: 12px;
+    min-height: 44px;
   }
   .shop-v2-free-title { font-size: 8px; }
   .shop-v2-free-desc { font-size: 15px; }
-  .shop-v2-free-img { font-size: 32px; }
-  .shop-v2-free-btn { font-size: 8px; padding: 8px 14px; }
+  .shop-v2-free-img { font-size: 34px; }
+  .shop-v2-free-btn {
+    font-size: 9px; padding: 10px 16px;
+    min-height: 40px;
+    border-radius: 8px;
+  }
 
   .shop-v2-daily-cards,
   .daily-shop-cards {
-    flex-wrap: wrap;
-    gap: 8px;
-    justify-content: center;
+    flex-wrap: wrap; gap: 8px; justify-content: center;
   }
-  .daily-shop-card { flex: 0 0 calc(50% - 4px); max-width: 180px; }
+  .daily-shop-card {
+    flex: 0 0 calc(50% - 4px); max-width: 180px;
+    border-radius: 10px;
+  }
+  .daily-shop-buy-btn { min-height: 36px; }
 
-  .shop-v2-cards-filters { gap: 4px; }
-  .shop-v2-filter-btn { font-size: 6px; padding: 5px 8px; }
+  .shop-v2-cards-filters {
+    gap: 4px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+  }
+  .shop-v2-filter-btn {
+    font-size: 6px; padding: 7px 10px;
+    min-height: 32px;
+    flex-shrink: 0;
+    border-radius: 6px;
+  }
   .shop-v2-card-item { width: 150px; }
-  .shop-v2-card-render { min-height: 220px; padding: 6px; }
+  .shop-v2-card-render { min-height: 220px; padding: 6px; border-radius: 10px; }
+  .shop-v2-card-buy-btn { min-height: 36px; border-radius: 6px; }
 
   .shop-v2-giftcode {
-    flex-direction: column;
-    text-align: center;
-    gap: 10px;
+    flex-direction: column; text-align: center; gap: 10px;
+    border-radius: 10px;
   }
   .shop-giftcode-input-row { flex-direction: column; gap: 6px; }
-  .shop-giftcode-input { text-align: center; }
+  .shop-giftcode-input { text-align: center; min-height: 40px; border-radius: 6px; }
+  .shop-giftcode-btn { min-height: 40px; }
 
   /* --- COLLECTION mobile --- */
   .coll-layout {
-    flex-direction: column;
-    height: auto;
+    flex-direction: column; height: auto;
     min-height: calc(100vh - 44px);
   }
   .coll-sidebar {
-    width: 100%;
-    min-width: 0;
-    max-height: none;
-    flex-direction: row;
-    overflow-x: auto;
-    overflow-y: hidden;
-    border-right: none;
-    border-bottom: 1px solid var(--primary-border);
+    width: 100%; min-width: 0; max-height: none;
+    flex-direction: row; overflow-x: auto; overflow-y: hidden;
+    border-right: none; border-bottom: 1px solid var(--primary-border);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .coll-sidebar::-webkit-scrollbar { display: none; }
   .coll-sidebar-section {
     border-right: 1px solid var(--primary-border);
-    border-bottom: none;
-    white-space: nowrap;
-    flex-shrink: 0;
+    border-bottom: none; white-space: nowrap; flex-shrink: 0;
+    padding: 8px 12px;
   }
-  .coll-main {
-    flex: 1;
-    overflow-y: auto;
-  }
+  .coll-main { flex: 1; overflow-y: auto; }
   body.collection-page .coll-grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px;
+    padding: 8px;
   }
 
   /* --- FUSION mobile --- */
   .fusion-wrapper {
-    width: 100% !important;
-    max-width: 100vw !important;
-    padding: 12px 8px;
-    box-sizing: border-box;
+    width: 100% !important; max-width: 100vw !important;
+    padding: 12px 10px; box-sizing: border-box;
   }
   .fusion-page .crt-screen { padding: 10px 0; }
-  .menu-title { font-size: 20px !important; margin: 8px 0 12px !important; }
+  .menu-title { font-size: 18px !important; margin: 8px 0 12px !important; }
   .fusion-tabs { gap: 4px; }
-  .fusion-tab { font-size: 9px; padding: 8px 12px; }
+  .fusion-tab {
+    font-size: 9px; padding: 10px 14px;
+    min-height: 38px; border-radius: 8px;
+  }
   .fusion-grid {
     grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)) !important;
     gap: 8px !important;
   }
-  .fusion-panel { padding: 12px; margin: 12px auto; }
+  .fusion-card { min-height: 180px; border-radius: 8px; }
+  .fusion-panel { padding: 12px; margin: 12px auto; border-radius: 10px; }
   .fusion-panel-title { font-size: 11px; }
+  .fusion-btn { min-height: 44px; border-radius: 8px; }
 
   /* --- CASINO mobile --- */
-  .casino-container {
-    padding: 10px !important;
-    max-width: 100% !important;
-  }
+  .casino-container { padding: 10px !important; max-width: 100% !important; }
 
   /* --- STATS mobile --- */
-  .stats-container {
-    padding: 10px !important;
-  }
-  .stats-grid {
-    grid-template-columns: 1fr !important;
-  }
+  .stats-container { padding: 10px !important; }
+  .stats-grid { grid-template-columns: 1fr !important; }
 
   /* --- GUILDS mobile --- */
-  .guild-container {
-    padding: 10px !important;
-  }
-  .guild-page-title {
-    font-size: 18px !important;
-    margin-bottom: 12px !important;
-  }
-  .guild-create-form { padding: 10px; }
+  .guild-container { padding: 12px !important; }
+  .guild-page-title { font-size: 18px !important; margin-bottom: 12px !important; }
+  .guild-create-form { padding: 10px; border-radius: 10px; }
   .guild-browse-item {
-    flex-direction: column;
-    gap: 6px;
-    text-align: center;
+    flex-direction: column; gap: 8px; text-align: center;
+    padding: 12px; border-radius: 10px;
   }
+  .guild-input { min-height: 40px; border-radius: 6px; }
 
   /* --- MINE mobile --- */
-  .mine-scene-wrapper {
-    padding: 4px !important;
-  }
+  .mine-scene-wrapper { padding: 4px !important; }
+  body.mine-page .dash-navbar-inner { height: 40px; }
 
   /* --- BATTLE PASS mobile --- */
-  .bp-container {
-    padding: 12px 8px !important;
-  }
+  .bp-container { padding: 12px 8px !important; }
 
   /* --- MARKET mobile --- */
-  .market-container {
-    padding: 10px !important;
-  }
+  .market-container { padding: 10px !important; }
 
   /* --- WIKI mobile --- */
-  .wiki-wrapper {
-    padding: 8px !important;
-  }
+  .wiki-wrapper { padding: 10px !important; }
+  .wiki-section-title { min-height: 40px; }
 
   /* --- COMBAT mobile --- */
   .bt-topbar {
-    flex-wrap: wrap;
-    height: auto;
-    padding: 4px 8px;
-    gap: 4px;
+    flex-wrap: wrap; height: auto; padding: 4px 8px; gap: 4px;
   }
+  .bt-action-bar { flex-wrap: wrap; gap: 4px; }
+  .bt-action-btn { min-height: 40px; font-size: 8px; }
 
   /* --- REVEAL (booster opening) mobile --- */
   .reveal-scene { padding: 10px; }
   .reveal-title { font-size: 14px !important; }
   .cards-reveal {
-    gap: 8px !important;
-    justify-content: center;
+    gap: 10px !important; justify-content: center;
+    flex-wrap: wrap;
   }
   .reveal-card {
-    width: 120px !important;
-    height: 170px !important;
+    width: 120px !important; height: 170px !important;
   }
-  .reveal-buttons { gap: 8px; flex-direction: column; align-items: center; }
+  .reveal-buttons {
+    gap: 8px; flex-direction: column; align-items: center;
+  }
+  .reveal-all-btn, .opening-done-btn {
+    min-height: 44px; min-width: 200px;
+    font-size: 10px; border-radius: 8px;
+  }
 
   /* --- OPENING VIEW mobile --- */
-  .opening-view {
-    padding: 10px;
-  }
-  .tear-container {
-    max-height: 350px !important;
-  }
-  .tear-half {
-    width: 140px !important;
-  }
+  .opening-view { padding: 10px; }
+  .tear-container { max-height: 350px !important; }
+  .tear-half { width: 140px !important; }
 
   /* --- MODALS mobile --- */
   .patchnotes-modal,
   .achievements-modal,
   .settings-modal {
-    width: 95vw !important;
-    max-width: 95vw !important;
-    max-height: 85vh;
-    margin: 0;
+    width: 95vw !important; max-width: 95vw !important;
+    max-height: 85vh; margin: 0; border-radius: 14px;
   }
   .card-modal-overlay .card-modal {
-    flex-direction: column;
-    max-width: 95vw;
-    max-height: 85vh;
-    overflow-y: auto;
+    flex-direction: column; max-width: 95vw;
+    max-height: 85vh; overflow-y: auto;
+    border-radius: 14px;
   }
-  .modal-card-art {
-    width: 100% !important;
-    max-height: 200px !important;
+  .modal-card-art { width: 100% !important; max-height: 200px !important; }
+  .modal-card-info { width: 100% !important; padding: 12px !important; }
+  .modal-close {
+    min-height: 40px; min-width: 80px;
+    font-size: 14px;
   }
-  .modal-card-info {
-    width: 100% !important;
+
+  /* --- ALL BUTTONS: minimum touch target --- */
+  button, .submit-btn, [onclick] {
+    min-height: 36px;
+  }
+
+  /* --- GLOBAL: rounder corners on mobile --- */
+  .shop-section, .shop-v2-card-render, .daily-shop-card,
+  .dash-profile-card, .dash-combat-zone, .quests-panel {
+    border-radius: 12px;
   }
 }
 
@@ -12195,61 +12192,61 @@ body.casino-page {
    MOBILE RESPONSIVE — TELEPHONE (max 480px)
    ============================================== */
 @media (max-width: 480px) {
-  .mobile-nav-label {
-    font-size: 5px;
-  }
-  .mobile-more-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
+  /* Bottom nav smaller */
+  .mobile-nav-label { font-size: 4px; }
+  .mobile-nav-icon { font-size: 20px; }
+  .mobile-nav-item { padding: 6px 4px 4px; }
+  .mobile-more-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .mobile-more-item { padding: 16px 4px; }
+  .mobile-more-icon { font-size: 30px; }
+  .mobile-more-label { font-size: 5px; }
 
   /* Navbar ultra compact */
-  .dash-navbar-inner {
-    height: 40px;
-    padding: 0 8px;
-  }
+  .dash-navbar-inner { height: 38px; padding: 0 8px; }
   .dash-nav-logo { font-size: 8px; }
   .dash-nav-stat { font-size: 6px; }
-  .dash-nav-username { font-size: 14px; padding-left: 8px; }
+  .dash-nav-username { font-size: 13px; padding-left: 6px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; }
   .dash-nav-user { gap: 6px; }
   .beta-badge { display: none; }
 
+  /* Credits smaller */
+  .credits-display { font-size: 7px !important; padding: 3px 8px !important; }
+
   /* Dashboard compact */
-  .dash-content { padding: 8px; gap: 8px; }
+  .dash-content { padding: 6px; gap: 8px; }
   .dash-profile-card {
-    flex-direction: column !important;
-    text-align: center !important;
-    gap: 8px !important;
-    padding: 10px !important;
+    flex-direction: column !important; text-align: center !important;
+    gap: 6px !important; padding: 10px !important;
   }
-  .dash-avatar { width: 48px; height: 48px; font-size: 20px; }
-  .dash-profile-name { font-size: 14px; }
+  .dash-avatar { width: 46px; height: 46px; font-size: 20px; }
+  .dash-profile-name { font-size: 13px; }
   .dash-rank-badge { font-size: 12px; }
-  .dash-rank-label { font-size: 8px; }
-  .dash-combat-zone { min-height: 140px; }
+  .dash-rank-label { font-size: 7px; }
+  .dash-resource { min-width: 80px; padding: 6px 8px; }
+  .dash-combat-zone { min-height: 130px; }
   .dash-combat-title { font-size: 10px !important; }
-  .dash-hero-btn { font-size: 9px; padding: 8px 18px; }
-  .dash-combat-stats { gap: 12px; }
+  .dash-hero-btn { font-size: 9px; padding: 10px 20px; }
+  .dash-combat-stats { gap: 10px; }
   .dash-combat-stat-value { font-size: 16px; }
   .dash-combat-stat-label { font-size: 5px; }
   .dash-decks-title { font-size: 8px; }
+  .quests-tab { font-size: 6px; padding: 6px 8px; }
 
   /* Shop compact */
-  .shop-v2-boosters { gap: 6px; }
-  .shop-v2-booster { width: 105px; }
-  .shop-v2-booster-img { height: 135px; border-radius: 6px; }
+  .shop-v2-content { padding: 10px 8px 40px; }
+  .shop-v2-boosters { gap: 8px; padding-left: 8px; }
+  .shop-v2-booster { width: 130px; }
+  .shop-v2-booster-img { height: 160px; }
   .shop-v2-booster-name { font-size: 5px; }
   .shop-v2-booster-count { font-size: 12px; }
-  .shop-v2-booster-price { font-size: 9px; }
-  .booster-badge { font-size: 5px; padding: 2px 18px; top: 6px; right: -20px; }
+  .shop-v2-booster-price { font-size: 10px; }
+  .booster-badge { font-size: 4px; padding: 2px 16px; top: 5px; right: -18px; }
 
   .shop-v2-free-booster {
-    flex-direction: column;
-    text-align: center;
-    gap: 8px;
-    padding: 10px;
+    flex-direction: column; text-align: center; gap: 8px; padding: 10px;
   }
   .shop-v2-free-btn { width: 100%; }
-  .shop-v2-free-img { font-size: 28px; }
+  .shop-v2-free-img { font-size: 30px; }
   .shop-v2-free-title { font-size: 7px; }
 
   .daily-shop-card { flex: 0 0 100%; max-width: 100%; }
@@ -12265,20 +12262,17 @@ body.casino-page {
 
   /* Fusion compact */
   .fusion-grid {
-    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
   }
   .fusion-slots { gap: 4px !important; }
   .fusion-slot { width: 55px !important; height: 70px !important; }
-  .fusion-tab { font-size: 8px; padding: 6px 10px; }
+  .fusion-tab { font-size: 8px; padding: 8px 10px; }
 
   /* Reveal compact */
-  .reveal-card {
-    width: 100px !important;
-    height: 145px !important;
-  }
+  .reveal-card { width: 100px !important; height: 145px !important; }
   .reveal-title { font-size: 12px !important; }
   .tear-half { width: 110px !important; }
-  .tear-container { max-height: 280px !important; }
+  .tear-container { max-height: 260px !important; }
 
   /* Guild compact */
   .guild-page-title { font-size: 14px !important; }
@@ -12289,7 +12283,30 @@ body.casino-page {
   .settings-section-title { font-size: 8px; }
   .settings-avatar-grid { gap: 6px; }
   .theme-buttons { flex-direction: column; gap: 6px; }
-  .theme-btn { width: 100%; }
+  .theme-btn { width: 100%; min-height: 44px; }
+
+  /* Stats compact */
+  .stats-page-title { font-size: 12px; }
+}
+
+/* ==============================================
+   MOBILE RESPONSIVE — TRES PETIT ECRAN (max 360px)
+   ============================================== */
+@media (max-width: 360px) {
+  .dash-nav-logo { font-size: 7px; }
+  .dash-nav-username { display: none; }
+  .dash-nav-user { border: none; }
+
+  .shop-v2-booster { width: 110px; }
+  .shop-v2-booster-img { height: 135px; }
+
+  .mobile-more-grid { grid-template-columns: repeat(3, 1fr); }
+
+  .reveal-card { width: 85px !important; height: 125px !important; }
+
+  body.collection-page .coll-grid {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)) !important;
+  }
 }
 
 /* Utility */
