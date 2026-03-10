@@ -7,9 +7,35 @@
   <link rel="stylesheet" href="/css/style.css">
   <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
-<body>
-  <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
-  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+<body class="fusion-page">
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
+
+  <!-- ===== TOP NAVBAR ===== -->
+  <nav class="dash-navbar">
+    <div class="dash-navbar-inner">
+      <div class="dash-nav-logo" data-text="GACHA CARDS">GACHA CARDS</div>
+      <div class="dash-nav-links">
+        <a href="/menu" class="dash-nav-link">ACCUEIL</a>
+        <a href="/shop" class="dash-nav-link dash-nav-link--shop">BOUTIQUE</a>
+        <a href="/collection" class="dash-nav-link">COLLECTION</a>
+        <a href="/mine" class="dash-nav-link dash-nav-link--mine">MINE</a>
+        <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
+        <a href="/battlepass" class="dash-nav-link dash-nav-link--bp">PASSE</a>
+        <a href="/market" class="dash-nav-link dash-nav-link--market">MARCHE</a>
+        <a href="/casino" class="dash-nav-link dash-nav-link--casino">CASINO</a>
+        <a href="/stats" class="dash-nav-link dash-nav-link--stats">STATS</a>
+        <a href="/fusion" class="dash-nav-link dash-nav-link--active dash-nav-link--fusion">FORGE</a>
+        <a href="/wiki" class="dash-nav-link">WIKI</a>
+        <a href="/guilds" class="dash-nav-link dash-nav-link--guild">GUILDES</a>
+      </div>
+      <div class="dash-nav-user">
+        <span class="dash-nav-stat" title="Credits">&#128176; <span id="nav-credits">0</span></span>
+        <span class="dash-nav-stat energy-stat">&#9889; <span id="nav-energy">--</span></span>
+        <span class="dash-nav-username" id="nav-username">???</span>
+      </div>
+    </div>
+  </nav>
 
   <div class="crt-screen">
     <div class="fusion-wrapper">
