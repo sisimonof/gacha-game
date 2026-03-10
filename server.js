@@ -311,6 +311,21 @@ db.exec(`
   }
 }
 
+// Migration: Pity system counters
+{
+  const pityCols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  const pityMigrations = [
+    ['pity_epic', 'INTEGER DEFAULT 0'],
+    ['pity_legendary', 'INTEGER DEFAULT 0']
+  ];
+  for (const [col, type] of pityMigrations) {
+    if (!pityCols.includes(col)) {
+      db.exec(`ALTER TABLE users ADD COLUMN ${col} ${type}`);
+      console.log(`Migration: ${col} ajouté`);
+    }
+  }
+}
+
 // Phase 3: Awakening level on user_cards
 {
   const ucCols = db.prepare("PRAGMA table_info(user_cards)").all().map(c => c.name);
@@ -925,6 +940,10 @@ db.exec(`
   )
 `);
 
+// --- Pity System ---
+const PITY_EPIC_THRESHOLD = 30;      // Garantie epique apres 30 tirages sans epique+
+const PITY_LEGENDARY_THRESHOLD = 80; // Garantie legendaire apres 80 tirages sans legendaire+
+
 // --- Boosters ---
 const BOOSTERS = [
   {
@@ -1518,8 +1537,26 @@ function openBooster(boosterId, userId) {
   const insertCard = db.prepare('INSERT INTO user_cards (user_id, card_id, is_shiny, is_temp) VALUES (?, ?, ?, ?)');
   const shinyRate = booster.shinyRate || 0.02;
 
+  // Charger les compteurs pity
+  const pity = db.prepare('SELECT pity_epic, pity_legendary FROM users WHERE id = ?').get(userId);
+  let pityEpic = pity.pity_epic || 0;
+  let pityLegendary = pity.pity_legendary || 0;
+  let pityTriggered = false;
+
   for (let i = 0; i < booster.cardsPerPack; i++) {
     let rarity = rollRarity(booster.weights);
+
+    // Pity legendaire : force legendaire apres PITY_LEGENDARY_THRESHOLD tirages
+    if (pityLegendary >= PITY_LEGENDARY_THRESHOLD && !['legendaire', 'chaos', 'secret'].includes(rarity)) {
+      rarity = 'legendaire';
+      pityTriggered = true;
+    }
+    // Pity epique : force epique apres PITY_EPIC_THRESHOLD tirages
+    else if (pityEpic >= PITY_EPIC_THRESHOLD && !['epique', 'legendaire', 'chaos', 'secret'].includes(rarity)) {
+      rarity = 'epique';
+      pityTriggered = true;
+    }
+
     let cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(rarity);
     // Fallback : si aucune carte de cette rarete, descendre d'un cran
     if (!cards.length) {
@@ -1536,8 +1573,24 @@ function openBooster(boosterId, userId) {
     // Crystal items sont toujours TEMP, sinon 8% de chance
     const isTemp = card.name.startsWith('Crystal ') ? 1 : (Math.random() < 0.08 ? 1 : 0);
     insertCard.run(userId, card.id, isShiny, isTemp);
-    drawnCards.push({ ...card, is_shiny: isShiny, is_temp: isTemp });
+    drawnCards.push({ ...card, is_shiny: isShiny, is_temp: isTemp, _pityTriggered: pityTriggered });
+    if (pityTriggered) pityTriggered = false;
+
+    // Mise a jour des compteurs pity
+    if (['legendaire', 'chaos', 'secret'].includes(rarity)) {
+      pityLegendary = 0;
+      pityEpic = 0;
+    } else if (rarity === 'epique') {
+      pityEpic = 0;
+      pityLegendary++;
+    } else {
+      pityEpic++;
+      pityLegendary++;
+    }
   }
+
+  // Sauvegarder les compteurs pity
+  db.prepare('UPDATE users SET pity_epic = ?, pity_legendary = ? WHERE id = ?').run(pityEpic, pityLegendary, userId);
 
   // Chance de drop Essence d'Excavation (3% par carte tiree)
   const essenceGained = drawnCards.filter(() => Math.random() < 0.03).length;
@@ -4518,7 +4571,7 @@ app.post('/api/logout', (req, res) => {
 
 // --- Routes USER ---
 app.get('/api/me', requireAuth, (req, res) => {
-  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date, profile_frame, unlocked_frames, tutorial_completed, guild_id, showcase_cards, profile_bio FROM users WHERE id = ?').get(req.session.userId);
+  const user = db.prepare('SELECT username, credits, last_daily, avatar, display_name, excavation_essence, username_effect, unlocked_avatars, login_streak, last_streak_date, profile_frame, unlocked_frames, tutorial_completed, guild_id, showcase_cards, profile_bio, pity_epic, pity_legendary FROM users WHERE id = ?').get(req.session.userId);
   const cardCount = db.prepare('SELECT COUNT(*) as c FROM user_cards WHERE user_id = ?').get(req.session.userId).c;
 
   const today = new Date().toISOString().split('T')[0];
@@ -4579,6 +4632,13 @@ app.get('/api/me', requireAuth, (req, res) => {
     guildName: user.guild_id ? (db.prepare('SELECT name FROM guilds WHERE id = ?').get(user.guild_id)?.name || null) : null,
     showcaseCards: JSON.parse(user.showcase_cards || '[]'),
     profileBio: user.profile_bio || '',
+    // Pity system
+    pity: {
+      epic: user.pity_epic || 0,
+      legendary: user.pity_legendary || 0,
+      epicThreshold: PITY_EPIC_THRESHOLD,
+      legendaryThreshold: PITY_LEGENDARY_THRESHOLD
+    },
   });
 });
 
@@ -4803,7 +4863,16 @@ app.post('/api/boosters/:id/open', requireAuth, (req, res) => {
   updateQuestProgress(req.session.userId, 'credits_spent', booster.price);
   checkAchievements(req.session.userId);
 
-  res.json({ success: true, cards, credits: newCredits });
+  const updatedPity = db.prepare('SELECT pity_epic, pity_legendary FROM users WHERE id = ?').get(req.session.userId);
+  res.json({
+    success: true, cards, credits: newCredits,
+    pity: {
+      epic: updatedPity.pity_epic || 0,
+      legendary: updatedPity.pity_legendary || 0,
+      epicThreshold: PITY_EPIC_THRESHOLD,
+      legendaryThreshold: PITY_LEGENDARY_THRESHOLD
+    }
+  });
 });
 
 // --- Routes COLLECTION (updated with shiny/fused grouping) ---
