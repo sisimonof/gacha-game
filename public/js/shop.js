@@ -1,4 +1,4 @@
-// shop.js — Booster opening with click-to-reveal system
+// shop.js — Boutique v2
 
 const legendarySound = new Audio('/audio/legendary-hit.mp3');
 const secretSound = new Audio('/audio/secret-reveal.mp3');
@@ -10,71 +10,112 @@ const BOOSTER_IMAGES = {
 };
 
 let currentCredits = 0;
-let cachedStreakRewards = null;
+let allShopCards = [];
+let currentFilter = 'all';
 
+// === INIT ===
 async function loadCredits() {
   const res = await fetch('/api/me');
   if (!res.ok) { window.location.href = '/'; return; }
   const data = await res.json();
   currentCredits = data.credits;
   document.getElementById('credits-count').textContent = data.credits;
-  cachedStreakRewards = data.streakRewards;
+  const navCredits = document.getElementById('nav-credits');
+  if (navCredits) navCredits.textContent = data.credits;
+  const navUser = document.getElementById('nav-username');
+  if (navUser) navUser.textContent = data.displayName || data.username;
 
-  // Streak UI
-  renderStreakProgress(data.loginStreak, data.streakRewards, data.canClaimDaily);
-  if (!data.canClaimDaily) markDailyClaimed();
+  // Check daily booster status
+  if (!data.canClaimDaily) markFreeClaimed();
 }
 
-function renderStreakProgress(currentDay, rewards, canClaim) {
-  const container = document.getElementById('streak-progress');
-  const desc = document.getElementById('streak-desc');
-  if (!container || !desc) return;
-  desc.textContent = 'Jour ' + currentDay + ' / 7';
+function updateCreditsDisplay(credits) {
+  currentCredits = credits;
+  document.getElementById('credits-count').textContent = credits;
+  const navCredits = document.getElementById('nav-credits');
+  if (navCredits) navCredits.textContent = credits;
+}
 
-  container.innerHTML = (rewards || []).map(function(r, i) {
-    const dayNum = i + 1;
-    const claimed = dayNum <= currentDay;
-    const isNext = canClaim && (dayNum === currentDay + 1 || (currentDay === 0 && dayNum === 1) || (currentDay >= 7 && dayNum === 1));
-    const classes = ['streak-day'];
-    if (claimed) classes.push('streak-claimed');
-    if (isNext) classes.push('streak-next');
-    return '<div class="' + classes.join(' ') + '">' +
-      '<span class="streak-day-num">J' + dayNum + '</span>' +
-      '<span class="streak-day-reward">' + r.credits + ' CR' + (r.card ? ' + 🃏' : '') + '</span>' +
-    '</div>';
+function markFreeClaimed() {
+  const btn = document.getElementById('free-btn');
+  const booster = document.getElementById('free-booster');
+  if (btn) { btn.textContent = 'RECUPERE'; btn.disabled = true; btn.classList.add('shop-v2-free-btn--claimed'); }
+  if (booster) booster.classList.add('shop-v2-free--claimed');
+}
+
+// === BOOSTERS ===
+const BOOSTER_BADGES = {
+  rift: { label: '★ BEST SELLER', cls: 'badge-best' },
+  avance: { label: 'PREMIUM', cls: 'badge-premium' }
+};
+const BOOSTER_CARD_COUNT = { origines: 5, rift: 7, avance: 8 };
+
+async function loadBoosters() {
+  const res = await fetch('/api/boosters');
+  const boosters = await res.json();
+  const shelf = document.getElementById('boosters-shelf');
+
+  shelf.innerHTML = boosters.map(b => {
+    const badge = BOOSTER_BADGES[b.id];
+    const cardCount = BOOSTER_CARD_COUNT[b.id] || '?';
+    return `
+      <div class="shop-v2-booster" data-id="${b.id}" onclick="buyBooster('${b.id}', ${b.price})">
+        ${badge ? `<div class="booster-badge ${badge.cls}">${badge.label}</div>` : ''}
+        <div class="shop-v2-booster-img">
+          <img src="${BOOSTER_IMAGES[b.id] || '/img/booster-origines.png'}" alt="${b.name}" draggable="false">
+        </div>
+        <div class="shop-v2-booster-name">${b.name}</div>
+        <div class="shop-v2-booster-count">${cardCount} cartes</div>
+        <div class="shop-v2-booster-price">${b.price} CR</div>
+      </div>
+    `;
   }).join('');
 }
 
-function markDailyClaimed() {
-  const btn = document.getElementById('daily-btn');
-  if (btn) { btn.classList.add('daily-claimed'); btn.textContent = 'RECUPERE'; btn.disabled = true; }
+async function buyBooster(id, price) {
+  if (currentCredits < price) { screenShake(); return; }
+  document.querySelectorAll('.shop-v2-booster').forEach(b => b.style.pointerEvents = 'none');
+
+  try {
+    const res = await fetch(`/api/boosters/${id}/open`, { method: 'POST' });
+    const data = await res.json();
+    if (!data.success) {
+      if (window.showToast) showToast(data.error, 'error');
+      document.querySelectorAll('.shop-v2-booster').forEach(b => b.style.pointerEvents = '');
+      return;
+    }
+    updateCreditsDisplay(data.credits);
+    startTearAnimation(id, data.cards);
+  } catch {
+    if (window.showToast) showToast('Erreur serveur', 'error');
+    document.querySelectorAll('.shop-v2-booster').forEach(b => b.style.pointerEvents = '');
+  }
 }
 
-async function claimDaily() {
-  const btn = document.getElementById('daily-btn');
+// === FREE DAILY BOOSTER ===
+async function claimFreeBooster() {
+  const btn = document.getElementById('free-btn');
   if (btn && btn.disabled) return;
 
   try {
-    const res = await fetch('/api/daily', { method: 'POST' });
+    const res = await fetch('/api/daily-booster', { method: 'POST' });
     const data = await res.json();
-
     if (data.success) {
-      currentCredits = data.credits;
-      document.getElementById('credits-count').textContent = data.credits;
-      renderStreakProgress(data.streakDay, cachedStreakRewards, false);
-      markDailyClaimed();
+      markFreeClaimed();
       screenFlash();
-      if (window.showToast) showToast('+' + data.amount + ' CR (Jour ' + data.streakDay + ')', 'success');
-      if (data.cardGiven) {
-        if (window.showToast) showToast('Carte bonus: ' + (data.cardGiven.emoji || '') + ' ' + data.cardGiven.name, 'achievement', 6000);
-      }
+      // Show cards via tear animation
+      startTearAnimation('origines', data.cards);
+      if (window.showToast) showToast('Booster gratuit ouvert !', 'success');
     } else {
-      markDailyClaimed();
+      markFreeClaimed();
+      if (window.showToast) showToast(data.error || 'Deja recupere !', 'error');
     }
-  } catch {}
+  } catch {
+    if (window.showToast) showToast('Erreur serveur', 'error');
+  }
 }
 
-// === BOUTIQUE DU JOUR ===
+// === DAILY SHOP ===
 async function loadDailyShop() {
   try {
     const res = await fetch('/api/shop/daily-cards');
@@ -107,8 +148,7 @@ async function buyDailyCard(cardId, price) {
     });
     const data = await res.json();
     if (data.success) {
-      currentCredits = data.credits;
-      document.getElementById('credits-count').textContent = data.credits;
+      updateCreditsDisplay(data.credits);
       screenFlash();
       if (window.showToast) showToast('Carte achetee: ' + (data.card.emoji || '') + ' ' + data.card.name, 'success');
     } else {
@@ -131,61 +171,66 @@ function startDailyShopTimer(seconds) {
   }, 1000);
 }
 
-const BOOSTER_BADGES = {
-  rift: { label: '★ BEST SELLER', cls: 'badge-best' },
-  avance: { label: 'PREMIUM', cls: 'badge-premium' }
-};
+// === CARD SHOP ===
+async function loadCardShop() {
+  try {
+    const res = await fetch('/api/shop/all-cards');
+    const data = await res.json();
+    allShopCards = data.cards || [];
+    renderCardShop();
+  } catch {}
+}
 
-const BOOSTER_CARD_COUNT = { origines: 5, rift: 7, avance: 8 };
+function filterShopCards(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.shop-v2-filter-btn').forEach(b => b.classList.remove('shop-v2-filter--active'));
+  document.querySelector(`.shop-v2-filter-btn[data-filter="${filter}"]`).classList.add('shop-v2-filter--active');
+  renderCardShop();
+}
 
-async function loadBoosters() {
-  const res = await fetch('/api/boosters');
-  const boosters = await res.json();
-  const shelf = document.getElementById('boosters-shelf');
+function renderCardShop() {
+  const container = document.getElementById('shop-cards-list');
+  if (!container) return;
 
-  shelf.innerHTML = boosters.map(b => {
-    const badge = BOOSTER_BADGES[b.id];
-    const cardCount = BOOSTER_CARD_COUNT[b.id] || '?';
+  const filtered = currentFilter === 'all' ? allShopCards : allShopCards.filter(c => c.rarity === currentFilter);
+
+  container.innerHTML = filtered.map(card => {
+    const r = RARITY_COLORS[card.rarity] || RARITY_COLORS['commune'];
     return `
-      <div class="booster-card" data-id="${b.id}" data-price="${b.price}" onclick="buyBooster('${b.id}', ${b.price})">
-        ${badge ? `<div class="booster-badge ${badge.cls}">${badge.label}</div>` : ''}
-        <div class="booster-img-wrap">
-          <img src="${BOOSTER_IMAGES[b.id] || '/img/booster-origines.png'}" alt="${b.name}" class="booster-card-img" draggable="false">
+      <div class="shop-v2-card-item" onclick="buyShopCard(${card.id}, ${card.shopPrice})">
+        <div class="shop-v2-card-render rarity-${card.rarity}" style="border-color:${r.color}; box-shadow: 0 0 15px ${r.glow}">
+          ${renderCardFront(card)}
         </div>
-        <div class="booster-card-info">
-          <span class="booster-card-name">${b.name}</span>
-          <span class="booster-card-count">${cardCount} cartes</span>
-        </div>
-        <div class="booster-card-price">${b.price} CR</div>
+        <button class="shop-v2-card-buy-btn">${card.shopPrice} CR</button>
       </div>
     `;
   }).join('');
-}
 
-async function buyBooster(id, price) {
-  if (currentCredits < price) { screenShake(); return; }
-
-  document.querySelectorAll('.booster-card').forEach(b => b.style.pointerEvents = 'none');
-
-  try {
-    const res = await fetch(`/api/boosters/${id}/open`, { method: 'POST' });
-    const data = await res.json();
-
-    if (!data.success) {
-      alert(data.error);
-      document.querySelectorAll('.booster-card').forEach(b => b.style.pointerEvents = '');
-      return;
-    }
-
-    currentCredits = data.credits;
-    document.getElementById('credits-count').textContent = data.credits;
-    startTearAnimation(id, data.cards);
-  } catch {
-    alert('Erreur serveur');
-    document.querySelectorAll('.booster-card').forEach(b => b.style.pointerEvents = '');
+  if (filtered.length === 0) {
+    container.innerHTML = '<p style="color:#666; font-family: VT323, monospace; font-size: 20px; padding: 20px;">Aucune carte disponible</p>';
   }
 }
 
+async function buyShopCard(cardId, price) {
+  if (currentCredits < price) { screenShake(); return; }
+  try {
+    const res = await fetch('/api/shop/buy-single-card', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cardId })
+    });
+    const data = await res.json();
+    if (data.success) {
+      updateCreditsDisplay(data.credits);
+      screenFlash();
+      if (window.showToast) showToast('Carte achetee: ' + (data.card.emoji || '') + ' ' + data.card.name, 'success');
+    } else {
+      if (window.showToast) showToast(data.error, 'error');
+    }
+  } catch { if (window.showToast) showToast('Erreur serveur', 'error'); }
+}
+
+// === TEAR ANIMATION ===
 function startTearAnimation(boosterId, cards) {
   const imgSrc = BOOSTER_IMAGES[boosterId] || '/img/booster-origines.png';
 
@@ -206,7 +251,6 @@ function startTearAnimation(boosterId, cards) {
     screenFlash();
     tearContainer.classList.remove('shaking');
     tearContainer.classList.add('tearing');
-
     setTimeout(() => {
       tearContainer.classList.add('hidden');
       tearContainer.classList.remove('tearing');
@@ -227,10 +271,7 @@ function screenShake() {
   setTimeout(() => document.body.classList.remove('shake'), 500);
 }
 
-// ==========================================
-//  NOUVEAU SYSTEME DE REVEAL CLICK-TO-FLIP
-// ==========================================
-
+// === CARD REVEAL ===
 function showCardsReveal(cards) {
   const scene = document.getElementById('reveal-scene');
   const title = document.getElementById('reveal-title');
@@ -248,67 +289,49 @@ function showCardsReveal(cards) {
   let revealedCount = 0;
   const totalCards = cards.length;
 
-  // Melange aleatoire pour le suspense
   const sorted = [...cards];
   for (let i = sorted.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [sorted[i], sorted[j]] = [sorted[j], sorted[i]];
   }
 
-  // Creer toutes les cartes
   sorted.forEach((card, idx) => {
     const r = RARITY_COLORS[card.rarity] || RARITY_COLORS['epique'];
     const el = document.createElement('div');
     el.className = 'reveal-card waiting card-slam';
     el.dataset.index = idx;
 
-    // Essence d'Excavation special card
     if (card._isEssence) {
       el.dataset.isEssence = '1';
       el.innerHTML = `
         <div class="card-inner">
-          <div class="card-back">
-            <div class="card-back-pattern"></div>
-            <span>?</span>
-          </div>
+          <div class="card-back"><div class="card-back-pattern"></div><span>?</span></div>
           <div class="card-front rarity-epique" style="border-color:#ffaa00; box-shadow:0 0 20px rgba(255,170,0,0.5)">
             <div class="card-rarity" style="background:#ffaa00">ESSENCE</div>
             <div class="card-emoji" style="font-size:64px; margin:20px 0;">⛏</div>
             <div class="card-name" style="color:#ffaa00">Essence d'Excavation</div>
-            <div class="card-ability">
-              <div class="ability-desc" style="color:#ffcc44">+1 Essence pour la Mine</div>
-            </div>
+            <div class="card-ability"><div class="ability-desc" style="color:#ffcc44">+1 Essence pour la Mine</div></div>
           </div>
-        </div>
-      `;
+        </div>`;
     } else {
       const shinyClass = card.is_shiny ? 'reveal-card-shiny' : '';
       const tempClass = card.is_temp ? 'reveal-card-temp' : '';
-
       el.innerHTML = `
         <div class="card-inner ${shinyClass} ${tempClass}">
-          <div class="card-back">
-            <div class="card-back-pattern"></div>
-            <span>?</span>
-          </div>
+          <div class="card-back"><div class="card-back-pattern"></div><span>?</span></div>
           <div class="card-front rarity-${card.rarity}" style="border-color:${r.color}; box-shadow:0 0 20px ${r.glow}">
             ${renderCardFront(card)}
           </div>
-        </div>
-      `;
+        </div>`;
     }
-
     reveal.appendChild(el);
   });
 
-  // === PHASE 1 : Toutes les cartes slam face cachee (stagger 100ms) ===
   sorted.forEach((card, i) => {
     setTimeout(() => {
       const el = reveal.children[i];
       el.classList.remove('waiting');
       el.classList.add('card-slam');
-
-      // Apres le dernier slam, rendre les cartes cliquables
       if (i === sorted.length - 1) {
         setTimeout(() => {
           Array.from(reveal.children).forEach(c => c.classList.add('clickable'));
@@ -319,69 +342,37 @@ function showCardsReveal(cards) {
     }, i * 100);
   });
 
-  // === PHASE 2 : Click pour reveler ===
   function revealCard(el, card) {
     if (el.classList.contains('revealed') || !el.classList.contains('clickable')) return;
-
     el.classList.remove('clickable');
     el.classList.remove('card-slam');
     el.classList.add('revealed');
 
-    // Apres le flip (0.7s), appliquer les effets rarete
     setTimeout(() => {
-      if (card.is_temp) {
-        el.classList.add('temp-reveal');
-        title.textContent = '⚠ TEMPORAIRE';
-        title.style.color = '#ff3333';
-      }
+      if (card.is_temp) { el.classList.add('temp-reveal'); title.textContent = '⚠ TEMPORAIRE'; title.style.color = '#ff3333'; }
       if (card.is_shiny) {
-        el.classList.add('shiny-reveal');
-        title.textContent = '✦ SHINY !';
-        title.style.color = '#ff66ff';
-        screenFlash();
-        screenShake();
+        el.classList.add('shiny-reveal'); title.textContent = '✦ SHINY !'; title.style.color = '#ff66ff';
+        screenFlash(); screenShake();
       } else if (card.rarity === 'secret') {
-        el.classList.add('secret-reveal');
-        title.textContent = '🔒 SECRET 🔒';
-        title.style.color = '#ffffff';
-        secretSound.currentTime = 0; secretSound.play();
-        screenFlash();
-        screenShake();
-        screenShake();
-        screenShake();
+        el.classList.add('secret-reveal'); title.textContent = '🔒 SECRET 🔒'; title.style.color = '#ffffff';
+        secretSound.currentTime = 0; secretSound.play(); screenFlash(); screenShake();
       } else if (card.rarity === 'chaos') {
-        el.classList.add('chaos-reveal');
-        title.textContent = '☠ CHAOS ☠';
-        title.style.color = RARITY_COLORS.chaos.color;
-        secretSound.currentTime = 0; secretSound.play();
-        screenFlash();
-        screenShake();
-        screenShake();
+        el.classList.add('chaos-reveal'); title.textContent = '☠ CHAOS ☠'; title.style.color = RARITY_COLORS.chaos.color;
+        secretSound.currentTime = 0; secretSound.play(); screenFlash(); screenShake();
       } else if (card.rarity === 'legendaire') {
-        el.classList.add('legendary-reveal');
-        title.textContent = '★ LEGENDAIRE ★';
-        title.style.color = RARITY_COLORS.legendaire.color;
-        legendarySound.currentTime = 0; legendarySound.play();
-        screenFlash();
-        screenShake();
+        el.classList.add('legendary-reveal'); title.textContent = '★ LEGENDAIRE ★'; title.style.color = RARITY_COLORS.legendaire.color;
+        legendarySound.currentTime = 0; legendarySound.play(); screenFlash(); screenShake();
       } else if (card.rarity === 'epique') {
-        el.classList.add('epic-reveal');
-        title.textContent = '♦ EPIQUE ♦';
-        title.style.color = RARITY_COLORS.epique.color;
+        el.classList.add('epic-reveal'); title.textContent = '♦ EPIQUE ♦'; title.style.color = RARITY_COLORS.epique.color;
       } else if (card.rarity === 'rare') {
-        title.textContent = '◆ RARE ◆';
-        title.style.color = RARITY_COLORS.rare.color;
+        title.textContent = '◆ RARE ◆'; title.style.color = RARITY_COLORS.rare.color;
       } else {
-        title.textContent = '— COMMUNE —';
-        title.style.color = '#888888';
+        title.textContent = '— COMMUNE —'; title.style.color = '#888888';
       }
-
       initTiltEffect(reveal);
     }, 700);
 
     revealedCount++;
-
-    // Toutes revelees ?
     if (revealedCount === totalCards) {
       setTimeout(() => {
         doneBtn.classList.remove('hidden');
@@ -392,26 +383,19 @@ function showCardsReveal(cards) {
     }
   }
 
-  // Attacher les handlers de click
   sorted.forEach((card, idx) => {
     const el = reveal.children[idx];
     el.addEventListener('click', () => {
-      if (el.classList.contains('revealed')) {
-        showCardDetail(card);
-        return;
-      }
+      if (el.classList.contains('revealed')) { showCardDetail(card); return; }
       revealCard(el, card);
     });
   });
 
-  // Bouton "REVELER TOUT"
   revealAllBtn.onclick = () => {
     const unrevealed = Array.from(reveal.children).filter(c => !c.classList.contains('revealed'));
     unrevealed.forEach((el, i) => {
       const idx = parseInt(el.dataset.index);
-      setTimeout(() => {
-        revealCard(el, sorted[idx]);
-      }, i * 300);
+      setTimeout(() => revealCard(el, sorted[idx]), i * 300);
     });
   };
 }
@@ -421,24 +405,17 @@ document.getElementById('done-btn').addEventListener('click', () => {
   document.getElementById('reveal-scene').classList.add('hidden');
   document.getElementById('tear-container').classList.add('hidden');
   document.getElementById('shop-view').classList.remove('hidden');
-  document.querySelectorAll('.booster-card').forEach(b => b.style.pointerEvents = '');
+  document.querySelectorAll('.shop-v2-booster').forEach(b => b.style.pointerEvents = '');
 });
 
-// ==========================================
-//  CODE CADEAU
-// ==========================================
-
+// === GIFT CODE ===
 async function redeemGiftCode() {
   const input = document.getElementById('giftcode-input');
   const btn = document.getElementById('giftcode-btn');
-  const msg = document.getElementById('giftcode-msg');
   const code = input.value.trim().toUpperCase();
-
   if (!code) { showGiftMsg('Entre un code !', false); return; }
 
-  btn.disabled = true;
-  btn.textContent = '...';
-
+  btn.disabled = true; btn.textContent = '...';
   try {
     const res = await fetch('/api/redeem-code', {
       method: 'POST',
@@ -446,28 +423,19 @@ async function redeemGiftCode() {
       body: JSON.stringify({ code })
     });
     const data = await res.json();
-
     if (res.ok) {
       let rewardText = '';
       if (data.creditsGiven > 0) rewardText += `+${data.creditsGiven} CR`;
-      if (data.cardsGiven > 0) {
-        if (rewardText) rewardText += ' + ';
-        rewardText += `${data.cardsGiven} carte(s)`;
-      }
+      if (data.cardsGiven > 0) { if (rewardText) rewardText += ' + '; rewardText += `${data.cardsGiven} carte(s)`; }
       showGiftMsg(`✓ ${rewardText}`, true);
       input.value = '';
-      currentCredits = data.newCredits;
-      document.getElementById('credits-count').textContent = data.newCredits;
+      updateCreditsDisplay(data.newCredits);
       screenFlash();
     } else {
       showGiftMsg(data.error, false);
     }
-  } catch {
-    showGiftMsg('Erreur serveur', false);
-  }
-
-  btn.disabled = false;
-  btn.textContent = 'UTILISER';
+  } catch { showGiftMsg('Erreur serveur', false); }
+  btn.disabled = false; btn.textContent = 'UTILISER';
 }
 
 function showGiftMsg(text, success) {
@@ -477,16 +445,13 @@ function showGiftMsg(text, success) {
   setTimeout(() => msg.classList.add('hidden'), 4000);
 }
 
-// Enter key to submit gift code
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('giftcode-input');
-  if (input) {
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') redeemGiftCode();
-    });
-  }
+  if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeemGiftCode(); });
 });
 
+// === LOAD ===
 loadCredits();
 loadBoosters();
 loadDailyShop();
+loadCardShop();

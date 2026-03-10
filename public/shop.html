@@ -7,96 +7,121 @@
   <link rel="stylesheet" href="/css/style.css">
   <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
 </head>
-<body>
-  <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
-  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+<body class="shop-page-v2">
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
 
-  <div class="crt-screen shop-page">
-
-    <!-- VUE BOUTIQUE -->
-    <div class="shop-view" id="shop-view">
-
-      <!-- TITRE -->
-      <div class="shop-title-bar">
-        <div class="shop-title-line"></div>
-        <h1 class="shop-title">⚔ BOUTIQUE ⚔</h1>
-        <div class="shop-title-line"></div>
+  <!-- ===== TOP NAVBAR ===== -->
+  <nav class="dash-navbar">
+    <div class="dash-navbar-inner">
+      <div class="dash-nav-logo" data-text="GACHA CARDS">GACHA CARDS</div>
+      <div class="dash-nav-links">
+        <a href="/menu" class="dash-nav-link">ACCUEIL</a>
+        <a href="/shop" class="dash-nav-link dash-nav-link--active dash-nav-link--shop">BOUTIQUE</a>
+        <a href="/collection" class="dash-nav-link">COLLECTION</a>
+        <a href="/mine" class="dash-nav-link dash-nav-link--mine">MINE</a>
+        <a href="/combat" class="dash-nav-link dash-nav-link--combat">COMBAT</a>
+        <a href="/battlepass" class="dash-nav-link dash-nav-link--bp">PASSE</a>
+        <a href="/market" class="dash-nav-link dash-nav-link--market">MARCHE</a>
+        <a href="/casino" class="dash-nav-link dash-nav-link--casino">CASINO</a>
+        <a href="/stats" class="dash-nav-link dash-nav-link--stats">STATS</a>
+        <a href="/fusion" class="dash-nav-link dash-nav-link--fusion">FORGE</a>
+        <a href="/wiki" class="dash-nav-link">WIKI</a>
+        <a href="/guilds" class="dash-nav-link dash-nav-link--guild">GUILDES</a>
       </div>
-
-      <!-- SECTION BOOSTERS -->
-      <div class="shop-section shop-boosters-section">
-        <div class="shop-section-label">BOOSTERS</div>
-        <div class="boosters-shelf" id="boosters-shelf">
-          <!-- Rempli par JS -->
-        </div>
-      </div>
-
-      <!-- ROW: STREAK + BOUTIQUE DU JOUR -->
-      <div class="shop-row">
-        <!-- STREAK BONUS -->
-        <div class="shop-section shop-streak-section">
-          <div class="streak-header">
-            <div class="shop-daily-icon">&#127873;</div>
-            <div class="streak-info">
-              <h3 class="shop-daily-title">BONUS CONSECUTIF</h3>
-              <p class="streak-desc" id="streak-desc">Jour 0 / 7</p>
-            </div>
-            <button class="shop-daily-btn" id="daily-btn" onclick="claimDaily()">RECUPERER</button>
-          </div>
-          <div class="streak-progress" id="streak-progress"></div>
-        </div>
-
-        <!-- BOUTIQUE DU JOUR -->
-        <div class="shop-section shop-daily-section">
-          <div class="daily-shop-header">
-            <h3 class="daily-shop-title">&#128302; BOUTIQUE DU JOUR</h3>
-            <span class="daily-shop-timer" id="daily-shop-timer">??:??:??</span>
-          </div>
-          <div class="daily-shop-cards" id="daily-shop-cards"></div>
-        </div>
-      </div>
-
-      <!-- CODE CADEAU -->
-      <div class="shop-section shop-giftcode-section">
-        <div class="shop-giftcode-icon">🎟</div>
-        <div class="shop-giftcode-form">
-          <h3 class="shop-giftcode-title">CODE CADEAU</h3>
-          <div class="shop-giftcode-input-row">
-            <input type="text" id="giftcode-input" class="shop-giftcode-input" placeholder="GACHA-XXXX-XXXX" maxlength="30" autocomplete="off" spellcheck="false">
-            <button class="shop-giftcode-btn" id="giftcode-btn" onclick="redeemGiftCode()">UTILISER</button>
-          </div>
-          <p class="shop-giftcode-msg hidden" id="giftcode-msg"></p>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- VUE OUVERTURE -->
-    <div class="opening-view hidden" id="opening-view">
-      <!-- Dechirure du booster -->
-      <div class="tear-container hidden" id="tear-container">
-        <div class="tear-half tear-left" id="tear-left"></div>
-        <div class="tear-half tear-right" id="tear-right"></div>
-        <div class="tear-glow"></div>
-      </div>
-
-      <!-- Reveal des cartes -->
-      <div class="reveal-scene hidden" id="reveal-scene">
-        <h2 class="reveal-title" id="reveal-title">OUVERTURE...</h2>
-        <div class="cards-reveal" id="cards-reveal"></div>
-        <div class="reveal-buttons">
-          <button class="submit-btn reveal-all-btn hidden" id="reveal-all-btn">> REVELER TOUT</button>
-          <button class="submit-btn opening-done-btn hidden" id="done-btn">> CONTINUER</button>
-        </div>
+      <div class="dash-nav-user">
+        <span class="dash-nav-stat" title="Credits">&#128176; <span id="nav-credits">0</span></span>
+        <span class="dash-nav-stat energy-stat">&#9889; <span id="nav-energy">--</span></span>
+        <span class="dash-nav-username" id="nav-username">???</span>
       </div>
     </div>
+  </nav>
+
+  <!-- ===== SHOP CONTENT ===== -->
+  <div class="shop-v2-content" id="shop-view">
+
+    <!-- SECTION BOOSTERS -->
+    <section class="shop-v2-boosters-section">
+      <h2 class="shop-v2-section-title">BOOSTERS</h2>
+      <div class="shop-v2-boosters" id="boosters-shelf">
+        <!-- Filled by JS -->
+      </div>
+    </section>
+
+    <!-- BOOSTER GRATUIT QUOTIDIEN -->
+    <section class="shop-v2-free-section">
+      <div class="shop-v2-free-booster" id="free-booster" onclick="claimFreeBooster()">
+        <div class="shop-v2-free-img">&#127873;</div>
+        <div class="shop-v2-free-info">
+          <h3 class="shop-v2-free-title">BOOSTER GRATUIT</h3>
+          <p class="shop-v2-free-desc">3 cartes gratuites chaque jour !</p>
+        </div>
+        <button class="shop-v2-free-btn" id="free-btn">OUVRIR</button>
+      </div>
+    </section>
+
+    <!-- BOUTIQUE DU JOUR -->
+    <section class="shop-v2-daily-section">
+      <div class="shop-v2-daily-header">
+        <h2 class="shop-v2-section-title">&#128302; BOUTIQUE DU JOUR</h2>
+        <span class="shop-v2-daily-timer" id="daily-shop-timer">??:??:??</span>
+      </div>
+      <div class="shop-v2-daily-cards" id="daily-shop-cards"></div>
+    </section>
+
+    <!-- BOUTIQUE DE CARTES -->
+    <section class="shop-v2-cards-section">
+      <h2 class="shop-v2-section-title">TOUTES LES CARTES</h2>
+      <div class="shop-v2-cards-filters">
+        <button class="shop-v2-filter-btn shop-v2-filter--active" data-filter="all" onclick="filterShopCards('all')">TOUT</button>
+        <button class="shop-v2-filter-btn" data-filter="commune" onclick="filterShopCards('commune')">COMMUNE</button>
+        <button class="shop-v2-filter-btn" data-filter="rare" onclick="filterShopCards('rare')">RARE</button>
+        <button class="shop-v2-filter-btn" data-filter="epique" onclick="filterShopCards('epique')">EPIQUE</button>
+        <button class="shop-v2-filter-btn" data-filter="legendaire" onclick="filterShopCards('legendaire')">LEGENDAIRE</button>
+      </div>
+      <div class="shop-v2-cards-scroll">
+        <div class="shop-v2-cards-list" id="shop-cards-list">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+    </section>
+
+    <!-- CODE CADEAU -->
+    <section class="shop-v2-giftcode">
+      <div class="shop-giftcode-icon">&#127915;</div>
+      <div class="shop-giftcode-form">
+        <h3 class="shop-giftcode-title">CODE CADEAU</h3>
+        <div class="shop-giftcode-input-row">
+          <input type="text" id="giftcode-input" class="shop-giftcode-input" placeholder="GACHA-XXXX-XXXX" maxlength="30" autocomplete="off" spellcheck="false">
+          <button class="shop-giftcode-btn" id="giftcode-btn" onclick="redeemGiftCode()">UTILISER</button>
+        </div>
+        <p class="shop-giftcode-msg hidden" id="giftcode-msg"></p>
+      </div>
+    </section>
 
   </div>
 
-  <!-- Flash ecran -->
-  <div class="screen-flash hidden" id="screen-flash"></div>
+  <!-- VUE OUVERTURE -->
+  <div class="opening-view hidden" id="opening-view">
+    <div class="tear-container hidden" id="tear-container">
+      <div class="tear-half tear-left" id="tear-left"></div>
+      <div class="tear-half tear-right" id="tear-right"></div>
+      <div class="tear-glow"></div>
+    </div>
 
-  <div class="version-tag">v1.5.0</div>
+    <div class="reveal-scene hidden" id="reveal-scene">
+      <h2 class="reveal-title" id="reveal-title">OUVERTURE...</h2>
+      <div class="cards-reveal" id="cards-reveal"></div>
+      <div class="reveal-buttons">
+        <button class="submit-btn reveal-all-btn hidden" id="reveal-all-btn">> REVELER TOUT</button>
+        <button class="submit-btn opening-done-btn hidden" id="done-btn">> CONTINUER</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="screen-flash hidden" id="screen-flash"></div>
+  <div class="credits-display">CREDITS: <span id="credits-count">0</span></div>
+
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/toast.js"></script>
   <script src="/js/friends.js"></script>
