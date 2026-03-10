@@ -486,9 +486,11 @@ async function sellCard(userCardId, cardId) {
 
     await new Promise(resolve => setTimeout(resolve, 1800));
 
+    var gained = data.credits - currentCredits;
     animateCredits(currentCredits, data.credits);
     currentCredits = data.credits;
 
+    if (gained > 0 && typeof showCreditsReward === 'function') showCreditsReward(gained);
     screenFlash();
     hideSellOverlay();
     renderCollection(data.collection);

@@ -292,6 +292,7 @@ async function sellAll() {
 
     if (data.success) {
       showNotification(`+${data.totalSold} CR (${data.itemsSold} minerais)`, 'sell');
+      if (data.totalSold && typeof showCreditsReward === 'function') showCreditsReward(data.totalSold);
       mineData.credits = data.credits;
       mineData.minerals = [];
       document.getElementById('nav-credits').textContent = data.credits;

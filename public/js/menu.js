@@ -186,6 +186,8 @@ async function claimQuest(questId) {
     const data = await res.json();
     if (res.ok && data.success) {
       document.getElementById('stat-credits').textContent = data.credits;
+      if (data.creditsGained && typeof showCreditsReward === 'function') showCreditsReward(data.creditsGained);
+      if (data.xpGained && typeof showXpReward === 'function') showXpReward(data.xpGained);
       loadQuests();
     }
   } catch {}
