@@ -84,11 +84,14 @@
       .map(function(f) {
         var name = f.displayName || f.username;
         var frameClass = (f.profileFrame && f.profileFrame !== 'none') ? ' frame-' + f.profileFrame : '';
-        return '<div class="friend-item ' + (f.online ? 'online' : '') + '" onclick="openChat(' + f.friendUserId + ', \'' + escapeAttr(name) + '\')">' +
-          '<span class="friend-status-dot ' + (f.online ? 'dot-online' : 'dot-offline') + '"></span>' +
-          '<span class="friend-avatar' + frameClass + '">' + (f.avatar || '⚔') + '</span>' +
-          '<span class="friend-name">' + escapeHtml(name) + '</span>' +
-          (f.unreadCount > 0 ? '<span class="friend-unread">' + f.unreadCount + '</span>' : '') +
+        return '<div class="friend-item ' + (f.online ? 'online' : '') + '">' +
+          '<div class="friend-item-main" onclick="openChat(' + f.friendUserId + ', \'' + escapeAttr(name) + '\')">' +
+            '<span class="friend-status-dot ' + (f.online ? 'dot-online' : 'dot-offline') + '"></span>' +
+            '<span class="friend-avatar' + frameClass + '">' + (f.avatar || '⚔') + '</span>' +
+            '<span class="friend-name">' + escapeHtml(name) + '</span>' +
+            (f.unreadCount > 0 ? '<span class="friend-unread">' + f.unreadCount + '</span>' : '') +
+          '</div>' +
+          '<button class="friend-remove-btn" onclick="removeFriend(' + f.friendshipId + ', \'' + escapeAttr(name) + '\')" title="Supprimer">✗</button>' +
         '</div>';
       }).join('');
   }
@@ -212,6 +215,21 @@
         body: JSON.stringify({ friendshipId: friendshipId })
       });
       loadFriends();
+    } catch(e) {}
+  };
+
+  window.removeFriend = async function(friendshipId, name) {
+    if (!confirm('Supprimer ' + name + ' de ta liste d\'amis ?')) return;
+    try {
+      var res = await fetch('/api/friends/remove', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ friendshipId: friendshipId })
+      });
+      if (res.ok) {
+        if (typeof showToast === 'function') showToast(name + ' supprime de tes amis', 'info');
+        loadFriends();
+      }
     } catch(e) {}
   };
 
