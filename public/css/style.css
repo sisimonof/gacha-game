@@ -771,8 +771,9 @@ body.dashboard-page {
   justify-content: space-between;
   max-width: 1400px;
   margin: 0 auto;
-  padding: 0 24px;
-  height: 56px;
+  padding: 4px 16px;
+  min-height: 48px;
+  gap: 12px;
 }
 
 .dash-nav-logo {
@@ -804,19 +805,24 @@ body.dashboard-page {
 
 .dash-nav-links {
   display: flex;
-  gap: 4px;
+  gap: 2px;
+  flex-wrap: wrap;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
 }
 
 .dash-nav-link {
   font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
+  font-size: 7px;
   color: #335533;
   text-decoration: none;
-  padding: 8px 14px;
+  padding: 6px 8px;
   border-radius: 6px;
   transition: all 0.25s;
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   position: relative;
+  white-space: nowrap;
 }
 
 .dash-nav-link:hover {
@@ -1389,11 +1395,11 @@ body.dashboard-page {
 /* === DASHBOARD RESPONSIVE === */
 @media (max-width: 1100px) {
   .dash-nav-links {
-    gap: 2px;
+    gap: 1px;
   }
   .dash-nav-link {
-    padding: 8px 10px;
-    font-size: 7px;
+    padding: 5px 6px;
+    font-size: 6px;
   }
 }
 
@@ -3723,9 +3729,24 @@ body.collection-page .screen-flash.flash-active {
    FUSION PAGE
    ============================== */
 
+.fusion-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.fusion-page .crt-screen {
+  padding: 20px;
+  flex: 1;
+}
+
 .fusion-wrapper {
   text-align: center; width: 950px; max-width: 95vw;
-  max-height: 90vh; overflow-y: auto;
+  margin: 0 auto;
+  overflow-y: auto;
 }
 
 .fusion-grid {
@@ -10786,6 +10807,16 @@ body.casino-page {
 /* ======= PHASE 5 — GUILDS CSS =============== */
 /* ============================================ */
 
+.dash-nav-link--fusion {
+  color: #cc44cc;
+}
+.dash-nav-link--fusion:hover,
+.dash-nav-link--fusion.dash-nav-link--active {
+  color: #ff66ff !important;
+  background: rgba(255, 102, 255, 0.1) !important;
+  text-shadow: 0 0 8px rgba(255, 102, 255, 0.5);
+}
+
 .dash-nav-link--guild {
   color: #00cc66 !important;
 }
@@ -10798,7 +10829,16 @@ body.casino-page {
 
 /* Guild page layout */
 .guilds-page {
-  overflow-y: auto !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  overflow-y: auto;
+  height: 100vh;
+}
+
+.guilds-page .crt-screen {
+  flex: 1;
 }
 
 .guild-container {
