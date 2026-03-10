@@ -142,48 +142,6 @@ async function executeInit(interaction) {
     await guild.channels.create({ name: '🖼️・showcase', type: ChannelType.GuildText, parent: catComm.id });
     await guild.channels.create({ name: '🏪・marché', type: ChannelType.GuildText, parent: catComm.id });
 
-    // --- Category: JEU (role-locked) ---
-    const catJeu = await guild.channels.create({
-      name: '🎮 JEU',
-      type: ChannelType.GuildCategory,
-      permissionOverwrites: [
-        { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-        { id: invocateurRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages, PermissionFlagsBits.ReadMessageHistory] }
-      ]
-    });
-
-    await guild.channels.create({ name: '⚔️・duels', type: ChannelType.GuildText, parent: catJeu.id });
-    await guild.channels.create({ name: '🏆・classement', type: ChannelType.GuildText, parent: catJeu.id });
-    await guild.channels.create({ name: '🎰・casino', type: ChannelType.GuildText, parent: catJeu.id });
-    await guild.channels.create({ name: '📊・stats', type: ChannelType.GuildText, parent: catJeu.id });
-
-    // --- Category: FEED (role-locked, read-only for users) ---
-    const catFeed = await guild.channels.create({
-      name: '📡 FEED',
-      type: ChannelType.GuildCategory,
-      permissionOverwrites: [
-        { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-        { id: invocateurRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.ReadMessageHistory], deny: [PermissionFlagsBits.SendMessages] },
-        { id: client.user.id, allow: [PermissionFlagsBits.SendMessages, PermissionFlagsBits.ViewChannel] }
-      ]
-    });
-
-    await guild.channels.create({ name: '🎴・pulls-legendaires', type: ChannelType.GuildText, parent: catFeed.id });
-    await guild.channels.create({ name: '🔮・fusions', type: ChannelType.GuildText, parent: catFeed.id });
-
-    // --- Vocal ---
-    const catVocal = await guild.channels.create({
-      name: '🔊 VOCAL',
-      type: ChannelType.GuildCategory,
-      permissionOverwrites: [
-        { id: everyone.id, deny: [PermissionFlagsBits.ViewChannel] },
-        { id: invocateurRole.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.Connect, PermissionFlagsBits.Speak] }
-      ]
-    });
-
-    await guild.channels.create({ name: '🎙️ Général', type: ChannelType.GuildVoice, parent: catVocal.id });
-    await guild.channels.create({ name: '⚔️ Duels', type: ChannelType.GuildVoice, parent: catVocal.id });
-
     // 5. Send link embed in the link channel
     await sendLinkEmbed(linkChannel);
 
