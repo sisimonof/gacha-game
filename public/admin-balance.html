@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GACHA CARDS - Outil d'Equilibrage</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <script src="/js/auth-guard.js"></script>
+  <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script src="/js/theme-detect.js"></script>
+  <script src="/js/page-transition.js"></script>
+</head>
+<body class="balance-page">
+  <div class="bg-grid"></div>
+  <div class="scanline-bar"></div>
+
+  <!-- TOPBAR -->
+  <nav class="balance-topbar">
+    <a href="/admin" class="balance-back">&lt; ADMIN</a>
+    <h1 class="balance-logo">OUTIL D'EQUILIBRAGE</h1>
+    <div class="balance-controls">
+      <label class="balance-label">Periode:
+        <select id="period-select" class="balance-select">
+          <option value="7">7 jours</option>
+          <option value="14">14 jours</option>
+          <option value="30" selected>30 jours</option>
+          <option value="90">90 jours</option>
+          <option value="365">Tout</option>
+        </select>
+      </label>
+      <label class="balance-label">Min. parties:
+        <select id="mingames-select" class="balance-select">
+          <option value="1">1+</option>
+          <option value="3">3+</option>
+          <option value="5" selected>5+</option>
+          <option value="10">10+</option>
+          <option value="20">20+</option>
+        </select>
+      </label>
+      <button class="balance-refresh-btn" id="refresh-btn">> ACTUALISER</button>
+    </div>
+  </nav>
+
+  <main class="balance-content">
+
+    <!-- OVERVIEW -->
+    <section class="balance-overview">
+      <div class="balance-stat-card">
+        <div class="balance-stat-value" id="total-battles">-</div>
+        <div class="balance-stat-label">COMBATS</div>
+      </div>
+      <div class="balance-stat-card">
+        <div class="balance-stat-value" id="total-cards-tracked">-</div>
+        <div class="balance-stat-label">CARTES TRACKEES</div>
+      </div>
+      <div class="balance-stat-card">
+        <div class="balance-stat-value" id="avg-winrate">-</div>
+        <div class="balance-stat-label">WINRATE MOYEN</div>
+      </div>
+      <div class="balance-stat-card">
+        <div class="balance-stat-value" id="suggestions-count">-</div>
+        <div class="balance-stat-label">SUGGESTIONS</div>
+      </div>
+    </section>
+
+    <!-- SUGGESTIONS -->
+    <section class="balance-section">
+      <h2 class="balance-section-title">&#9888; SUGGESTIONS D'EQUILIBRAGE</h2>
+      <div class="balance-suggestions" id="suggestions-container">
+        <div class="balance-loading">Chargement de l'analyse...</div>
+      </div>
+    </section>
+
+    <!-- ELEMENT / RARITY / TYPE BREAKDOWN -->
+    <section class="balance-breakdowns">
+      <div class="balance-breakdown">
+        <h3 class="balance-breakdown-title">PAR ELEMENT</h3>
+        <div class="balance-breakdown-list" id="element-breakdown"></div>
+      </div>
+      <div class="balance-breakdown">
+        <h3 class="balance-breakdown-title">PAR RARETE</h3>
+        <div class="balance-breakdown-list" id="rarity-breakdown"></div>
+      </div>
+      <div class="balance-breakdown">
+        <h3 class="balance-breakdown-title">PAR TYPE</h3>
+        <div class="balance-breakdown-list" id="type-breakdown"></div>
+      </div>
+    </section>
+
+    <!-- FULL CARD TABLE -->
+    <section class="balance-section">
+      <h2 class="balance-section-title">&#128202; CLASSEMENT DES CARTES</h2>
+      <div class="balance-table-controls">
+        <input type="text" id="card-search" class="balance-search" placeholder="> Rechercher une carte...">
+        <select id="sort-select" class="balance-select">
+          <option value="winrate_desc">Winrate (desc)</option>
+          <option value="winrate_asc">Winrate (asc)</option>
+          <option value="games_desc">Parties (desc)</option>
+          <option value="kills_desc">Kills (desc)</option>
+          <option value="dmg_desc">Degats (desc)</option>
+          <option value="survival_desc">Survie (desc)</option>
+        </select>
+        <select id="filter-element" class="balance-select">
+          <option value="">Tous elements</option>
+          <option value="feu">Feu</option>
+          <option value="eau">Eau</option>
+          <option value="terre">Terre</option>
+          <option value="lumiere">Lumiere</option>
+          <option value="ombre">Ombre</option>
+        </select>
+        <select id="filter-rarity" class="balance-select">
+          <option value="">Toutes raretes</option>
+          <option value="commune">Commune</option>
+          <option value="rare">Rare</option>
+          <option value="epique">Epique</option>
+          <option value="legendaire">Legendaire</option>
+          <option value="chaos">Chaos</option>
+        </select>
+      </div>
+      <div class="balance-table-wrap">
+        <table class="balance-table" id="card-table">
+          <thead>
+            <tr>
+              <th>CARTE</th>
+              <th>RARETE</th>
+              <th>ELEM.</th>
+              <th>TYPE</th>
+              <th>ATK/DEF/PV</th>
+              <th>PARTIES</th>
+              <th>WINRATE</th>
+              <th>KILLS/G</th>
+              <th>DMG/G</th>
+              <th>SURVIE</th>
+              <th>STATUT</th>
+            </tr>
+          </thead>
+          <tbody id="card-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="/js/toast.js"></script>
+  <script src="/js/admin-balance.js"></script>
+  <script src="/js/skeleton-loader.js"></script>
+  <script src="/js/empty-states.js"></script>
+  <script src="/js/keyboard-nav.js"></script>
+</body>
+</html>

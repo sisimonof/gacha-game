@@ -471,6 +471,26 @@ db.exec(`
   )
 `);
 
+// --- Table de stats par carte en combat (pour l'outil d'équilibrage) ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS battle_card_stats (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER NOT NULL,
+    battle_type TEXT NOT NULL,
+    side TEXT NOT NULL,
+    deployed INTEGER DEFAULT 0,
+    kills INTEGER DEFAULT 0,
+    deaths INTEGER DEFAULT 0,
+    damage_dealt INTEGER DEFAULT 0,
+    damage_taken INTEGER DEFAULT 0,
+    ability_used INTEGER DEFAULT 0,
+    survived INTEGER DEFAULT 0,
+    battle_won INTEGER DEFAULT 0,
+    played_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (card_id) REFERENCES cards(id)
+  )
+`);
+
 // --- Système d'éléments (3 classes uniquement) ---
 const ELEMENT_ADVANTAGES = {
   feu:   { strong: 'terre', weak: 'eau' },
@@ -2016,6 +2036,9 @@ function applyDamage(target, damage, events, source, battle, isLinkedDamage) {
   // Track last attacker for death-trigger passives (Rat des Egouts)
   if (source && source.name) target.lastAttacker = source.name;
   let remaining = damage;
+  // Balance tracking
+  if (source && typeof source.statDmgDealt === 'number') source.statDmgDealt += damage;
+  if (target && typeof target.statDmgTaken === 'number') target.statDmgTaken += damage;
   // Shield absorbe en premier
   if (target.shield > 0) {
     const absorbed = Math.min(target.shield, remaining);
@@ -2201,6 +2224,7 @@ function resolveAbility(unit, targets, allAllies, allEnemies, battle) {
   const ability = ABILITY_MAP[unit.ability_name];
   if (!ability || unit.usedAbility || unit.silenced) return [];
   unit.usedAbility = true;
+  if (typeof unit.statAbilityUsed === 'number') unit.statAbilityUsed++;
 
   const events = [];
   const abilityName = unit.ability_name;
@@ -3321,6 +3345,12 @@ function checkKO(unit, events, battle) {
     } else {
       unit.alive = false;
       events.push({ type: 'ko', unit: unit.name });
+      // Balance tracking: attribute kill to last attacker
+      if (battle && unit.lastAttacker) {
+        const allFieldUnits = [...(battle.playerField || []), ...(battle.enemyField || [])].filter(u => u);
+        const killer = allFieldUnits.find(u => u.name === unit.lastAttacker && u.side !== unit.side && u.alive);
+        if (killer && typeof killer.statKills === 'number') killer.statKills++;
+      }
       // Passif Archange Dechu : a sa mort, soigne 2 PV a tous les allies
       if (unit.name === 'Archange Dechu' && battle) {
         const allies = unit.side === 'player' ? battle.playerTeam : battle.enemyTeam;
@@ -3704,6 +3734,11 @@ function makeDeckFieldUnit(handCard, side) {
     linkedTo: null,
     linkedTurns: 0,
     crabDefStacks: 0,
+    // Balance tracking stats
+    statKills: 0,
+    statDmgDealt: 0,
+    statDmgTaken: 0,
+    statAbilityUsed: 0,
   };
 }
 
@@ -5105,6 +5140,9 @@ app.post('/api/battle/end', requireAuth, (req, res) => {
   // Log battle
   db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)')
     .run(req.session.userId, battle.battleType || 'ia', 'IA', battle.result, reward);
+
+  // Log card-level stats for balance tool
+  logBattleCardStats(battle, battle.battleType || 'ia');
 
   // Battle Pass XP
   addBattlePassXP(req.session.userId, battle.result === 'victory' ? BP_XP.combat_win : BP_XP.combat_lose);
@@ -8252,6 +8290,7 @@ app.get('/casino', requireAuth, (req, res) => { res.sendFile(path.join(__dirname
 app.get('/guilds', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'guilds.html')); });
 app.get('/stats', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'stats.html')); });
 app.get('/admin', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin.html')); });
+app.get('/admin/balance', requireAuth, (req, res) => { res.sendFile(path.join(__dirname, 'public', 'admin-balance.html')); });
 app.get('/wiki', (req, res) => { res.sendFile(path.join(__dirname, 'public', 'wiki.html')); });
 
 app.get('/', (req, res) => {
@@ -8382,6 +8421,277 @@ app.post('/api/admin/restore', requireAdmin, (req, res) => {
 });
 
 // ============================================
+// BALANCE TOOL — Card Stats Logging & Analysis
+// ============================================
+
+function logBattleCardStats(battle, battleType) {
+  try {
+    const insert = db.prepare(`INSERT INTO battle_card_stats
+      (card_id, battle_type, side, deployed, kills, deaths, damage_dealt, damage_taken, ability_used, survived, battle_won)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+
+    const won = battle.result === 'victory' ? 1 : 0;
+    const lost = battle.result === 'defeat' ? 1 : 0;
+
+    // Collect all units that were deployed during the battle
+    const allUnits = [];
+
+    // Field units (currently on field)
+    if (battle.playerField) {
+      battle.playerField.filter(u => u).forEach(u => allUnits.push({ ...u, side: 'player' }));
+    }
+    if (battle.enemyField) {
+      battle.enemyField.filter(u => u).forEach(u => allUnits.push({ ...u, side: 'enemy' }));
+    }
+
+    // Dead allies (units that were deployed then died)
+    if (battle.playerDeadAllies) {
+      battle.playerDeadAllies.forEach(u => { if (u && u.cardId) allUnits.push({ ...u, side: 'player', alive: false }); });
+    }
+    if (battle.enemyDeadAllies) {
+      battle.enemyDeadAllies.forEach(u => { if (u && u.cardId) allUnits.push({ ...u, side: 'enemy', alive: false }); });
+    }
+
+    // Deduplicate by handId (a unit can appear in both dead and field if revived)
+    const seen = new Set();
+    const logTransaction = db.transaction(() => {
+      for (const u of allUnits) {
+        if (!u.cardId || seen.has(u.handId)) continue;
+        seen.add(u.handId);
+
+        const isPlayer = u.side === 'player';
+        insert.run(
+          u.cardId,
+          battleType,
+          u.side,
+          1, // deployed
+          u.statKills || 0,
+          u.alive ? 0 : 1,
+          u.statDmgDealt || 0,
+          u.statDmgTaken || 0,
+          u.statAbilityUsed || 0,
+          u.alive ? 1 : 0,
+          isPlayer ? won : lost
+        );
+      }
+    });
+    logTransaction();
+  } catch (e) {
+    console.error('[BALANCE] Error logging card stats:', e.message);
+  }
+}
+
+// Admin API: Balance Analysis
+app.get('/api/admin/balance-analysis', requireAdmin, (req, res) => {
+  try {
+    const days = parseInt(req.query.days) || 30;
+    const minGames = parseInt(req.query.minGames) || 5;
+    const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+
+    // Per-card aggregated stats
+    const cardStats = db.prepare(`
+      SELECT
+        bcs.card_id,
+        c.name,
+        c.rarity,
+        c.type,
+        c.element,
+        c.attack,
+        c.defense,
+        c.hp,
+        c.mana_cost,
+        c.ability_name,
+        COUNT(*) as total_games,
+        SUM(CASE WHEN bcs.side = 'player' THEN bcs.battle_won ELSE 0 END) as player_wins,
+        SUM(CASE WHEN bcs.side = 'player' THEN 1 ELSE 0 END) as player_games,
+        SUM(bcs.kills) as total_kills,
+        SUM(bcs.deaths) as total_deaths,
+        SUM(bcs.damage_dealt) as total_dmg_dealt,
+        SUM(bcs.damage_taken) as total_dmg_taken,
+        SUM(bcs.ability_used) as total_abilities,
+        SUM(bcs.survived) as total_survived,
+        SUM(bcs.battle_won) as total_wins,
+        ROUND(CAST(SUM(bcs.battle_won) AS FLOAT) / COUNT(*) * 100, 1) as winrate,
+        ROUND(CAST(SUM(bcs.kills) AS FLOAT) / COUNT(*), 2) as avg_kills,
+        ROUND(CAST(SUM(bcs.deaths) AS FLOAT) / COUNT(*), 2) as avg_deaths,
+        ROUND(CAST(SUM(bcs.damage_dealt) AS FLOAT) / COUNT(*), 1) as avg_dmg_dealt,
+        ROUND(CAST(SUM(bcs.survived) AS FLOAT) / COUNT(*) * 100, 1) as survival_rate
+      FROM battle_card_stats bcs
+      JOIN cards c ON c.id = bcs.card_id
+      WHERE bcs.played_at >= ?
+      GROUP BY bcs.card_id
+      HAVING COUNT(*) >= ?
+      ORDER BY winrate DESC
+    `).all(cutoff, minGames);
+
+    // Global averages for comparison
+    const globalAvg = db.prepare(`
+      SELECT
+        ROUND(AVG(winrate), 1) as avg_winrate,
+        ROUND(AVG(avg_kills), 2) as avg_kills,
+        ROUND(AVG(survival_rate), 1) as avg_survival
+      FROM (
+        SELECT
+          bcs.card_id,
+          CAST(SUM(bcs.battle_won) AS FLOAT) / COUNT(*) * 100 as winrate,
+          CAST(SUM(bcs.kills) AS FLOAT) / COUNT(*) as avg_kills,
+          CAST(SUM(bcs.survived) AS FLOAT) / COUNT(*) * 100 as survival_rate
+        FROM battle_card_stats bcs
+        WHERE bcs.played_at >= ?
+        GROUP BY bcs.card_id
+        HAVING COUNT(*) >= ?
+      )
+    `).get(cutoff, minGames);
+
+    // Per-element winrate
+    const elementStats = db.prepare(`
+      SELECT
+        c.element,
+        COUNT(*) as total_games,
+        ROUND(CAST(SUM(bcs.battle_won) AS FLOAT) / COUNT(*) * 100, 1) as winrate
+      FROM battle_card_stats bcs
+      JOIN cards c ON c.id = bcs.card_id
+      WHERE bcs.played_at >= ?
+      GROUP BY c.element
+    `).all(cutoff);
+
+    // Per-rarity winrate
+    const rarityStats = db.prepare(`
+      SELECT
+        c.rarity,
+        COUNT(*) as total_games,
+        ROUND(CAST(SUM(bcs.battle_won) AS FLOAT) / COUNT(*) * 100, 1) as winrate
+      FROM battle_card_stats bcs
+      JOIN cards c ON c.id = bcs.card_id
+      WHERE bcs.played_at >= ?
+      GROUP BY c.rarity
+    `).all(cutoff);
+
+    // Per-type winrate
+    const typeStats = db.prepare(`
+      SELECT
+        c.type,
+        COUNT(*) as total_games,
+        ROUND(CAST(SUM(bcs.battle_won) AS FLOAT) / COUNT(*) * 100, 1) as winrate
+      FROM battle_card_stats bcs
+      JOIN cards c ON c.id = bcs.card_id
+      WHERE bcs.played_at >= ?
+      GROUP BY c.type
+    `).all(cutoff);
+
+    // Generate balance suggestions
+    const suggestions = [];
+    const avgWinrate = globalAvg?.avg_winrate || 50;
+
+    for (const card of cardStats) {
+      const wr = card.winrate;
+      const sr = card.survival_rate;
+      const ak = card.avg_kills;
+
+      // Overpowered: high winrate + high kills + high survival
+      if (wr > avgWinrate + 12 && card.total_games >= minGames * 2) {
+        const reasons = [];
+        if (wr > 65) reasons.push(`winrate tres eleve (${wr}%)`);
+        if (ak > (globalAvg?.avg_kills || 1) * 1.5) reasons.push(`kills eleves (${ak}/game)`);
+        if (sr > 70) reasons.push(`survie elevee (${sr}%)`);
+
+        const nerfs = [];
+        if (ak > (globalAvg?.avg_kills || 1) * 1.5) nerfs.push(`ATK ${card.attack} → ${Math.max(1, card.attack - 1)}`);
+        if (sr > 70) nerfs.push(`PV ${card.hp} → ${Math.max(1, card.hp - 1)}`);
+        if (wr > 70) nerfs.push(`Mana ${card.mana_cost} → ${card.mana_cost + 1}`);
+
+        suggestions.push({
+          card_id: card.card_id,
+          name: card.name,
+          rarity: card.rarity,
+          type: 'nerf',
+          severity: wr > 70 ? 'critical' : 'moderate',
+          reasons,
+          suggested_changes: nerfs.length > 0 ? nerfs : [`Revoir l'ability "${card.ability_name}"`],
+          stats: { winrate: wr, avg_kills: ak, survival_rate: sr, games: card.total_games }
+        });
+      }
+
+      // Underpowered: low winrate + low kills + low survival
+      if (wr < avgWinrate - 12 && card.total_games >= minGames * 2) {
+        const reasons = [];
+        if (wr < 35) reasons.push(`winrate tres bas (${wr}%)`);
+        if (ak < (globalAvg?.avg_kills || 1) * 0.5) reasons.push(`kills faibles (${ak}/game)`);
+        if (sr < 30) reasons.push(`survie faible (${sr}%)`);
+
+        const buffs = [];
+        if (ak < (globalAvg?.avg_kills || 1) * 0.5) buffs.push(`ATK ${card.attack} → ${card.attack + 1}`);
+        if (sr < 30) buffs.push(`PV ${card.hp} → ${card.hp + 1}`);
+        if (card.mana_cost > 1 && wr < 30) buffs.push(`Mana ${card.mana_cost} → ${Math.max(1, card.mana_cost - 1)}`);
+
+        suggestions.push({
+          card_id: card.card_id,
+          name: card.name,
+          rarity: card.rarity,
+          type: 'buff',
+          severity: wr < 30 ? 'critical' : 'moderate',
+          reasons,
+          suggested_changes: buffs.length > 0 ? buffs : [`Renforcer l'ability "${card.ability_name}"`],
+          stats: { winrate: wr, avg_kills: ak, survival_rate: sr, games: card.total_games }
+        });
+      }
+    }
+
+    // Sort suggestions: critical first
+    suggestions.sort((a, b) => {
+      if (a.severity !== b.severity) return a.severity === 'critical' ? -1 : 1;
+      return Math.abs(b.stats.winrate - avgWinrate) - Math.abs(a.stats.winrate - avgWinrate);
+    });
+
+    // Total battles in period
+    const totalBattles = db.prepare('SELECT COUNT(*) as count FROM battle_log WHERE played_at >= ?').get(cutoff);
+
+    res.json({
+      period_days: days,
+      min_games: minGames,
+      total_battles: totalBattles?.count || 0,
+      global_avg: globalAvg || { avg_winrate: 50, avg_kills: 0, avg_survival: 50 },
+      card_stats: cardStats,
+      element_stats: elementStats,
+      rarity_stats: rarityStats,
+      type_stats: typeStats,
+      suggestions
+    });
+  } catch (err) {
+    console.error('[BALANCE] Analysis error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin: Apply balance suggestion (modify card stats)
+app.post('/api/admin/apply-balance', requireAdmin, (req, res) => {
+  const { cardId, changes } = req.body;
+  if (!cardId || !changes) return res.status(400).json({ error: 'cardId et changes requis' });
+
+  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
+  if (!card) return res.status(404).json({ error: 'Carte introuvable' });
+
+  const allowed = ['attack', 'defense', 'hp', 'mana_cost'];
+  const updates = [];
+  const values = [];
+
+  for (const [key, value] of Object.entries(changes)) {
+    if (allowed.includes(key) && typeof value === 'number' && value >= 0) {
+      updates.push(`${key} = ?`);
+      values.push(value);
+    }
+  }
+
+  if (updates.length === 0) return res.status(400).json({ error: 'Aucun changement valide' });
+
+  values.push(cardId);
+  db.prepare(`UPDATE cards SET ${updates.join(', ')} WHERE id = ?`).run(...values);
+
+  const updated = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
+  res.json({ success: true, card: updated });
+});
+
+// ============================================
 // Socket.io — Friends / Notifications
 // ============================================
 
@@ -8503,6 +8813,9 @@ function pvpEndBattle(pvp, battleId) {
   // Log
   db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)').run(pvp.player1Id, 'pvp', `PvP vs ${pvp.player2Name}`, p1Result, p1Result === 'victory' ? winReward : loseReward);
   db.prepare('INSERT INTO battle_log (user_id, battle_type, opponent_info, result, reward_credits) VALUES (?, ?, ?, ?, ?)').run(pvp.player2Id, 'pvp', `PvP vs ${pvp.player1Name}`, p2Result, p2Result === 'victory' ? winReward : loseReward);
+
+  // Log card-level stats for balance tool
+  logBattleCardStats(battle, 'pvp');
 
   // Notifier les joueurs
   const s1 = userSocketMap.get(pvp.player1Id);

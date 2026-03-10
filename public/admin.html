@@ -6,7 +6,10 @@
   <title>GACHA CARDS - Admin Panel</title>
   <link rel="stylesheet" href="/css/style.css">
   <script src="/js/auth-guard.js"></script>
+  <script src="/js/page-guide.js"></script>
   <script>(function(){var t=localStorage.getItem('gacha-theme');if(t)document.documentElement.setAttribute('data-theme',t)})()</script>
+  <script src="/js/theme-detect.js"></script>
+  <script src="/js/page-transition.js"></script>
 </head>
 <body>
   <button class="back-btn" onclick="window.location.href='/menu'">[ RETOUR ]</button>
@@ -30,6 +33,7 @@
         <button class="admin-tab" onclick="showTab('giftcodes')">CODES</button>
         <button class="admin-tab" onclick="showTab('backups')">BACKUPS</button>
         <button class="admin-tab admin-tab--test" onclick="showTab('test')">TEST</button>
+        <a href="/admin/balance" class="admin-tab" style="text-decoration:none;color:#ffaa00;border-color:#ffaa00">&#9878; EQUILIBRAGE</a>
       </div>
 
       <!-- Tab: Users -->
@@ -287,5 +291,8 @@
   <script src="/js/friends.js"></script>
   <script src="/js/card-renderer.js"></script>
   <script src="/js/admin.js"></script>
+  <script src="/js/skeleton-loader.js"></script>
+  <script src="/js/empty-states.js"></script>
+  <script src="/js/keyboard-nav.js"></script>
 </body>
 </html>
