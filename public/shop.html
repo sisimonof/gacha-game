@@ -51,6 +51,21 @@
       <!-- Boosters payants (filled by JS) -->
       <div class="shop-boosters-inline" id="boosters-shelf"></div>
 
+      <!-- Pity counter -->
+      <div class="pity-tracker" id="pity-tracker">
+        <div class="pity-tracker-title">GARANTIE</div>
+        <div class="pity-bars">
+          <div class="pity-bar-wrap">
+            <div class="pity-bar-label">EPIQUE <span id="pity-epic-count">0/30</span></div>
+            <div class="pity-bar"><div class="pity-bar-fill pity-bar-epic" id="pity-epic-bar" style="width:0%"></div></div>
+          </div>
+          <div class="pity-bar-wrap">
+            <div class="pity-bar-label">LEGENDAIRE <span id="pity-leg-count">0/80</span></div>
+            <div class="pity-bar"><div class="pity-bar-fill pity-bar-legendary" id="pity-leg-bar" style="width:0%"></div></div>
+          </div>
+        </div>
+      </div>
+
       <!-- Booster gratuit quotidien -->
       <div class="shop-v2-booster shop-v2-booster--free" id="free-booster" onclick="claimFreeBooster()">
         <div class="booster-badge badge-free">GRATUIT</div>

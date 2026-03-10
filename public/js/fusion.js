@@ -152,7 +152,7 @@ function spinWheel(isSuccess) {
   // Segment center = targetIdx * segAngle + segAngle/2
   // We want that to be at the top after rotation
   const targetCenter = targetIdx * segAngle + segAngle / 2;
-  const finalAngle = (Math.PI * 2 - targetCenter + Math.PI / 2) + Math.PI * 2 * (5 + Math.random() * 3);
+  const finalAngle = (Math.PI * 2 - targetCenter - Math.PI / 2) + Math.PI * 2 * (5 + Math.random() * 3);
 
   const duration = 3000;
   const startTime = performance.now();

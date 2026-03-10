@@ -25,6 +25,9 @@ async function loadCredits() {
 
   // Check daily booster status
   if (!data.canClaimDaily) markFreeClaimed();
+
+  // Pity system
+  if (data.pity) updatePityDisplay(data.pity);
 }
 
 function updateCreditsDisplay(credits) {
@@ -85,6 +88,7 @@ async function buyBooster(id, price) {
       return;
     }
     updateCreditsDisplay(data.credits);
+    if (data.pity) updatePityDisplay(data.pity);
     startTearAnimation(id, data.cards);
   } catch {
     if (window.showToast) showToast('Erreur serveur', 'error');
@@ -401,6 +405,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('giftcode-input');
   if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeemGiftCode(); });
 });
+
+// === PITY DISPLAY ===
+function updatePityDisplay(pity) {
+  const epicPct = Math.min(100, (pity.epic / pity.epicThreshold) * 100);
+  const legPct = Math.min(100, (pity.legendary / pity.legendaryThreshold) * 100);
+
+  const epicBar = document.getElementById('pity-epic-bar');
+  const legBar = document.getElementById('pity-leg-bar');
+  const epicCount = document.getElementById('pity-epic-count');
+  const legCount = document.getElementById('pity-leg-count');
+
+  if (epicBar) epicBar.style.width = epicPct + '%';
+  if (legBar) legBar.style.width = legPct + '%';
+  if (epicCount) epicCount.textContent = pity.epic + '/' + pity.epicThreshold;
+  if (legCount) legCount.textContent = pity.legendary + '/' + pity.legendaryThreshold;
+
+  // Glow quand proche du seuil
+  if (epicBar && epicPct >= 80) epicBar.classList.add('pity-bar-near');
+  else if (epicBar) epicBar.classList.remove('pity-bar-near');
+  if (legBar && legPct >= 80) legBar.classList.add('pity-bar-near');
+  else if (legBar) legBar.classList.remove('pity-bar-near');
+}
 
 // === LOAD ===
 loadCredits();
