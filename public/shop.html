@@ -40,55 +40,36 @@
   <!-- ===== SHOP CONTENT ===== -->
   <div class="shop-v2-content" id="shop-view">
 
-    <!-- SECTION BOOSTERS -->
-    <section class="shop-v2-boosters-section">
-      <h2 class="shop-v2-section-title">BOOSTERS</h2>
+    <!-- BOOSTER GRATUIT + BOOSTERS ACHETABLES -->
+    <section class="shop-v2-top-row">
+      <!-- Booster gratuit quotidien -->
+      <div class="shop-v2-free-card" id="free-booster" onclick="claimFreeBooster()">
+        <div class="shop-v2-free-badge">GRATUIT</div>
+        <div class="shop-v2-free-visual">🎁</div>
+        <div class="shop-v2-free-label">BOOSTER DU JOUR</div>
+        <div class="shop-v2-free-sub">3 cartes gratuites</div>
+        <button class="shop-v2-free-btn" id="free-btn">OUVRIR</button>
+      </div>
+
+      <!-- Boosters achetables -->
       <div class="shop-v2-boosters" id="boosters-shelf">
         <!-- Filled by JS -->
       </div>
     </section>
 
-    <!-- BOOSTER GRATUIT QUOTIDIEN -->
-    <section class="shop-v2-free-section">
-      <div class="shop-v2-free-booster" id="free-booster" onclick="claimFreeBooster()">
-        <div class="shop-v2-free-img">&#127873;</div>
-        <div class="shop-v2-free-info">
-          <h3 class="shop-v2-free-title">BOOSTER GRATUIT</h3>
-          <p class="shop-v2-free-desc">3 cartes gratuites chaque jour !</p>
-        </div>
-        <button class="shop-v2-free-btn" id="free-btn">OUVRIR</button>
-      </div>
-    </section>
-
-    <!-- BOUTIQUE DU JOUR -->
+    <!-- BOUTIQUE DU JOUR — 3 cartes aléatoires -->
     <section class="shop-v2-daily-section">
       <div class="shop-v2-daily-header">
-        <h2 class="shop-v2-section-title">&#128302; BOUTIQUE DU JOUR</h2>
+        <h2 class="shop-v2-section-title">🔮 CARTES DU JOUR</h2>
         <span class="shop-v2-daily-timer" id="daily-shop-timer">??:??:??</span>
       </div>
+      <p class="shop-v2-daily-desc">3 cartes exclusives renouvelées chaque jour</p>
       <div class="shop-v2-daily-cards" id="daily-shop-cards"></div>
-    </section>
-
-    <!-- BOUTIQUE DE CARTES -->
-    <section class="shop-v2-cards-section">
-      <h2 class="shop-v2-section-title">TOUTES LES CARTES</h2>
-      <div class="shop-v2-cards-filters">
-        <button class="shop-v2-filter-btn shop-v2-filter--active" data-filter="all" onclick="filterShopCards('all')">TOUT</button>
-        <button class="shop-v2-filter-btn" data-filter="commune" onclick="filterShopCards('commune')">COMMUNE</button>
-        <button class="shop-v2-filter-btn" data-filter="rare" onclick="filterShopCards('rare')">RARE</button>
-        <button class="shop-v2-filter-btn" data-filter="epique" onclick="filterShopCards('epique')">EPIQUE</button>
-        <button class="shop-v2-filter-btn" data-filter="legendaire" onclick="filterShopCards('legendaire')">LEGENDAIRE</button>
-      </div>
-      <div class="shop-v2-cards-scroll">
-        <div class="shop-v2-cards-list" id="shop-cards-list">
-          <!-- Filled by JS -->
-        </div>
-      </div>
     </section>
 
     <!-- CODE CADEAU -->
     <section class="shop-v2-giftcode">
-      <div class="shop-giftcode-icon">&#127915;</div>
+      <div class="shop-giftcode-icon">🎫</div>
       <div class="shop-giftcode-form">
         <h3 class="shop-giftcode-title">CODE CADEAU</h3>
         <div class="shop-giftcode-input-row">

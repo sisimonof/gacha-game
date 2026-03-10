@@ -7300,36 +7300,6 @@ app.post('/api/shop/buy-card', requireAuth, (req, res) => {
   res.json({ success: true, card: validCard, credits: newCredits });
 });
 
-// --- CARD SHOP (all buyable cards) ---
-const CARD_SHOP_PRICES = { commune: 80, rare: 250, epique: 600, legendaire: 1500 };
-
-app.get('/api/shop/all-cards', requireAuth, (req, res) => {
-  const cards = db.prepare("SELECT * FROM cards WHERE rarity IN ('commune','rare','epique','legendaire') ORDER BY rarity, name").all();
-  const priced = cards.map(c => ({ ...c, shopPrice: CARD_SHOP_PRICES[c.rarity] || 300 }));
-  res.json({ cards: priced });
-});
-
-app.post('/api/shop/buy-single-card', requireAuth, (req, res) => {
-  const { cardId } = req.body;
-  const userId = req.session.userId;
-  const card = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
-  if (!card) return res.status(404).json({ error: 'Carte introuvable' });
-
-  const price = CARD_SHOP_PRICES[card.rarity];
-  if (!price) return res.status(400).json({ error: 'Carte non achetable' });
-
-  const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId);
-  if (user.credits < price) return res.status(400).json({ error: 'Pas assez de credits !' });
-
-  db.prepare('UPDATE users SET credits = credits - ?, stat_credits_spent = stat_credits_spent + ? WHERE id = ?').run(price, price, userId);
-  db.prepare('INSERT INTO user_cards (user_id, card_id) VALUES (?, ?)').run(userId, cardId);
-  updateQuestProgress(userId, 'credits_spent', price);
-  checkAchievements(userId);
-
-  const newCredits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
-  res.json({ success: true, card, credits: newCredits });
-});
-
 // --- FREE DAILY BOOSTER ---
 app.post('/api/daily-booster', requireAuth, (req, res) => {
   const userId = req.session.userId;
