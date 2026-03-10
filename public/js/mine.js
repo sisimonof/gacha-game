@@ -453,8 +453,8 @@ function renderCraftTab() {
     card.className = 'mine-upgrade-card';
 
     let costsHtml = '';
-    if (recipe.costs) {
-      for (const [res, amount] of Object.entries(recipe.costs)) {
+    if (recipe.cost) {
+      for (const [res, amount] of Object.entries(recipe.cost)) {
         let owned;
         if (res === 'essence') {
           owned = essence;
