@@ -37,49 +37,56 @@
     </div>
   </nav>
 
-  <!-- ===== SHOP CONTENT ===== -->
-  <div class="shop-v2-content" id="shop-view">
+  <!-- ===== SHOP CONTENT — single horizontal scroll ===== -->
+  <div class="shop-scroll-wrapper" id="shop-view">
+    <div class="shop-scroll-track">
 
-    <!-- BOOSTER GRATUIT + BOOSTERS ACHETABLES -->
-    <section class="shop-v2-top-row">
-      <!-- Booster gratuit quotidien -->
-      <div class="shop-v2-free-card" id="free-booster" onclick="claimFreeBooster()">
-        <div class="shop-v2-free-badge">GRATUIT</div>
-        <div class="shop-v2-free-visual">🎁</div>
-        <div class="shop-v2-free-label">BOOSTER DU JOUR</div>
-        <div class="shop-v2-free-sub">3 cartes gratuites</div>
-        <button class="shop-v2-free-btn" id="free-btn">OUVRIR</button>
+      <!-- Booster gratuit -->
+      <div class="shop-item shop-item--free" id="free-booster" onclick="claimFreeBooster()">
+        <div class="shop-item-badge shop-item-badge--free">GRATUIT</div>
+        <div class="shop-item-visual">🎁</div>
+        <div class="shop-item-name">DAILY</div>
+        <div class="shop-item-sub">3 cartes</div>
+        <button class="shop-item-btn shop-item-btn--free" id="free-btn">OUVRIR</button>
       </div>
 
-      <!-- Boosters achetables -->
-      <div class="shop-v2-boosters" id="boosters-shelf">
-        <!-- Filled by JS -->
-      </div>
-    </section>
+      <!-- Boosters (filled by JS) -->
+      <div class="shop-boosters-inline" id="boosters-shelf"></div>
 
-    <!-- BOUTIQUE DU JOUR — 3 cartes aléatoires -->
-    <section class="shop-v2-daily-section">
-      <div class="shop-v2-daily-header">
-        <h2 class="shop-v2-section-title">🔮 CARTES DU JOUR</h2>
-        <span class="shop-v2-daily-timer" id="daily-shop-timer">??:??:??</span>
+      <!-- Séparateur visuel -->
+      <div class="shop-separator">
+        <div class="shop-sep-line"></div>
+        <div class="shop-sep-label">CARTES DU JOUR</div>
+        <div class="shop-sep-timer" id="daily-shop-timer">??:??:??</div>
+        <div class="shop-sep-line"></div>
       </div>
-      <p class="shop-v2-daily-desc">3 cartes exclusives renouvelées chaque jour</p>
-      <div class="shop-v2-daily-cards" id="daily-shop-cards"></div>
-    </section>
 
-    <!-- CODE CADEAU -->
-    <section class="shop-v2-giftcode">
-      <div class="shop-giftcode-icon">🎫</div>
-      <div class="shop-giftcode-form">
-        <h3 class="shop-giftcode-title">CODE CADEAU</h3>
-        <div class="shop-giftcode-input-row">
-          <input type="text" id="giftcode-input" class="shop-giftcode-input" placeholder="GACHA-XXXX-XXXX" maxlength="30" autocomplete="off" spellcheck="false">
-          <button class="shop-giftcode-btn" id="giftcode-btn" onclick="redeemGiftCode()">UTILISER</button>
-        </div>
-        <p class="shop-giftcode-msg hidden" id="giftcode-msg"></p>
+      <!-- 3 cartes du jour (filled by JS) -->
+      <div class="shop-daily-inline" id="daily-shop-cards"></div>
+
+      <!-- Bouton code cadeau -->
+      <div class="shop-item shop-item--giftcode" onclick="openGiftCodeModal()">
+        <div class="shop-item-visual">🎫</div>
+        <div class="shop-item-name">CODE</div>
+        <div class="shop-item-sub">Cadeau</div>
+        <button class="shop-item-btn shop-item-btn--code">ENTRER</button>
       </div>
-    </section>
 
+    </div>
+  </div>
+
+  <!-- Modal code cadeau -->
+  <div class="giftcode-modal-overlay hidden" id="giftcode-modal" onclick="closeGiftCodeModal(event)">
+    <div class="giftcode-modal">
+      <button class="giftcode-modal-close" onclick="closeGiftCodeModal()">&times;</button>
+      <div class="giftcode-modal-icon">🎫</div>
+      <h3 class="giftcode-modal-title">CODE CADEAU</h3>
+      <div class="giftcode-modal-form">
+        <input type="text" id="giftcode-input" class="giftcode-modal-input" placeholder="GACHA-XXXX-XXXX" maxlength="30" autocomplete="off" spellcheck="false">
+        <button class="giftcode-modal-btn" id="giftcode-btn" onclick="redeemGiftCode()">UTILISER</button>
+      </div>
+      <p class="shop-giftcode-msg hidden" id="giftcode-msg"></p>
+    </div>
   </div>
 
   <!-- VUE OUVERTURE -->

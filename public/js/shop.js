@@ -387,6 +387,16 @@ function showGiftMsg(text, success) {
   setTimeout(() => msg.classList.add('hidden'), 4000);
 }
 
+// === GIFT CODE MODAL ===
+function openGiftCodeModal() {
+  document.getElementById('giftcode-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('giftcode-input').focus(), 100);
+}
+function closeGiftCodeModal(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.getElementById('giftcode-modal').classList.add('hidden');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('giftcode-input');
   if (input) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') redeemGiftCode(); });
