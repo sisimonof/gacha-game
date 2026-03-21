@@ -4474,6 +4474,7 @@ function aiDeckTurn(battle) {
 }
 
 // --- Middleware ---
+app.set('trust proxy', 1);
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
@@ -4483,7 +4484,11 @@ const sessionMiddleware = session({
   secret: 'gacha-secret-key-change-me',
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
+  cookie: {
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  }
 });
 app.use(sessionMiddleware);
 
@@ -4495,7 +4500,12 @@ function generateAuthToken(userId, res) {
   db.prepare('DELETE FROM auth_tokens WHERE user_id = ?').run(userId);
   db.prepare('INSERT INTO auth_tokens (user_id, token) VALUES (?, ?)').run(userId, token);
   if (res) {
-    res.cookie(AUTH_COOKIE, token, { maxAge: AUTH_COOKIE_MAX_AGE, httpOnly: true, sameSite: 'lax' });
+    res.cookie(AUTH_COOKIE, token, {
+      maxAge: AUTH_COOKIE_MAX_AGE,
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: process.env.NODE_ENV === 'production'
+    });
   }
   return token;
 }
