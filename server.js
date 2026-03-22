@@ -7633,7 +7633,6 @@ function bjCreateDeck() {
       }
     }
   }
-  // Fisher-Yates shuffle
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -7643,6 +7642,13 @@ function bjCreateDeck() {
 
 function bjCardPoints(card) {
   if (['J', 'Q', 'K'].includes(card.value)) return 10;
+  if (card.value === 'A') return 11;
+  return parseInt(card.value);
+}
+
+function bjCardValue(card) {
+  // For split comparison: 10s and faces are same value
+  if (['J', 'Q', 'K', '10'].includes(card.value)) return 10;
   if (card.value === 'A') return 11;
   return parseInt(card.value);
 }
@@ -7665,10 +7671,29 @@ function bjIsBlackjack(hand) {
   return hand.length === 2 && bjHandScore(hand) === 21;
 }
 
+function bjCanSplit(game) {
+  return game.playerHand.length === 2
+    && !game.splitHand
+    && bjCardValue(game.playerHand[0]) === bjCardValue(game.playerHand[1]);
+}
+
+function bjGetActiveHand(game) {
+  if (game.activeHand === 'split') return game.splitHand;
+  return game.playerHand;
+}
+
+function bjResolveHand(handScore, dealerScore, bet) {
+  if (handScore > 21) return { result: 'bust', winnings: 0 };
+  if (dealerScore > 21) return { result: 'dealer_bust', winnings: bet * 2 };
+  if (handScore > dealerScore) return { result: 'win', winnings: bet * 2 };
+  if (handScore === dealerScore) return { result: 'push', winnings: bet };
+  return { result: 'lose', winnings: 0 };
+}
+
 function bjGameState(game, reveal) {
   const dealerHand = reveal ? game.dealerHand : [game.dealerHand[0], { value: '?', suit: '?' }];
   const dealerScore = reveal ? bjHandScore(game.dealerHand) : bjCardPoints(game.dealerHand[0]);
-  return {
+  const state = {
     playerHand: game.playerHand,
     dealerHand,
     playerScore: bjHandScore(game.playerHand),
@@ -7676,11 +7701,77 @@ function bjGameState(game, reveal) {
     bet: game.bet,
     status: game.status,
     result: game.result || null,
-    winnings: game.winnings || 0
+    winnings: game.winnings || 0,
+    canSplit: game.status === 'playing' && bjCanSplit(game),
+    activeHand: game.activeHand || 'main'
   };
+  // Split data
+  if (game.splitHand) {
+    state.splitHand = game.splitHand;
+    state.splitScore = bjHandScore(game.splitHand);
+    state.splitBet = game.splitBet || game.bet;
+    state.splitResult = game.splitResult || null;
+    state.splitWinnings = game.splitWinnings || 0;
+  }
+  return state;
 }
 
-// DEAL - Start a new hand
+// After a hand busts or stands in split mode, move to next hand or finish
+function bjAdvanceSplit(game, userId) {
+  if (game.activeHand === 'main' && game.splitHand) {
+    // Main hand done, move to split hand
+    game.activeHand = 'split';
+    return false; // not finished yet
+  }
+  // Both hands done (or no split), dealer plays
+  return bjFinishGame(game, userId);
+}
+
+function bjFinishGame(game, userId) {
+  // Dealer draws until 17
+  while (bjHandScore(game.dealerHand) < 17) {
+    game.dealerHand.push(game.deck.pop());
+  }
+  const dealerScore = bjHandScore(game.dealerHand);
+  game.status = 'finished';
+
+  // Resolve main hand
+  const mainScore = bjHandScore(game.playerHand);
+  if (mainScore <= 21) {
+    const main = bjResolveHand(mainScore, dealerScore, game.bet);
+    game.result = main.result;
+    game.winnings = main.winnings;
+  } else {
+    game.result = 'bust';
+    game.winnings = 0;
+  }
+
+  // Resolve split hand if exists
+  if (game.splitHand) {
+    const splitScore = bjHandScore(game.splitHand);
+    if (splitScore <= 21) {
+      const split = bjResolveHand(splitScore, dealerScore, game.splitBet);
+      game.splitResult = split.result;
+      game.splitWinnings = split.winnings;
+    } else {
+      game.splitResult = 'bust';
+      game.splitWinnings = 0;
+    }
+  }
+
+  // Pay out
+  const totalWinnings = (game.winnings || 0) + (game.splitWinnings || 0);
+  if (totalWinnings > 0) {
+    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(totalWinnings, userId);
+    const totalBet = game.bet + (game.splitBet || 0);
+    if (totalWinnings > totalBet) {
+      updateQuestProgress(userId, 'credits_earned', totalWinnings - totalBet);
+    }
+  }
+  return true;
+}
+
+// DEAL
 app.post('/api/casino/blackjack/deal', requireAuth, (req, res) => {
   const userId = req.session.userId;
   const { bet } = req.body;
@@ -7689,8 +7780,6 @@ app.post('/api/casino/blackjack/deal', requireAuth, (req, res) => {
   if (!betAmount || betAmount < BLACKJACK_MIN_BET || betAmount > BLACKJACK_MAX_BET) {
     return res.status(400).json({ error: `Mise entre ${BLACKJACK_MIN_BET} et ${BLACKJACK_MAX_BET} CR` });
   }
-
-  // Check if already in a game
   if (blackjackGames[userId] && blackjackGames[userId].status === 'playing') {
     return res.status(400).json({ error: 'Partie en cours ! Termine-la d\'abord.' });
   }
@@ -7700,18 +7789,20 @@ app.post('/api/casino/blackjack/deal', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Pas assez de credits' });
   }
 
-  // Deduct bet
   db.prepare('UPDATE users SET credits = credits - ?, stat_credits_spent = stat_credits_spent + ? WHERE id = ?').run(betAmount, betAmount, userId);
 
-  // Create deck and deal
   const deck = bjCreateDeck();
   const playerHand = [deck.pop(), deck.pop()];
   const dealerHand = [deck.pop(), deck.pop()];
 
-  const game = { deck, playerHand, dealerHand, bet: betAmount, status: 'playing', result: null, winnings: 0 };
+  const game = {
+    deck, playerHand, dealerHand, bet: betAmount,
+    status: 'playing', result: null, winnings: 0,
+    activeHand: 'main', splitHand: null, splitBet: 0, splitResult: null, splitWinnings: 0
+  };
   blackjackGames[userId] = game;
 
-  // Check natural blackjack
+  // Natural blackjacks
   const playerBJ = bjIsBlackjack(playerHand);
   const dealerBJ = bjIsBlackjack(dealerHand);
 
@@ -7741,7 +7832,7 @@ app.post('/api/casino/blackjack/deal', requireAuth, (req, res) => {
   res.json({ ...bjGameState(game, reveal), credits });
 });
 
-// HIT - Draw a card
+// HIT
 app.post('/api/casino/blackjack/hit', requireAuth, (req, res) => {
   const userId = req.session.userId;
   const game = blackjackGames[userId];
@@ -7749,13 +7840,24 @@ app.post('/api/casino/blackjack/hit', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Aucune partie en cours' });
   }
 
-  game.playerHand.push(game.deck.pop());
-  const score = bjHandScore(game.playerHand);
+  const hand = bjGetActiveHand(game);
+  hand.push(game.deck.pop());
+  const score = bjHandScore(hand);
 
   if (score > 21) {
-    game.status = 'finished';
-    game.result = 'bust';
-    game.winnings = 0;
+    // Hand busted
+    if (game.splitHand) {
+      // In split mode, advance to next hand or finish
+      const finished = bjAdvanceSplit(game, userId);
+      if (!finished) {
+        const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+        return res.json({ ...bjGameState(game, false), credits });
+      }
+    } else {
+      game.status = 'finished';
+      game.result = 'bust';
+      game.winnings = 0;
+    }
   }
 
   const reveal = game.status === 'finished';
@@ -7763,7 +7865,7 @@ app.post('/api/casino/blackjack/hit', requireAuth, (req, res) => {
   res.json({ ...bjGameState(game, reveal), credits });
 });
 
-// STAND - Dealer plays
+// STAND
 app.post('/api/casino/blackjack/stand', requireAuth, (req, res) => {
   const userId = req.session.userId;
   const game = blackjackGames[userId];
@@ -7771,105 +7873,96 @@ app.post('/api/casino/blackjack/stand', requireAuth, (req, res) => {
     return res.status(400).json({ error: 'Aucune partie en cours' });
   }
 
-  // Dealer draws until 17
-  while (bjHandScore(game.dealerHand) < 17) {
-    game.dealerHand.push(game.deck.pop());
-  }
-
-  const playerScore = bjHandScore(game.playerHand);
-  const dealerScore = bjHandScore(game.dealerHand);
-
-  game.status = 'finished';
-
-  if (dealerScore > 21) {
-    game.result = 'dealer_bust';
-    game.winnings = game.bet * 2;
-  } else if (playerScore > dealerScore) {
-    game.result = 'win';
-    game.winnings = game.bet * 2;
-  } else if (playerScore === dealerScore) {
-    game.result = 'push';
-    game.winnings = game.bet;
-  } else {
-    game.result = 'lose';
-    game.winnings = 0;
-  }
-
-  if (game.winnings > 0) {
-    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(game.winnings, userId);
-    if (game.winnings > game.bet) {
-      updateQuestProgress(userId, 'credits_earned', game.winnings - game.bet);
+  if (game.splitHand) {
+    const finished = bjAdvanceSplit(game, userId);
+    if (!finished) {
+      const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+      return res.json({ ...bjGameState(game, false), credits });
     }
+  } else {
+    bjFinishGame(game, userId);
   }
 
   const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
   res.json({ ...bjGameState(game, true), credits });
 });
 
-// DOUBLE - Double bet, draw one card, auto stand
+// DOUBLE
 app.post('/api/casino/blackjack/double', requireAuth, (req, res) => {
   const userId = req.session.userId;
   const game = blackjackGames[userId];
   if (!game || game.status !== 'playing') {
     return res.status(400).json({ error: 'Aucune partie en cours' });
   }
-  if (game.playerHand.length !== 2) {
+
+  const hand = bjGetActiveHand(game);
+  if (hand.length !== 2) {
     return res.status(400).json({ error: 'Double uniquement sur les 2 premieres cartes' });
+  }
+
+  const currentBet = game.activeHand === 'split' ? game.splitBet : game.bet;
+  const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId);
+  if (user.credits < currentBet) {
+    return res.status(400).json({ error: 'Pas assez de credits pour doubler' });
+  }
+
+  db.prepare('UPDATE users SET credits = credits - ?, stat_credits_spent = stat_credits_spent + ? WHERE id = ?').run(currentBet, currentBet, userId);
+
+  if (game.activeHand === 'split') {
+    game.splitBet *= 2;
+  } else {
+    game.bet *= 2;
+  }
+
+  // Draw one card
+  hand.push(game.deck.pop());
+
+  // Auto-stand after double
+  if (game.splitHand) {
+    const finished = bjAdvanceSplit(game, userId);
+    if (!finished) {
+      const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+      return res.json({ ...bjGameState(game, false), credits });
+    }
+  } else {
+    bjFinishGame(game, userId);
+  }
+
+  const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ ...bjGameState(game, true), credits });
+});
+
+// SPLIT
+app.post('/api/casino/blackjack/split', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const game = blackjackGames[userId];
+  if (!game || game.status !== 'playing') {
+    return res.status(400).json({ error: 'Aucune partie en cours' });
+  }
+  if (!bjCanSplit(game)) {
+    return res.status(400).json({ error: 'Split impossible' });
   }
 
   const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId);
   if (user.credits < game.bet) {
-    return res.status(400).json({ error: 'Pas assez de credits pour doubler' });
+    return res.status(400).json({ error: 'Pas assez de credits pour split' });
   }
 
-  // Deduct extra bet
+  // Deduct split bet
   db.prepare('UPDATE users SET credits = credits - ?, stat_credits_spent = stat_credits_spent + ? WHERE id = ?').run(game.bet, game.bet, userId);
-  game.bet *= 2;
 
-  // Draw one card
+  // Split the hand
+  const secondCard = game.playerHand.pop();
+  game.splitHand = [secondCard];
+  game.splitBet = game.bet;
+  game.activeHand = 'main';
+
+  // Deal one new card to each hand
   game.playerHand.push(game.deck.pop());
-  const playerScore = bjHandScore(game.playerHand);
+  game.splitHand.push(game.deck.pop());
 
-  if (playerScore > 21) {
-    game.status = 'finished';
-    game.result = 'bust';
-    game.winnings = 0;
-    const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
-    return res.json({ ...bjGameState(game, true), credits });
-  }
-
-  // Auto stand - dealer plays
-  while (bjHandScore(game.dealerHand) < 17) {
-    game.dealerHand.push(game.deck.pop());
-  }
-
-  const dealerScore = bjHandScore(game.dealerHand);
-  game.status = 'finished';
-
-  if (dealerScore > 21) {
-    game.result = 'dealer_bust';
-    game.winnings = game.bet * 2;
-  } else if (playerScore > dealerScore) {
-    game.result = 'win';
-    game.winnings = game.bet * 2;
-  } else if (playerScore === dealerScore) {
-    game.result = 'push';
-    game.winnings = game.bet;
-  } else {
-    game.result = 'lose';
-    game.winnings = 0;
-  }
-
-  if (game.winnings > 0) {
-    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(game.winnings, userId);
-    if (game.winnings > game.bet) {
-      updateQuestProgress(userId, 'credits_earned', game.winnings - game.bet);
-    }
-  }
-
-  updateQuestProgress(userId, 'credits_spent', game.bet / 2);
   const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
-  res.json({ ...bjGameState(game, true), credits });
+  res.json({ ...bjGameState(game, false), credits });
 });
 
 // ============================================

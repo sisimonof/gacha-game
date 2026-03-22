@@ -108,10 +108,16 @@
         <!-- VS separator -->
         <div class="bj-vs">VS</div>
 
-        <!-- Player -->
-        <div class="bj-section">
+        <!-- Player Main Hand -->
+        <div class="bj-section bj-section-player">
           <div class="bj-label">TOI <span class="bj-score" id="bj-player-score">0</span></div>
           <div class="bj-hand" id="bj-player-cards"></div>
+        </div>
+
+        <!-- Player Split Hand -->
+        <div class="bj-section bj-split-section hidden" id="bj-split-section">
+          <div class="bj-label">SPLIT <span class="bj-score" id="bj-split-score">0</span></div>
+          <div class="bj-hand" id="bj-split-cards"></div>
         </div>
 
         <!-- Current bet display -->
@@ -139,6 +145,7 @@
           <button class="bj-action-btn bj-hit-btn" onclick="bjHit()">HIT</button>
           <button class="bj-action-btn bj-stand-btn" onclick="bjStand()">STAND</button>
           <button class="bj-action-btn bj-double-btn" id="bj-double-btn" onclick="bjDouble()">DOUBLE</button>
+          <button class="bj-action-btn bj-split-btn hidden bj-btn-disabled" id="bj-split-btn" onclick="bjSplit()">SPLIT</button>
         </div>
 
         <!-- Result -->

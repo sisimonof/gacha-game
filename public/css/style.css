@@ -9553,6 +9553,28 @@ body.casino-page {
   color: #aaa;
 }
 
+.bj-hand-active {
+  border: 2px solid #ffcc00;
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 0 15px rgba(255,204,0,0.3);
+  animation: bjHandPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes bjHandPulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,204,0,0.2); }
+  50% { box-shadow: 0 0 20px rgba(255,204,0,0.5); }
+}
+
+.bj-split-section { margin-top: 10px; }
+
+.bj-split-btn {
+  background: linear-gradient(180deg, #aa44ff, #7722cc);
+  border-color: #cc66ff;
+  color: #fff;
+  box-shadow: 0 0 15px rgba(170,68,255,0.4);
+}
+
 @media (max-width: 600px) {
   .bj-table { padding: 15px 10px; }
   .bj-card { width: 50px; height: 75px; }
