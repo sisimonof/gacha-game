@@ -1293,7 +1293,7 @@ const ACHIEVEMENTS = [
 // ============================================
 // CASINO
 // ============================================
-const CASINO_COST = 200;
+const CASINO_COST = 85;
 
 // --- PROFILE FRAMES ---
 const PROFILE_FRAMES = {
@@ -7547,7 +7547,7 @@ app.get('/api/casino/info', requireAuth, (req, res) => {
 app.post('/api/casino/spin', requireAuth, (req, res) => {
   const userId = req.session.userId;
   const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId);
-  if (user.credits < CASINO_COST) return res.status(400).json({ error: 'Pas assez de credits (200 CR)' });
+  if (user.credits < CASINO_COST) return res.status(400).json({ error: 'Pas assez de credits (85 CR)' });
 
   // Deduct cost + feed jackpot
   db.prepare('UPDATE users SET credits = credits - ?, stat_credits_spent = stat_credits_spent + ?, stat_casino_spins = stat_casino_spins + 1 WHERE id = ?')
