@@ -6640,6 +6640,8 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
 
   try {
     const resetTx = db.transaction(() => {
+      // Supprimer market_listings d'abord (reference user_cards via FK)
+      db.prepare('DELETE FROM market_listings WHERE seller_id = ? OR buyer_id = ?').run(userId, userId);
       // Supprimer deck_cards d'abord (reference user_cards et decks)
       const deckIds = db.prepare('SELECT id FROM decks WHERE user_id = ?').all(userId).map(d => d.id);
       for (const dId of deckIds) {
@@ -6654,8 +6656,11 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
       db.prepare('DELETE FROM battle_pass WHERE user_id = ?').run(userId);
       db.prepare('DELETE FROM user_quests WHERE user_id = ?').run(userId);
       db.prepare('DELETE FROM user_achievements WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM user_items WHERE user_id = ?').run(userId);
       db.prepare('DELETE FROM friendships WHERE user_id = ? OR friend_id = ?').run(userId, userId);
       db.prepare('DELETE FROM chat_messages WHERE sender_id = ? OR receiver_id = ?').run(userId, userId);
+      db.prepare('DELETE FROM auth_tokens WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM gift_code_uses WHERE user_id = ?').run(userId);
       // Guild cleanup
       db.prepare('DELETE FROM guild_chat WHERE user_id = ?').run(userId);
       db.prepare('DELETE FROM guild_members WHERE user_id = ?').run(userId);
