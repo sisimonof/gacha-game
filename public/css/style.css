@@ -9575,6 +9575,62 @@ body.casino-page {
   box-shadow: 0 0 15px rgba(170,68,255,0.4);
 }
 
+.bj-insurance-prompt {
+  text-align: center;
+  margin-top: 15px;
+  padding: 15px;
+  background: rgba(0,100,200,0.15);
+  border: 2px solid #4488cc;
+  border-radius: 12px;
+  animation: result-pop 0.4s ease;
+}
+
+.bj-insurance-text {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #88ccff;
+  margin-bottom: 8px;
+}
+
+.bj-insurance-cost {
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  color: #aaa;
+  margin-bottom: 12px;
+}
+
+.bj-insurance-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.bj-insurance-yes {
+  background: linear-gradient(180deg, #4488cc, #226699) !important;
+  border-color: #66aadd !important;
+  color: #fff !important;
+  box-shadow: 0 0 15px rgba(68,136,204,0.4) !important;
+}
+
+.bj-insurance-no {
+  background: linear-gradient(180deg, #666, #444) !important;
+  border-color: #888 !important;
+  color: #ccc !important;
+}
+
+.bj-insurance-banner {
+  text-align: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  padding: 6px 12px;
+  margin-top: 8px;
+  border-radius: 8px;
+  background: rgba(68,136,204,0.15);
+  border: 1px solid #4488cc;
+  color: #88ccff;
+  animation: result-pop 0.3s ease;
+}
+
 @media (max-width: 600px) {
   .bj-table { padding: 15px 10px; }
   .bj-card { width: 50px; height: 75px; }

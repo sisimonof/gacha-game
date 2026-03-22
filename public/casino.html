@@ -140,6 +140,16 @@
           </div>
         </div>
 
+        <!-- Insurance prompt (shown when dealer shows Ace) -->
+        <div class="bj-insurance-prompt hidden" id="bj-insurance-prompt">
+          <div class="bj-insurance-text">Le dealer montre un As. Assurance ?</div>
+          <div class="bj-insurance-cost" id="bj-insurance-cost"></div>
+          <div class="bj-insurance-buttons">
+            <button class="bj-action-btn bj-insurance-yes" onclick="bjInsurance()">🛡️ ASSURANCE</button>
+            <button class="bj-action-btn bj-insurance-no" onclick="bjNoInsurance()">NON MERCI</button>
+          </div>
+        </div>
+
         <!-- Game controls (shown during play) -->
         <div class="bj-controls hidden" id="bj-game-controls">
           <button class="bj-action-btn bj-hit-btn" onclick="bjHit()">HIT</button>
@@ -147,6 +157,9 @@
           <button class="bj-action-btn bj-double-btn" id="bj-double-btn" onclick="bjDouble()">DOUBLE</button>
           <button class="bj-action-btn bj-split-btn hidden bj-btn-disabled" id="bj-split-btn" onclick="bjSplit()">SPLIT</button>
         </div>
+
+        <!-- Insurance banner -->
+        <div class="bj-insurance-banner hidden" id="bj-insurance-banner"></div>
 
         <!-- Result -->
         <div class="bj-result hidden" id="bj-result">

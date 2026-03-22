@@ -7677,6 +7677,14 @@ function bjCanSplit(game) {
     && bjCardValue(game.playerHand[0]) === bjCardValue(game.playerHand[1]);
 }
 
+function bjCanInsure(game) {
+  // Insurance available when dealer shows Ace, player hasn't acted yet, and no insurance taken
+  return game.playerHand.length === 2
+    && game.dealerHand[0].value === 'A'
+    && !game.insuranceBet
+    && game.status === 'playing';
+}
+
 function bjGetActiveHand(game) {
   if (game.activeHand === 'split') return game.splitHand;
   return game.playerHand;
@@ -7703,6 +7711,9 @@ function bjGameState(game, reveal) {
     result: game.result || null,
     winnings: game.winnings || 0,
     canSplit: game.status === 'playing' && bjCanSplit(game),
+    canInsure: bjCanInsure(game),
+    insuranceBet: game.insuranceBet || 0,
+    insuranceResult: game.insuranceResult || null,
     activeHand: game.activeHand || 'main'
   };
   // Split data
@@ -7798,7 +7809,8 @@ app.post('/api/casino/blackjack/deal', requireAuth, (req, res) => {
   const game = {
     deck, playerHand, dealerHand, bet: betAmount,
     status: 'playing', result: null, winnings: 0,
-    activeHand: 'main', splitHand: null, splitBet: 0, splitResult: null, splitWinnings: 0
+    activeHand: 'main', splitHand: null, splitBet: 0, splitResult: null, splitWinnings: 0,
+    insuranceBet: 0, insuranceResult: null
   };
   blackjackGames[userId] = game;
 
@@ -7816,11 +7828,13 @@ app.post('/api/casino/blackjack/deal', requireAuth, (req, res) => {
     game.result = 'blackjack';
     game.winnings = Math.floor(betAmount * 2.5);
     db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(game.winnings, userId);
-  } else if (dealerBJ) {
+  } else if (dealerBJ && dealerHand[0].value !== 'A') {
+    // Dealer BJ without Ace showing — instant loss (no insurance possible)
     game.status = 'finished';
     game.result = 'dealer_blackjack';
     game.winnings = 0;
   }
+  // If dealer shows Ace + has BJ, we wait for insurance decision before revealing
 
   const reveal = game.status === 'finished';
   const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
@@ -7960,6 +7974,75 @@ app.post('/api/casino/blackjack/split', requireAuth, (req, res) => {
   // Deal one new card to each hand
   game.playerHand.push(game.deck.pop());
   game.splitHand.push(game.deck.pop());
+
+  const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ ...bjGameState(game, false), credits });
+});
+
+// INSURANCE
+app.post('/api/casino/blackjack/insurance', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const game = blackjackGames[userId];
+  if (!game || game.status !== 'playing') {
+    return res.status(400).json({ error: 'Aucune partie en cours' });
+  }
+  if (!bjCanInsure(game)) {
+    return res.status(400).json({ error: 'Assurance impossible' });
+  }
+
+  const insuranceCost = Math.floor(game.bet / 2);
+  const user = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId);
+  if (user.credits < insuranceCost) {
+    return res.status(400).json({ error: 'Pas assez de credits pour l\'assurance' });
+  }
+
+  // Deduct insurance bet
+  db.prepare('UPDATE users SET credits = credits - ?, stat_credits_spent = stat_credits_spent + ? WHERE id = ?').run(insuranceCost, insuranceCost, userId);
+  game.insuranceBet = insuranceCost;
+
+  // Check if dealer has blackjack
+  const dealerBJ = bjIsBlackjack(game.dealerHand);
+  if (dealerBJ) {
+    // Insurance wins — pays 2:1 (get back insurance × 3)
+    const insurancePayout = insuranceCost * 3;
+    game.insuranceResult = 'won';
+    db.prepare('UPDATE users SET credits = credits + ? WHERE id = ?').run(insurancePayout, userId);
+
+    // Game ends — dealer blackjack
+    game.status = 'finished';
+    game.result = 'dealer_blackjack';
+    game.winnings = 0;
+
+    const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+    return res.json({ ...bjGameState(game, true), credits });
+  }
+
+  // Insurance lost — dealer doesn't have BJ, game continues
+  game.insuranceResult = 'lost';
+  const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+  res.json({ ...bjGameState(game, false), credits });
+});
+
+// NO INSURANCE — decline insurance when dealer shows Ace
+app.post('/api/casino/blackjack/no-insurance', requireAuth, (req, res) => {
+  const userId = req.session.userId;
+  const game = blackjackGames[userId];
+  if (!game || game.status !== 'playing') {
+    return res.status(400).json({ error: 'Aucune partie en cours' });
+  }
+
+  // Mark insurance as declined
+  game.insuranceBet = -1; // sentinel: declined
+
+  // Check if dealer has blackjack anyway
+  const dealerBJ = bjIsBlackjack(game.dealerHand);
+  if (dealerBJ) {
+    game.status = 'finished';
+    game.result = 'dealer_blackjack';
+    game.winnings = 0;
+    const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
+    return res.json({ ...bjGameState(game, true), credits });
+  }
 
   const credits = db.prepare('SELECT credits FROM users WHERE id = ?').get(userId).credits;
   res.json({ ...bjGameState(game, false), credits });

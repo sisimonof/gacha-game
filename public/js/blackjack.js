@@ -66,6 +66,27 @@ function updateUI() {
   document.getElementById('bj-player-score').textContent = bjState.playerScore;
   document.getElementById('bj-current-bet').textContent = bjState.bet;
 
+  // Insurance prompt
+  const insurancePrompt = document.getElementById('bj-insurance-prompt');
+  if (bjState.canInsure && bjState.status === 'playing') {
+    insurancePrompt.classList.remove('hidden');
+    controls.classList.add('hidden');
+    betControls.classList.add('hidden');
+    resultEl.classList.add('hidden');
+    document.getElementById('bj-insurance-cost').textContent = `Cout: ${Math.floor(bjState.bet / 2)} CR (paie 2:1 si dealer BJ)`;
+    return; // Don't show game controls yet
+  }
+  insurancePrompt.classList.add('hidden');
+
+  // Show insurance result toast
+  if (bjState.insuranceResult === 'won') {
+    const insBanner = document.getElementById('bj-insurance-banner');
+    if (insBanner) { insBanner.textContent = '🛡️ Assurance gagnee !'; insBanner.classList.remove('hidden'); }
+  } else if (bjState.insuranceResult === 'lost') {
+    const insBanner = document.getElementById('bj-insurance-banner');
+    if (insBanner) { insBanner.textContent = '❌ Assurance perdue'; insBanner.classList.remove('hidden'); }
+  }
+
   if (bjState.status === 'playing') {
     controls.classList.remove('hidden');
     betControls.classList.add('hidden');
@@ -208,6 +229,26 @@ async function bjStand() {
 async function bjDouble() {
   try {
     const res = await fetch('/api/casino/blackjack/double', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error); return; }
+    bjState = data;
+    updateUI();
+  } catch { alert('Erreur serveur'); }
+}
+
+async function bjInsurance() {
+  try {
+    const res = await fetch('/api/casino/blackjack/insurance', { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok) { alert(data.error); return; }
+    bjState = data;
+    updateUI();
+  } catch { alert('Erreur serveur'); }
+}
+
+async function bjNoInsurance() {
+  try {
+    const res = await fetch('/api/casino/blackjack/no-insurance', { method: 'POST' });
     const data = await res.json();
     if (!res.ok) { alert(data.error); return; }
     bjState = data;
