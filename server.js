@@ -4487,7 +4487,7 @@ const sessionMiddleware = session({
   cookie: {
     maxAge: 7 * 24 * 60 * 60 * 1000,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    sameSite: 'lax'
   }
 });
 app.use(sessionMiddleware);
@@ -4503,7 +4503,7 @@ function generateAuthToken(userId, res) {
     res.cookie(AUTH_COOKIE, token, {
       maxAge: AUTH_COOKIE_MAX_AGE,
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production'
     });
   }
@@ -6638,27 +6638,35 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
   const user = db.prepare('SELECT id, username FROM users WHERE id = ?').get(userId);
   if (!user) return res.status(404).json({ error: 'Utilisateur introuvable' });
 
-  const resetTx = db.transaction(() => {
-    // Supprimer deck_cards d'abord (reference user_cards et decks)
-    const deckIds = db.prepare('SELECT id FROM decks WHERE user_id = ?').all(userId).map(d => d.id);
-    for (const dId of deckIds) {
-      db.prepare('DELETE FROM deck_cards WHERE deck_id = ?').run(dId);
-    }
-    db.prepare('DELETE FROM decks WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM user_cards WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM battle_log WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM mine_state WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM mine_upgrades WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM battle_pass WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM user_quests WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM user_achievements WHERE user_id = ?').run(userId);
-    db.prepare('DELETE FROM friendships WHERE user_id = ? OR friend_id = ?').run(userId, userId);
-    db.prepare('DELETE FROM chat_messages WHERE sender_id = ? OR receiver_id = ?').run(userId, userId);
-    db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0, unlocked_avatars = \'["⚔"]\', username_effect = \'\', avatar = \'⚔\', login_streak = 0, last_streak_date = \'\', stat_boosters_opened = 0, stat_pvp_wins = 0, stat_pvp_losses = 0, stat_diamonds_mined = 0, stat_fusions = 0, stat_fusion_success = 0, stat_fusion_fail = 0, stat_casino_spins = 0, stat_casino_won = 0, stat_credits_spent = 0, stat_total_earned = 0, stat_boosters_origines = 0, stat_boosters_rift = 0, stat_boosters_avance = 0 WHERE id = ?').run(userId);
-  });
-  resetTx();
-  res.json({ success: true, username: user.username });
+  try {
+    const resetTx = db.transaction(() => {
+      // Supprimer deck_cards d'abord (reference user_cards et decks)
+      const deckIds = db.prepare('SELECT id FROM decks WHERE user_id = ?').all(userId).map(d => d.id);
+      for (const dId of deckIds) {
+        db.prepare('DELETE FROM deck_cards WHERE deck_id = ?').run(dId);
+      }
+      db.prepare('DELETE FROM decks WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM user_cards WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM battle_log WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM mine_state WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM mine_inventory WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM mine_upgrades WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM battle_pass WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM user_quests WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM user_achievements WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM friendships WHERE user_id = ? OR friend_id = ?').run(userId, userId);
+      db.prepare('DELETE FROM chat_messages WHERE sender_id = ? OR receiver_id = ?').run(userId, userId);
+      // Guild cleanup
+      db.prepare('DELETE FROM guild_chat WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM guild_members WHERE user_id = ?').run(userId);
+      db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0, unlocked_avatars = \'["⚔"]\', username_effect = \'\', avatar = \'⚔\', login_streak = 0, last_streak_date = \'\', guild_id = NULL, stat_boosters_opened = 0, stat_pvp_wins = 0, stat_pvp_losses = 0, stat_diamonds_mined = 0, stat_fusions = 0, stat_fusion_success = 0, stat_fusion_fail = 0, stat_casino_spins = 0, stat_casino_won = 0, stat_credits_spent = 0, stat_total_earned = 0, stat_boosters_origines = 0, stat_boosters_rift = 0, stat_boosters_avance = 0 WHERE id = ?').run(userId);
+    });
+    resetTx();
+    res.json({ success: true, username: user.username });
+  } catch (err) {
+    console.error('Reset user error:', err);
+    res.status(500).json({ error: 'Erreur lors du reset: ' + err.message });
+  }
 });
 
 // Set user credits to exact amount
