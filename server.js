@@ -6662,7 +6662,7 @@ app.post('/api/admin/reset-user', requireAdmin, (req, res) => {
       db.prepare('DELETE FROM auth_tokens WHERE user_id = ?').run(userId);
       db.prepare('DELETE FROM gift_code_uses WHERE user_id = ?').run(userId);
       // Guild cleanup
-      db.prepare('DELETE FROM guild_chat WHERE user_id = ?').run(userId);
+      db.prepare('DELETE FROM guild_chat WHERE sender_id = ?').run(userId);
       db.prepare('DELETE FROM guild_members WHERE user_id = ?').run(userId);
       db.prepare('UPDATE users SET credits = 1000, excavation_essence = 0, unlocked_avatars = \'["⚔"]\', username_effect = \'\', avatar = \'⚔\', login_streak = 0, last_streak_date = \'\', guild_id = NULL, stat_boosters_opened = 0, stat_pvp_wins = 0, stat_pvp_losses = 0, stat_diamonds_mined = 0, stat_fusions = 0, stat_fusion_success = 0, stat_fusion_fail = 0, stat_casino_spins = 0, stat_casino_won = 0, stat_credits_spent = 0, stat_total_earned = 0, stat_boosters_origines = 0, stat_boosters_rift = 0, stat_boosters_avance = 0 WHERE id = ?').run(userId);
     });
