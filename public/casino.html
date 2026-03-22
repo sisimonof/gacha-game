@@ -48,42 +48,112 @@
   <div class="casino-container">
     <h1 class="casino-title">CASINO</h1>
 
-    <div class="casino-main">
-      <!-- Wheel area -->
-      <div class="casino-wheel-area">
-        <div class="casino-pointer">&#9660;</div>
-        <div class="casino-wheel-wrap" id="casino-wheel-wrap">
-          <canvas id="casino-wheel" width="400" height="400"></canvas>
+    <!-- TABS -->
+    <div class="casino-tabs">
+      <button class="casino-tab active" data-tab="roulette" onclick="switchCasinoTab('roulette')">🎰 ROULETTE</button>
+      <button class="casino-tab" data-tab="blackjack" onclick="switchCasinoTab('blackjack')">🃏 BLACKJACK</button>
+    </div>
+
+    <!-- TAB ROULETTE -->
+    <div id="tab-roulette">
+      <div class="casino-main">
+        <!-- Wheel area -->
+        <div class="casino-wheel-area">
+          <div class="casino-pointer">&#9660;</div>
+          <div class="casino-wheel-wrap" id="casino-wheel-wrap">
+            <canvas id="casino-wheel" width="400" height="400"></canvas>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="casino-controls">
+          <div class="casino-jackpot-banner" id="jackpot-banner">
+            <span class="casino-jackpot-icon">🏆</span>
+            <span class="casino-jackpot-label">JACKPOT</span>
+            <span class="casino-jackpot-amount" id="jackpot-amount">5 000</span>
+            <span class="casino-jackpot-cr">CR</span>
+          </div>
+          <div class="casino-cost">COUT: <span class="casino-cost-amount"><span id="spin-cost">85</span> CR</span></div>
+          <button class="casino-spin-btn" id="spin-btn" onclick="spin()">
+            <span class="casino-spin-icon">&#127922;</span> TOURNER
+          </button>
+          <div class="casino-credits">TES CREDITS: <span id="casino-credits">0</span></div>
         </div>
       </div>
 
-      <!-- Controls -->
-      <div class="casino-controls">
-        <div class="casino-jackpot-banner" id="jackpot-banner">
-          <span class="casino-jackpot-icon">🏆</span>
-          <span class="casino-jackpot-label">JACKPOT</span>
-          <span class="casino-jackpot-amount" id="jackpot-amount">5 000</span>
-          <span class="casino-jackpot-cr">CR</span>
+      <!-- Result -->
+      <div class="casino-result hidden" id="casino-result">
+        <div class="casino-result-label" id="result-label">PERDU</div>
+        <div class="casino-result-detail" id="result-detail"></div>
+      </div>
+
+      <!-- History -->
+      <div class="casino-history">
+        <h3 class="casino-history-title">DERNIERS RESULTATS</h3>
+        <div class="casino-history-list" id="history-list">
+          <div class="casino-history-empty">Aucun resultat</div>
         </div>
-        <div class="casino-cost">COUT: <span class="casino-cost-amount"><span id="spin-cost">85</span> CR</span></div>
-        <button class="casino-spin-btn" id="spin-btn" onclick="spin()">
-          <span class="casino-spin-icon">&#127922;</span> TOURNER
-        </button>
-        <div class="casino-credits">TES CREDITS: <span id="casino-credits">0</span></div>
       </div>
     </div>
 
-    <!-- Result -->
-    <div class="casino-result hidden" id="casino-result">
-      <div class="casino-result-label" id="result-label">PERDU</div>
-      <div class="casino-result-detail" id="result-detail"></div>
-    </div>
+    <!-- TAB BLACKJACK -->
+    <div id="tab-blackjack" class="hidden">
+      <div class="bj-table">
+        <!-- Dealer -->
+        <div class="bj-section">
+          <div class="bj-label">DEALER <span class="bj-score" id="bj-dealer-score">0</span></div>
+          <div class="bj-hand" id="bj-dealer-cards"></div>
+        </div>
 
-    <!-- History -->
-    <div class="casino-history">
-      <h3 class="casino-history-title">DERNIERS RESULTATS</h3>
-      <div class="casino-history-list" id="history-list">
-        <div class="casino-history-empty">Aucun resultat</div>
+        <!-- VS separator -->
+        <div class="bj-vs">VS</div>
+
+        <!-- Player -->
+        <div class="bj-section">
+          <div class="bj-label">TOI <span class="bj-score" id="bj-player-score">0</span></div>
+          <div class="bj-hand" id="bj-player-cards"></div>
+        </div>
+
+        <!-- Current bet display -->
+        <div class="bj-bet-display">MISE: <span id="bj-current-bet">0</span> CR</div>
+
+        <!-- Bet controls (shown when no game active) -->
+        <div class="bj-controls" id="bj-bet-controls">
+          <div class="bj-bet-row">
+            <div class="bj-quick-bets">
+              <button class="bj-quick-btn" onclick="bjSetBet(50)">50</button>
+              <button class="bj-quick-btn" onclick="bjSetBet(100)">100</button>
+              <button class="bj-quick-btn" onclick="bjSetBet(250)">250</button>
+              <button class="bj-quick-btn" onclick="bjSetBet(500)">500</button>
+              <button class="bj-quick-btn" onclick="bjSetBet(1000)">MAX</button>
+            </div>
+            <div class="bj-bet-input-row">
+              <input type="number" id="bj-bet-input" class="bj-input" value="100" min="50" max="1000" step="50">
+              <button class="bj-deal-btn" onclick="bjDeal()">DISTRIBUER</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Game controls (shown during play) -->
+        <div class="bj-controls hidden" id="bj-game-controls">
+          <button class="bj-action-btn bj-hit-btn" onclick="bjHit()">HIT</button>
+          <button class="bj-action-btn bj-stand-btn" onclick="bjStand()">STAND</button>
+          <button class="bj-action-btn bj-double-btn" id="bj-double-btn" onclick="bjDouble()">DOUBLE</button>
+        </div>
+
+        <!-- Result -->
+        <div class="bj-result hidden" id="bj-result">
+          <div class="bj-result-label" id="bj-result-label"></div>
+          <div class="bj-result-detail" id="bj-result-detail"></div>
+        </div>
+      </div>
+
+      <!-- Blackjack History -->
+      <div class="casino-history">
+        <h3 class="casino-history-title">DERNIERS RESULTATS</h3>
+        <div class="casino-history-list" id="bj-history-list">
+          <div class="casino-history-empty">Aucun resultat</div>
+        </div>
       </div>
     </div>
   </div>
@@ -96,6 +166,7 @@
   <script src="/js/toast.js"></script>
   <script src="/js/friends.js"></script>
   <script src="/js/casino.js"></script>
+  <script src="/js/blackjack.js"></script>
   <script src="/js/skeleton-loader.js"></script>
   <script src="/js/empty-states.js"></script>
   <script src="/js/keyboard-nav.js"></script>

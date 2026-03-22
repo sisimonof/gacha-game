@@ -9248,6 +9248,321 @@ body.casino-page {
 }
 
 /* =======================================
+   CASINO TABS
+   ======================================= */
+.casino-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #333;
+}
+.casino-tab {
+  flex: 1;
+  padding: 12px 20px;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+.casino-tab:hover {
+  color: #aaa;
+  background: rgba(255,255,255,0.03);
+}
+.casino-tab.active {
+  color: #ff4444;
+  border-bottom-color: #ff4444;
+  text-shadow: 0 0 10px rgba(255,68,68,0.5);
+}
+
+/* =======================================
+   BLACKJACK
+   ======================================= */
+.bj-table {
+  background: linear-gradient(135deg, #0a2e0a 0%, #1a4a1a 50%, #0a2e0a 100%);
+  border: 3px solid #2a5a2a;
+  border-radius: 20px;
+  padding: 30px 20px;
+  margin: 0 auto;
+  max-width: 600px;
+  box-shadow: 0 0 30px rgba(0,80,0,0.3), inset 0 0 40px rgba(0,0,0,0.4);
+}
+
+.bj-section { text-align: center; margin: 10px 0; }
+
+.bj-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: #88cc88;
+  margin-bottom: 10px;
+  letter-spacing: 2px;
+}
+
+.bj-score {
+  display: inline-block;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.bj-hand {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  min-height: 100px;
+  flex-wrap: wrap;
+}
+
+.bj-card {
+  width: 65px;
+  height: 95px;
+  border-radius: 8px;
+  background: #fff;
+  border: 2px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px;
+  position: relative;
+  box-shadow: 2px 3px 8px rgba(0,0,0,0.4);
+  font-family: 'Georgia', serif;
+}
+
+.bj-card-deal {
+  animation: bjCardDeal 0.3s ease-out;
+}
+
+@keyframes bjCardDeal {
+  0% { transform: translateY(-40px) scale(0.5); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.bj-card-hidden {
+  background: linear-gradient(135deg, #cc0000 25%, #990000 25%, #990000 50%, #cc0000 50%, #cc0000 75%, #990000 75%);
+  background-size: 14px 14px;
+  border: 2px solid #880000;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bj-card-inner {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 20px;
+  text-shadow: 0 0 10px rgba(255,0,0,0.5);
+}
+
+.bj-card-corner {
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.bj-card-corner-bottom {
+  text-align: right;
+  transform: rotate(180deg);
+}
+
+.bj-card-center {
+  font-size: 28px;
+  text-align: center;
+  line-height: 1;
+}
+
+.bj-vs {
+  text-align: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: #ffaa00;
+  text-shadow: 0 0 10px rgba(255,170,0,0.5);
+  margin: 8px 0;
+}
+
+.bj-bet-display {
+  text-align: center;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 10px;
+  color: #ffcc00;
+  margin: 15px 0 5px;
+}
+
+.bj-controls {
+  text-align: center;
+  margin-top: 15px;
+}
+
+.bj-bet-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.bj-quick-bets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.bj-quick-btn {
+  background: rgba(255,255,255,0.1);
+  border: 1px solid #555;
+  color: #ccc;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.bj-quick-btn:hover {
+  background: rgba(255,170,0,0.2);
+  border-color: #ffaa00;
+  color: #ffaa00;
+}
+
+.bj-bet-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.bj-input {
+  width: 100px;
+  padding: 8px 10px;
+  background: rgba(0,0,0,0.5);
+  border: 2px solid #555;
+  border-radius: 8px;
+  color: #ffcc00;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  text-align: center;
+}
+.bj-input:focus {
+  outline: none;
+  border-color: #ffaa00;
+  box-shadow: 0 0 10px rgba(255,170,0,0.3);
+}
+
+.bj-deal-btn {
+  padding: 10px 20px;
+  background: linear-gradient(180deg, #ff4444, #cc0000);
+  border: 2px solid #ff6666;
+  border-radius: 10px;
+  color: #fff;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+  box-shadow: 0 0 15px rgba(255,68,68,0.4);
+  transition: all 0.15s;
+}
+.bj-deal-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba(255,68,68,0.6);
+}
+
+.bj-action-btn {
+  padding: 12px 24px;
+  margin: 0 6px;
+  border: 2px solid;
+  border-radius: 10px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+.bj-action-btn:hover { transform: scale(1.05); }
+
+.bj-hit-btn {
+  background: linear-gradient(180deg, #44cc44, #228822);
+  border-color: #66ee66;
+  color: #fff;
+  box-shadow: 0 0 15px rgba(68,204,68,0.4);
+}
+
+.bj-stand-btn {
+  background: linear-gradient(180deg, #ff8844, #cc5500);
+  border-color: #ffaa66;
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255,136,68,0.4);
+}
+
+.bj-double-btn {
+  background: linear-gradient(180deg, #ffcc00, #cc9900);
+  border-color: #ffdd44;
+  color: #000;
+  box-shadow: 0 0 15px rgba(255,204,0,0.4);
+}
+
+.bj-btn-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.bj-result {
+  text-align: center;
+  padding: 15px;
+  margin-top: 15px;
+  border-radius: 10px;
+  animation: result-pop 0.5s ease;
+}
+
+.bj-result-label {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  margin-bottom: 5px;
+}
+
+.bj-result-detail {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+}
+
+.bj-result--win, .bj-result--blackjack {
+  border: 2px solid #44cc44;
+  background: rgba(68,204,68,0.15);
+  color: #66ff66;
+}
+
+.bj-result--blackjack .bj-result-label {
+  color: #ffcc00;
+  text-shadow: 0 0 15px rgba(255,204,0,0.6);
+  font-size: 18px;
+}
+
+.bj-result--lose {
+  border: 2px solid #ff4444;
+  background: rgba(255,68,68,0.15);
+  color: #ff6666;
+}
+
+.bj-result--push {
+  border: 2px solid #888;
+  background: rgba(136,136,136,0.15);
+  color: #aaa;
+}
+
+@media (max-width: 600px) {
+  .bj-table { padding: 15px 10px; }
+  .bj-card { width: 50px; height: 75px; }
+  .bj-card-center { font-size: 20px; }
+  .bj-card-corner { font-size: 10px; }
+  .bj-action-btn { padding: 10px 14px; font-size: 10px; }
+  .casino-tab { font-size: 9px; padding: 10px 10px; }
+}
+
+/* =======================================
    PROFILE MODAL
    ======================================= */
 .profile-modal-overlay {

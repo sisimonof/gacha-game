@@ -273,5 +273,14 @@ if (typeof io !== 'undefined') {
   }, 600);
 }
 
+// Tab switching
+function switchCasinoTab(tab) {
+  document.querySelectorAll('.casino-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.getElementById('tab-roulette').classList.toggle('hidden', tab !== 'roulette');
+  document.getElementById('tab-blackjack').classList.toggle('hidden', tab !== 'blackjack');
+}
+
 loadNav();
 loadCasino();
