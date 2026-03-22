@@ -931,6 +931,18 @@ function getManaForTurn(turn) {
   if (addedCount4 > 0) console.log('Migration: ' + addedCount4 + ' nouvelles cartes v0.2.4 ajoutees');
 }
 
+// --- Carte Foxi (rarete inverse) ---
+{
+  const foxi = db.prepare("SELECT id FROM cards WHERE name = 'Foxi'").get();
+  if (!foxi) {
+    db.prepare(`
+      INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost)
+      VALUES ('Foxi', 'inverse', 'creature', 'neutre', 0, 0, 0, 0, 'Pouvoir Inconnu', '???', '🦊', '', 0)
+    `).run();
+    console.log('Migration: carte Foxi (inverse) ajoutee');
+  }
+}
+
 // --- Tables Decks ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS decks (
@@ -966,7 +978,7 @@ const BOOSTERS = [
     description: '5 cartes du monde originel.',
     price: 300,
     cardsPerPack: 5,
-    weights: { commune: 54.85, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05 },
+    weights: { commune: 54.849, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05, inverse: 0.001 },
     shinyRate: 0.007
   },
   {
@@ -975,7 +987,7 @@ const BOOSTERS = [
     description: '7 cartes de la faille dimensionnelle.',
     price: 415,
     cardsPerPack: 7,
-    weights: { commune: 54.85, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05 },
+    weights: { commune: 54.849, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05, inverse: 0.001 },
     shinyRate: 0.007
   },
   {
@@ -984,7 +996,7 @@ const BOOSTERS = [
     description: '8 cartes — legendaires boostees.',
     price: 915,
     cardsPerPack: 8,
-    weights: { commune: 53.75, rare: 38, epique: 6, legendaire: 2.1, chaos: 0.1, secret: 0.05 },
+    weights: { commune: 53.749, rare: 38, epique: 6, legendaire: 2.1, chaos: 0.1, secret: 0.05, inverse: 0.001 },
     shinyRate: 0.01
   }
 ];
@@ -6613,6 +6625,7 @@ app.post('/api/admin/update-booster', requireAdmin, (req, res) => {
     if (weights.epique !== undefined) booster.weights.epique = Number(weights.epique);
     if (weights.legendaire !== undefined) booster.weights.legendaire = Number(weights.legendaire);
     if (weights.chaos !== undefined) booster.weights.chaos = Number(weights.chaos);
+    if (weights.inverse !== undefined) booster.weights.inverse = Number(weights.inverse);
   }
   if (shinyRate !== undefined) booster.shinyRate = Number(shinyRate);
   if (price !== undefined) booster.price = Number(price);

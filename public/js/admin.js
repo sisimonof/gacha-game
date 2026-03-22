@@ -88,6 +88,11 @@ async function loadBoostersConfig() {
           <span class="admin-pct">${(b.weights.legendaire/total*100).toFixed(1)}%</span>
         </div>
         <div class="admin-booster-row">
+          <label style="color:#00ffcc">Inverse:</label>
+          <input type="number" class="admin-input-sm" id="booster-${b.id}-inverse" value="${b.weights.inverse || 0}" min="0" step="0.001">
+          <span class="admin-pct">${((b.weights.inverse || 0)/total*100).toFixed(3)}%</span>
+        </div>
+        <div class="admin-booster-row">
           <label style="color:#ff66ff">Shiny %:</label>
           <input type="number" class="admin-input-sm" id="booster-${b.id}-shiny" value="${(b.shinyRate * 100).toFixed(1)}" min="0" max="100" step="0.1">
           <span class="admin-pct">%</span>
@@ -107,7 +112,8 @@ async function saveBooster(boosterId) {
       commune: get('commune'),
       rare: get('rare'),
       epique: get('epique'),
-      legendaire: get('legendaire')
+      legendaire: get('legendaire'),
+      inverse: get('inverse')
     },
     shinyRate: get('shiny') / 100
   };
