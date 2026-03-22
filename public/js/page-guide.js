@@ -43,7 +43,7 @@ var GUIDES = {
     steps: [
       { target: '#casino-wheel-wrap', text: 'La ROULETTE — Tournez pour gagner des credits, de l\'XP, ou meme des cartes rares !', pos: 'right' },
       { target: '#jackpot-banner', text: 'Le JACKPOT PROGRESSIF ! La cagnotte monte a chaque spin. Si vous gagnez, vous remportez tout !', pos: 'bottom' },
-      { target: '#spin-btn', text: 'Chaque spin coute 200 CR. Appuyez ici pour tenter votre chance !', pos: 'top' },
+      { target: '#spin-btn', text: 'Chaque spin coute 85 CR. Appuyez ici pour tenter votre chance !', pos: 'top' },
       { target: '.casino-history', text: 'L\'historique de vos derniers resultats. Suivez votre chance !', pos: 'top' },
     ]
   },

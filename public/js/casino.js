@@ -3,6 +3,7 @@
 let segments = [];
 let spinning = false;
 let spinHistory = [];
+let casinoCost = 85; // default, updated from server
 
 async function loadNav() {
   try {
@@ -25,8 +26,12 @@ async function loadCasino() {
     if (!res.ok) { window.location.href = '/'; return; }
     const data = await res.json();
     segments = data.segments;
+    if (data.cost) casinoCost = data.cost;
     document.getElementById('casino-credits').textContent = data.credits;
     updateJackpotDisplay(data.jackpot || 5000);
+    // Update spin button cost display
+    const costEl = document.getElementById('spin-cost');
+    if (costEl) costEl.textContent = casinoCost;
     drawWheel();
   } catch { window.location.href = '/'; }
 }
@@ -98,7 +103,7 @@ async function spin() {
 
   const creditsEl = document.getElementById('casino-credits');
   const credits = parseInt(creditsEl.textContent);
-  if (credits < 200) {
+  if (credits < casinoCost) {
     screenShake();
     return;
   }
@@ -157,12 +162,6 @@ function animateWheel(targetIndex) {
     const total = segments.length;
     const segAngle = 360 / total;
 
-    // Canvas draws segment 0 starting at 3 o'clock (0°).
-    // Pointer is at top (12 o'clock = 270°).
-    // After rotating wheel by R degrees clockwise, the segment at the pointer
-    // was originally at angle (270 - R) mod 360.
-    // We want segment targetIndex center = targetIndex * segAngle + segAngle/2
-    // to land under the pointer, so R = 270 - (center) mod 360.
     const segCenter = targetIndex * segAngle + segAngle / 2;
     const targetAngle = ((270 - segCenter) % 360 + 360) % 360;
     const totalRotation = 360 * (4 + Math.floor(Math.random() * 3)) + targetAngle;
@@ -177,7 +176,6 @@ function animateWheel(targetIndex) {
     wrap.style.transform = `rotate(${totalRotation}deg)`;
 
     setTimeout(() => {
-      // Reset rotation to final position without animation
       wrap.style.transition = 'none';
       wrap.style.transform = `rotate(${totalRotation % 360}deg)`;
       resolve();
@@ -195,10 +193,10 @@ function showResult(data) {
 
   if (data.reward.type === 'nothing') {
     labelEl.textContent = 'PERDU !';
-    detailEl.textContent = '-200 CR';
+    detailEl.textContent = `-${casinoCost} CR`;
     resultEl.classList.add('casino-result--lose');
   } else if (data.reward.type === 'credits') {
-    const net = data.reward.amount - 200;
+    const net = data.reward.amount - casinoCost;
     labelEl.textContent = `+${data.reward.amount} CR`;
     detailEl.textContent = net >= 0 ? `Net: +${net} CR` : `Net: ${net} CR`;
     resultEl.classList.add(net >= 0 ? 'casino-result--win' : 'casino-result--lose');
@@ -232,9 +230,9 @@ function addToHistory(data) {
     let text = '';
     if (h.reward.type === 'nothing') {
       cls += ' hist-lose';
-      text = 'PERDU (-200 CR)';
+      text = `PERDU (-${casinoCost} CR)`;
     } else if (h.reward.type === 'credits') {
-      const net = h.reward.amount - 200;
+      const net = h.reward.amount - casinoCost;
       cls += net >= 0 ? ' hist-win' : ' hist-lose';
       text = `+${h.reward.amount} CR (net: ${net >= 0 ? '+' : ''}${net})`;
     } else if (h.reward.type === 'xp') {
