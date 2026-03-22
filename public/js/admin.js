@@ -145,6 +145,7 @@ function renderCardsTable() {
   const typeColors = { guerrier: '#ff8844', mage: '#8866ff', bete: '#44cc44', divin: '#ffcc00', creature: '#44aaff', objet: '#aaaaaa' };
   tbody.innerHTML = allCards.map(c => `
     <tr id="card-row-${c.id}">
+      <td style="color:#666;font-size:11px;font-family:monospace">#${c.id}</td>
       <td class="admin-emoji-cell">${c.emoji || '?'}</td>
       <td style="color:${RARITY_COLORS[c.rarity]?.color || '#fff'}">${c.name}</td>
       <td>${c.rarity}</td>
