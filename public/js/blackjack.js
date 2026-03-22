@@ -140,11 +140,23 @@ function updateUI() {
       const net = totalWin - totalBet;
       detail = net >= 0 ? `Net: +${net} CR` : `Net: ${net} CR`;
       resultClass = net > 0 ? 'bj-result--win' : net === 0 ? 'bj-result--push' : 'bj-result--lose';
+    } else if (bjState.insuranceResult === 'won' && bjState.result === 'dealer_blackjack') {
+      // Insurance won — player breaks even
+      const insurancePayout = Math.floor(bjState.bet / 2) * 3;
+      const net = insurancePayout - bjState.bet - Math.floor(bjState.bet / 2);
+      label = '🛡️ ASSURANCE GAGNEE !';
+      detail = net === 0 ? 'Net: 0 CR (mise recuperee)' : `Net: ${net >= 0 ? '+' : ''}${net} CR`;
+      resultClass = net >= 0 ? 'bj-result--push' : 'bj-result--lose';
     } else {
       const res = formatResult(bjState.result, bjState.winnings, bjState.bet);
       label = res.label;
       detail = res.detail;
       resultClass = res.cls;
+
+      // If insurance was lost, append info
+      if (bjState.insuranceBet > 0 && bjState.insuranceResult === 'lost') {
+        detail += ` (assurance perdue: -${bjState.insuranceBet} CR)`;
+      }
     }
 
     resultLabel.textContent = label;
@@ -181,6 +193,10 @@ function formatResult(result, winnings, bet) {
 }
 
 async function bjDeal() {
+  // Reset insurance banner
+  const insBanner = document.getElementById('bj-insurance-banner');
+  if (insBanner) insBanner.classList.add('hidden');
+
   const betInput = document.getElementById('bj-bet-input');
   const bet = parseInt(betInput.value);
   if (!bet || bet < 50 || bet > 1000) {
@@ -275,10 +291,21 @@ function bjAddHistory(state) {
   list.innerHTML = bjHistory.map(h => {
     let cls = 'casino-hist-item';
     let text = '';
-    const totalWin = (h.winnings || 0) + (h.splitWinnings || 0);
-    const totalBet = (h.bet || 0) + (h.splitBet || 0);
+    let totalWin = (h.winnings || 0) + (h.splitWinnings || 0);
+    let totalBet = (h.bet || 0) + (h.splitBet || 0);
 
-    if (h.result === 'blackjack') {
+    // Account for insurance in history
+    if (h.insuranceBet > 0) {
+      totalBet += h.insuranceBet;
+      if (h.insuranceResult === 'won') {
+        totalWin += h.insuranceBet * 3;
+      }
+    }
+
+    if (h.insuranceResult === 'won' && h.result === 'dealer_blackjack') {
+      cls += ' hist-xp';
+      text = '🛡️ ASSURANCE (net: 0 CR)';
+    } else if (h.result === 'blackjack') {
       cls += ' hist-jackpot';
       text = `🃏 BLACKJACK +${totalWin} CR`;
     } else if (['win', 'dealer_bust'].includes(h.result) && totalWin > totalBet) {
