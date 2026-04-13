@@ -6,7 +6,8 @@ const RARITY_COLORS = {
   legendaire: { color: '#ffaa00', glow: 'rgba(255,170,0,0.6)',   label: 'LEGENDAIRE' },
   chaos:      { color: '#ff0044', glow: 'rgba(255,0,68,0.7)',    label: 'CHAOS' },
   secret:     { color: '#111111', glow: 'rgba(255,255,255,0.6)', label: 'SECRET' },
-  inverse:    { color: '#00ffcc', glow: 'rgba(0,255,204,0.7)',  label: 'INVERSE' }
+  inverse:    { color: '#00ffcc', glow: 'rgba(0,255,204,0.7)',  label: 'INVERSE' },
+  cadeau:     { color: '#ff2266', glow: 'rgba(255,34,102,0.7)',  label: '🎁 CADEAU' }
 };
 
 const ELEMENT_ICONS  = { feu: '🔥', eau: '💧', terre: '🌿', lumiere: '✨', ombre: '🌑', neutre: '⚪' };
@@ -267,6 +268,38 @@ function showCardDetail(card) {
 
   const overlay = document.createElement('div');
   overlay.className = 'card-modal-overlay';
+
+  if (card.rarity === 'cadeau') {
+    overlay.innerHTML = `
+      <button class="modal-close">[ FERMER ]</button>
+      <div class="card-modal">
+        <div class="modal-card-art" style="border: 3px solid ${r.color}; box-shadow: 0 0 30px ${r.glow}; background: linear-gradient(145deg, #1a0a10, #2a1020);">
+          <div class="cadeau-wrapper" style="cursor:pointer">
+            <div class="cadeau-gift" style="font-size:80px">🎁</div>
+            <div class="cadeau-code" style="font-size:13px">${card.ability_desc}</div>
+          </div>
+        </div>
+        <div class="modal-card-info">
+          <div class="modal-card-rarity" style="background:linear-gradient(90deg,#ff2266,#ffcc00,#00ff66)">🎁 CADEAU</div>
+          <div class="modal-card-name" style="color:#ffcc00">${card.name}</div>
+          <div class="modal-ability">
+            <div class="modal-ability-desc" style="color:#aaa; font-style:italic">Cliquez sur le cadeau pour le deballer !</div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    const gift = overlay.querySelector('.cadeau-gift');
+    const code = overlay.querySelector('.cadeau-code');
+    gift.addEventListener('click', () => {
+      gift.classList.add('unwrapping');
+      setTimeout(() => { gift.style.display = 'none'; code.classList.add('revealed'); }, 800);
+    });
+    overlay.querySelector('.modal-close').addEventListener('click', () => overlay.remove());
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+    return;
+  }
+
   overlay.innerHTML = `
     <button class="modal-close">[ FERMER ]</button>
     <div class="card-modal ${card.is_shiny ? 'modal-shiny' : ''}">

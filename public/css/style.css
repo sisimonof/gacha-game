@@ -3467,6 +3467,67 @@ body.shop-page-v2 .credits-display {
   50% { filter: brightness(1.15) drop-shadow(0 0 20px rgba(204, 68, 255, 0.8)); }
 }
 
+/* === CADEAU REVEAL === */
+.cadeau-reveal { animation: cadeauShine 0.6s ease-in-out infinite; }
+@keyframes cadeauShine {
+  0%, 100% { filter: brightness(1.3) drop-shadow(0 0 20px rgba(255,34,102,0.8)) drop-shadow(0 0 40px rgba(255,200,0,0.5)); }
+  33% { filter: brightness(1.6) drop-shadow(0 0 40px rgba(255,200,0,1)) drop-shadow(0 0 60px rgba(0,255,100,0.6)); }
+  66% { filter: brightness(1.4) drop-shadow(0 0 30px rgba(0,255,100,0.8)) drop-shadow(0 0 50px rgba(255,34,102,0.6)); }
+}
+
+/* Cadeau card gift wrapper */
+.cadeau-wrapper {
+  position: relative;
+  cursor: pointer;
+  text-align: center;
+  padding: 20px;
+}
+.cadeau-gift {
+  font-size: 80px;
+  animation: giftBounce 1s ease-in-out infinite;
+  transition: transform 0.5s ease;
+}
+.cadeau-gift.unwrapping {
+  animation: giftUnwrap 0.8s ease-in-out forwards;
+}
+.cadeau-code {
+  display: none;
+  background: linear-gradient(135deg, #ff2266, #ffcc00, #00ff66);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+  font-size: 11px;
+  line-height: 1.4;
+  padding: 10px;
+  margin-top: 10px;
+  border: 1px solid rgba(255,34,102,0.4);
+  border-radius: 4px;
+  background-color: rgba(0,0,0,0.5);
+  text-shadow: none;
+}
+.cadeau-code.revealed {
+  display: block;
+  animation: codeAppear 0.5s ease-out;
+  -webkit-text-fill-color: #ffcc00;
+}
+@keyframes giftBounce {
+  0%, 100% { transform: scale(1) rotate(0deg); }
+  25% { transform: scale(1.1) rotate(-5deg); }
+  75% { transform: scale(1.1) rotate(5deg); }
+}
+@keyframes giftUnwrap {
+  0% { transform: scale(1) rotate(0deg); }
+  30% { transform: scale(1.3) rotate(-15deg); }
+  60% { transform: scale(0.5) rotate(15deg); opacity: 0.5; }
+  100% { transform: scale(0) rotate(30deg); opacity: 0; }
+}
+@keyframes codeAppear {
+  0% { opacity: 0; transform: scale(0.5); }
+  50% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 /* === SHINY REVEAL === */
 .shiny-reveal { animation: shinyShine 1s ease-in-out infinite; }
 @keyframes shinyShine {
@@ -4138,6 +4199,19 @@ body.shop-page-v2 .credits-display {
   box-shadow: 0 0 20px rgba(255,255,255,0.2), 0 0 40px rgba(0,0,0,0.8), inset 0 0 15px rgba(0,0,0,0.5);
   animation: borderPulseSecret 2s ease-in-out infinite;
   background: linear-gradient(145deg, #0a0a0a, #1a1a1a) !important;
+}
+
+.card-front.rarity-cadeau {
+  border: 3px solid #ff2266;
+  box-shadow: 0 0 25px rgba(255,34,102,0.6), 0 0 50px rgba(255,200,0,0.3);
+  animation: borderPulseCadeau 1.2s ease-in-out infinite;
+  background: linear-gradient(145deg, #1a0a10, #2a1020, #1a0a10) !important;
+}
+
+@keyframes borderPulseCadeau {
+  0%, 100% { box-shadow: 0 0 15px rgba(255,34,102,0.5), 0 0 30px rgba(255,200,0,0.2), inset 0 0 10px rgba(255,34,102,0.2); border-color: #ff2266; }
+  33% { box-shadow: 0 0 30px rgba(255,200,0,0.6), 0 0 60px rgba(255,34,102,0.4), inset 0 0 15px rgba(255,200,0,0.3); border-color: #ffcc00; }
+  66% { box-shadow: 0 0 25px rgba(0,255,100,0.4), 0 0 50px rgba(255,34,102,0.3), inset 0 0 12px rgba(0,255,100,0.2); border-color: #00ff66; }
 }
 
 @keyframes borderPulseSecret {

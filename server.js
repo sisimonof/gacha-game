@@ -21,7 +21,8 @@ const SELL_PRICES = {
   epique: 150,
   legendaire: 400,
   chaos: 1000,
-  secret: 2000
+  secret: 2000,
+  cadeau: 0
 };
 
 // --- Base de données (chemin configurable via env pour Railway volume) ---
@@ -943,6 +944,16 @@ function getManaForTurn(turn) {
   }
 }
 
+// --- Migration : carte Code Cadeau ---
+{
+  const cadeauCard = ['Code Cadeau', 'cadeau', 'divin', 'lumiere', 0, 0, 1, 0, 'Deballer', '5 EURO STEAM DM LUMIS AVEC CAPTURE D\'ECRAN', '🎁', 'Un cadeau unique et precieux', 0];
+  const exists = db.prepare("SELECT id FROM cards WHERE name = ?").get(cadeauCard[0]);
+  if (!exists) {
+    db.prepare(`INSERT INTO cards (name, rarity, type, element, attack, defense, hp, mana_cost, ability_name, ability_desc, emoji, passive_desc, crystal_cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(...cadeauCard);
+    console.log('Migration: carte Code Cadeau ajoutee');
+  }
+}
+
 // --- Tables Decks ---
 db.exec(`
   CREATE TABLE IF NOT EXISTS decks (
@@ -978,7 +989,7 @@ const BOOSTERS = [
     description: '5 cartes du monde originel.',
     price: 300,
     cardsPerPack: 5,
-    weights: { commune: 54.849, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05, inverse: 0.001 },
+    weights: { commune: 54.8485, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05, inverse: 0.001, cadeau: 0.0005 },
     shinyRate: 0.007
   },
   {
@@ -987,7 +998,7 @@ const BOOSTERS = [
     description: '7 cartes de la faille dimensionnelle.',
     price: 415,
     cardsPerPack: 7,
-    weights: { commune: 54.849, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05, inverse: 0.001 },
+    weights: { commune: 54.8485, rare: 38, epique: 6, legendaire: 1, chaos: 0.1, secret: 0.05, inverse: 0.001, cadeau: 0.0005 },
     shinyRate: 0.007
   },
   {
@@ -996,7 +1007,7 @@ const BOOSTERS = [
     description: '8 cartes — legendaires boostees.',
     price: 915,
     cardsPerPack: 8,
-    weights: { commune: 53.749, rare: 38, epique: 6, legendaire: 2.1, chaos: 0.1, secret: 0.05, inverse: 0.001 },
+    weights: { commune: 53.7485, rare: 38, epique: 6, legendaire: 2.1, chaos: 0.1, secret: 0.05, inverse: 0.001, cadeau: 0.0005 },
     shinyRate: 0.01
   }
 ];
@@ -1573,12 +1584,12 @@ function openBooster(boosterId, userId) {
     let rarity = rollRarity(booster.weights);
 
     // Pity legendaire : force legendaire apres PITY_LEGENDARY_THRESHOLD tirages
-    if (pityLegendary >= PITY_LEGENDARY_THRESHOLD && !['legendaire', 'chaos', 'secret'].includes(rarity)) {
+    if (pityLegendary >= PITY_LEGENDARY_THRESHOLD && !['legendaire', 'chaos', 'secret', 'cadeau'].includes(rarity)) {
       rarity = 'legendaire';
       pityTriggered = true;
     }
     // Pity epique : force epique apres PITY_EPIC_THRESHOLD tirages
-    else if (pityEpic >= PITY_EPIC_THRESHOLD && !['epique', 'legendaire', 'chaos', 'secret'].includes(rarity)) {
+    else if (pityEpic >= PITY_EPIC_THRESHOLD && !['epique', 'legendaire', 'chaos', 'secret', 'cadeau'].includes(rarity)) {
       rarity = 'epique';
       pityTriggered = true;
     }
@@ -1586,7 +1597,7 @@ function openBooster(boosterId, userId) {
     let cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(rarity);
     // Fallback : si aucune carte de cette rarete, descendre d'un cran
     if (!cards.length) {
-      const fallbackOrder = ['secret', 'chaos', 'legendaire', 'epique', 'rare', 'commune'];
+      const fallbackOrder = ['cadeau', 'secret', 'chaos', 'legendaire', 'epique', 'rare', 'commune'];
       const idx = fallbackOrder.indexOf(rarity);
       for (let f = idx + 1; f < fallbackOrder.length; f++) {
         cards = db.prepare('SELECT * FROM cards WHERE rarity = ?').all(fallbackOrder[f]);
@@ -1595,15 +1606,15 @@ function openBooster(boosterId, userId) {
       if (!cards.length) continue;
     }
     const card = cards[Math.floor(Math.random() * cards.length)];
-    const isShiny = Math.random() < shinyRate ? 1 : 0;
-    // Crystal items sont toujours TEMP, sinon 8% de chance
-    const isTemp = card.name.startsWith('Crystal ') ? 1 : (Math.random() < 0.08 ? 1 : 0);
+    const isShiny = rarity === 'cadeau' ? 0 : (Math.random() < shinyRate ? 1 : 0);
+    // Crystal items sont toujours TEMP, cadeau jamais TEMP, sinon 8% de chance
+    const isTemp = rarity === 'cadeau' ? 0 : (card.name.startsWith('Crystal ') ? 1 : (Math.random() < 0.08 ? 1 : 0));
     insertCard.run(userId, card.id, isShiny, isTemp);
     drawnCards.push({ ...card, is_shiny: isShiny, is_temp: isTemp, _pityTriggered: pityTriggered });
     if (pityTriggered) pityTriggered = false;
 
     // Mise a jour des compteurs pity
-    if (['legendaire', 'chaos', 'secret'].includes(rarity)) {
+    if (['legendaire', 'chaos', 'secret', 'cadeau'].includes(rarity)) {
       pityLegendary = 0;
       pityEpic = 0;
     } else if (rarity === 'epique') {
@@ -4920,7 +4931,7 @@ app.get('/api/collection', requireAuth, (req, res) => {
     WHERE uc.user_id = ?
     GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level
     ORDER BY
-      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'cadeau' THEN -2 WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
   res.json(cards);
@@ -4940,6 +4951,7 @@ app.post('/api/collection/sell', requireAuth, (req, res) => {
   }
 
   if (!userCard) return res.status(400).json({ error: 'Carte introuvable' });
+  if (userCard.rarity === 'cadeau') return res.status(400).json({ error: 'Les cartes Cadeau ne peuvent pas etre vendues !' });
 
   let sellPrice = SELL_PRICES[userCard.rarity] || 0;
   if (userCard.is_shiny) sellPrice *= 3;
@@ -4964,7 +4976,7 @@ app.post('/api/collection/sell', requireAuth, (req, res) => {
     WHERE uc.user_id = ?
     GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level
     ORDER BY
-      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'cadeau' THEN -2 WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
 
@@ -4989,6 +5001,9 @@ app.post('/api/collection/sell-bulk', requireAuth, (req, res) => {
 
   if (userCards.length !== user_card_ids.length) {
     return res.status(400).json({ error: 'Certaines cartes sont introuvables' });
+  }
+  if (userCards.some(uc => uc.rarity === 'cadeau')) {
+    return res.status(400).json({ error: 'Les cartes Cadeau ne peuvent pas etre vendues !' });
   }
 
   let totalPrice = 0;
@@ -5018,7 +5033,7 @@ app.post('/api/collection/sell-bulk', requireAuth, (req, res) => {
     WHERE uc.user_id = ?
     GROUP BY c.id, uc.is_shiny, uc.is_fused, uc.is_temp, uc.awakening_level
     ORDER BY
-      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'cadeau' THEN -2 WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
 
@@ -5045,7 +5060,7 @@ app.get('/api/fusion/available', requireAuth, (req, res) => {
     GROUP BY c.id
     HAVING count >= 5
     ORDER BY
-      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'cadeau' THEN -2 WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       c.attack DESC
   `).all(req.session.userId);
   res.json(cards);
@@ -7067,7 +7082,7 @@ app.get('/api/my-cards', requireAuth, (req, res) => {
     JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ?
     ORDER BY
-      CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
+      CASE c.rarity WHEN 'cadeau' THEN -2 WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END,
       uc.is_fused DESC, uc.is_shiny DESC, c.attack DESC
   `).all(req.session.userId);
   res.json(cards);
@@ -7772,7 +7787,7 @@ app.get('/api/market', requireAuth, (req, res) => {
   let orderBy = 'ORDER BY ml.created_at DESC';
   if (sort === 'price_asc') orderBy = 'ORDER BY ml.price ASC';
   else if (sort === 'price_desc') orderBy = 'ORDER BY ml.price DESC';
-  else if (sort === 'rarity') orderBy = "ORDER BY CASE c.rarity WHEN 'secret' THEN 0 WHEN 'chaos' THEN 1 WHEN 'legendaire' THEN 2 WHEN 'epique' THEN 3 WHEN 'rare' THEN 4 WHEN 'commune' THEN 5 END";
+  else if (sort === 'rarity') orderBy = "ORDER BY CASE c.rarity WHEN 'cadeau' THEN -1 WHEN 'secret' THEN 0 WHEN 'chaos' THEN 1 WHEN 'legendaire' THEN 2 WHEN 'epique' THEN 3 WHEN 'rare' THEN 4 WHEN 'commune' THEN 5 END";
 
   const total = db.prepare(`SELECT COUNT(*) as total FROM market_listings ml JOIN cards c ON ml.card_id = c.id ${where}`).get(...params).total;
 
@@ -7812,7 +7827,7 @@ app.get('/api/market/my-cards', requireAuth, (req, res) => {
     FROM user_cards uc
     JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ?
-    ORDER BY CASE c.rarity WHEN 'secret' THEN 0 WHEN 'chaos' THEN 1 WHEN 'legendaire' THEN 2 WHEN 'epique' THEN 3 WHEN 'rare' THEN 4 WHEN 'commune' THEN 5 END, c.name
+    ORDER BY CASE c.rarity WHEN 'cadeau' THEN -1 WHEN 'secret' THEN 0 WHEN 'chaos' THEN 1 WHEN 'legendaire' THEN 2 WHEN 'epique' THEN 3 WHEN 'rare' THEN 4 WHEN 'commune' THEN 5 END, c.name
   `).all(req.session.userId);
 
   // Mark cards already on market
@@ -8122,7 +8137,7 @@ app.get('/api/awakening/available', requireAuth, (req, res) => {
     SELECT uc.id as user_card_id, uc.awakening_level, uc.is_fused, uc.is_shiny, c.*
     FROM user_cards uc JOIN cards c ON uc.card_id = c.id
     WHERE uc.user_id = ? AND uc.is_fused = 1 AND uc.awakening_level < 2
-    ORDER BY CASE c.rarity WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END, c.attack DESC
+    ORDER BY CASE c.rarity WHEN 'cadeau' THEN -2 WHEN 'secret' THEN -1 WHEN 'chaos' THEN 0 WHEN 'legendaire' THEN 1 WHEN 'epique' THEN 2 WHEN 'rare' THEN 3 WHEN 'commune' THEN 4 END, c.attack DESC
   `).all(userId);
 
   const user = db.prepare('SELECT credits, excavation_essence FROM users WHERE id = ?').get(userId);

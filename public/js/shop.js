@@ -267,6 +267,19 @@ function showCardsReveal(cards) {
             <div class="card-ability"><div class="ability-desc" style="color:#ffcc44">+1 Essence pour la Mine</div></div>
           </div>
         </div>`;
+    } else if (card.rarity === 'cadeau') {
+      el.innerHTML = `
+        <div class="card-inner">
+          <div class="card-back"><div class="card-back-pattern"></div><span>?</span></div>
+          <div class="card-front rarity-cadeau" style="border-color:${r.color}; box-shadow:0 0 20px ${r.glow}">
+            <div class="card-rarity" style="background:linear-gradient(90deg,#ff2266,#ffcc00,#00ff66);color:#fff">🎁 CADEAU</div>
+            <div class="cadeau-wrapper">
+              <div class="cadeau-gift">🎁</div>
+              <div class="cadeau-code">${card.ability_desc}</div>
+            </div>
+            <div class="card-name" style="color:#ffcc00; font-size:12px">${card.name}</div>
+          </div>
+        </div>`;
     } else {
       const shinyClass = card.is_shiny ? 'reveal-card-shiny' : '';
       const tempClass = card.is_temp ? 'reveal-card-temp' : '';
@@ -304,7 +317,22 @@ function showCardsReveal(cards) {
 
     setTimeout(() => {
       if (card.is_temp) { el.classList.add('temp-reveal'); title.textContent = '⚠ TEMPORAIRE'; title.style.color = '#ff3333'; }
-      if (card.is_shiny) {
+      if (card.rarity === 'cadeau') {
+        el.classList.add('cadeau-reveal'); title.textContent = '🎁 CODE CADEAU 🎁'; title.style.color = '#ffcc00';
+        secretSound.currentTime = 0; secretSound.play(); screenFlash(); screenShake();
+        // Unwrap gift on click
+        const gift = el.querySelector('.cadeau-gift');
+        const code = el.querySelector('.cadeau-code');
+        if (gift && code) {
+          setTimeout(() => {
+            gift.classList.add('unwrapping');
+            setTimeout(() => {
+              gift.style.display = 'none';
+              code.classList.add('revealed');
+            }, 800);
+          }, 500);
+        }
+      } else if (card.is_shiny) {
         el.classList.add('shiny-reveal'); title.textContent = '✦ SHINY !'; title.style.color = '#ff66ff';
         screenFlash(); screenShake();
       } else if (card.rarity === 'secret') {
